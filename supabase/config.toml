@@ -1,0 +1,43 @@
+# Configuração do projeto para o Supabase CLI.
+# O project_id aqui é só o nome local; o vínculo com o projeto remoto
+# é feito por `supabase link --project-ref <ref>`.
+
+project_id = "gringa-radar"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+# ---------------------------------------------------------------------
+# O Mercado Livre redireciona o navegador para cá SEM cabeçalho de
+# autenticação. Sem verify_jwt = false a função responde 401 e a
+# autorização nunca completa.
+#
+# Declarar aqui dispensa a flag --no-verify-jwt no deploy e, mais
+# importante, garante que a configuração não se perca num deploy futuro
+# feito por outra pessoa ou por CI.
+# ---------------------------------------------------------------------
+[functions.ml-callback]
+verify_jwt = false

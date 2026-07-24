@@ -1,0 +1,85 @@
+/* Prefixo gr-c- em tudo para não colidir com o CSS do Mercado Livre. */
+
+#gr-card{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:#fff; border:1px solid #E8EAEF; border-radius:12px;
+  color:#1A1A1E; overflow:hidden; box-sizing:border-box;
+}
+#gr-card *{ box-sizing:border-box; }
+
+/* dentro da coluna de compra */
+.gr-c-inline{ margin:0 0 16px; width:100%; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+
+/* reserva: aba flutuante quando não achamos onde encaixar */
+#gr-flutua{ position:fixed; right:16px; top:100px; z-index:2147483000; width:300px; }
+.gr-c-flutua{ box-shadow:0 8px 28px rgba(0,0,0,.16); }
+
+.gr-c-cab{
+  display:flex; align-items:center; gap:7px; padding:10px 14px;
+  border-bottom:1px solid #E8EAEF; font-size:13px; font-weight:600;
+}
+.gr-c-cab b{ color:#7C3AED; }
+.gr-c-corpo{ padding:14px; }
+.gr-c-load{ padding:20px 0; text-align:center; color:#8A93A0; font-size:13px; }
+
+.gr-c-topo{ display:flex; align-items:center; gap:13px; margin-bottom:13px; }
+.gr-c-pos{
+  font-size:27px; font-weight:700; color:#7C3AED; line-height:1;
+  background:#F5F3FF; border-radius:10px; padding:9px 13px; flex:none;
+}
+.gr-c-pos span{ font-size:14px; }
+.gr-c-mv{ font-size:13.5px; font-weight:600; line-height:1.35; }
+.gr-c-mv span{ display:block; font-size:11.5px; font-weight:400; color:#8A93A0; margin-top:2px; }
+
+.gr-c-grade{
+  display:grid; grid-template-columns:1fr 1fr; gap:1px;
+  background:#E8EAEF; border-radius:9px; overflow:hidden;
+}
+.gr-c-grade>div{ background:#fff; padding:9px 11px; }
+.gr-c-grade span{ display:block; font-size:11.5px; color:#4B5563; }
+.gr-c-grade b{ display:block; font-size:14px; font-weight:600; margin-top:2px; }
+
+.gr-c-faixa{ margin-top:9px; font-size:11.5px; color:#8A93A0; text-align:center; }
+
+.gr-c-btn{
+  width:100%; margin-top:13px; background:#7C3AED; color:#fff; border:0;
+  border-radius:9px; padding:10px; font-size:13.5px; font-weight:600;
+  cursor:pointer; font-family:inherit;
+}
+.gr-c-btn:hover{ background:#6D28D9; }
+.gr-c-btn:disabled{ opacity:.6; cursor:default; }
+.gr-c-btn.gr-c-off{ background:#F0FDF4; color:#16A34A; cursor:default; }
+
+.gr-c-vazio{ padding:6px 0; text-align:center; }
+.gr-c-vazio b{ display:block; font-size:14px; font-weight:600; margin-bottom:5px; }
+.gr-c-vazio p{ margin:0 0 4px; font-size:12.5px; color:#4B5563; line-height:1.5; }
+.gr-c-nota{ display:block; margin-top:8px; font-size:11px; color:#8A93A0; }
+
+@media (max-width:1100px){ #gr-flutua{ display:none; } }
+
+/* ---- painel de insights ---- */
+.gr-c-btn.gr-c-sec{
+  background:#fff; color:#7C3AED; border:1px solid #E8EAEF; margin-top:10px;
+}
+.gr-c-btn.gr-c-sec:hover{ background:#F5F3FF; border-color:#7C3AED; }
+
+.gr-c-ins{ margin-top:12px; }
+.gr-c-ib{ border:1px solid #E8EAEF; border-radius:10px; padding:11px 12px; margin-bottom:10px; }
+.gr-c-it{
+  font-size:11.5px; font-weight:600; color:#1A1A1E; margin-bottom:9px;
+  display:flex; align-items:baseline; gap:6px;
+}
+.gr-c-it i{ font-style:normal; font-weight:400; font-size:10.5px; color:#8A93A0; }
+
+.gr-c-igrade{ display:grid; grid-template-columns:1fr 1fr; gap:9px 12px; }
+.gr-c-igrade span{ display:block; font-size:11px; color:#4B5563; }
+.gr-c-igrade b{ display:block; font-size:14.5px; font-weight:700; margin-top:1px; letter-spacing:-.01em; }
+
+.gr-c-eixo{
+  display:flex; justify-content:space-between; margin-top:5px;
+  font-size:10.5px; color:#8A93A0;
+}
+.gr-c-aviso{
+  background:#FFFBEB; border:1px solid #FDE68A; border-radius:9px;
+  padding:9px 11px; font-size:11px; color:#78350F; line-height:1.45;
+}

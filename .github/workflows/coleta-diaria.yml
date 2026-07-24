@@ -1,0 +1,110 @@
+# =====================================================================
+# Coleta diária na nuvem.
+#
+# Roda de graça no GitHub Actions e não depende do seu computador estar
+# ligado. Se falhar, o GitHub te manda e-mail — e é por isso que o
+# último passo VERIFICA o resultado em vez de só confiar que rodou.
+#
+# CONFIGURAR ANTES (uma vez só)
+#   Settings > Secrets and variables > Actions > New repository secret
+#     DATABASE_URL       connection string do Supabase (porta 5432)
+#     ML_CLIENT_ID       id da aplicação do Mercado Livre
+#     ML_CLIENT_SECRET   chave secreta
+#     ML_REDIRECT_URI    a mesma cadastrada no painel do ML
+# =====================================================================
+name: Coleta diária
+
+on:
+  schedule:
+    - cron: '10 6 * * *'      # 03:10 em Brasília
+  workflow_dispatch:
+
+concurrency:
+  group: coleta
+  cancel-in-progress: false   # nunca cancelar coleta em andamento
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    env:
+      DATABASE_URL:     ${{ secrets.DATABASE_URL }}
+      ML_CLIENT_ID:     ${{ secrets.ML_CLIENT_ID }}
+      ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+      ML_REDIRECT_URI:  ${{ secrets.ML_REDIRECT_URI }}
+      ML_SITE_ID:       MLB
+      # Em 24/07/2026 descobrimos que ritmo alto faz o endpoint de
+      # destaques degradar em silêncio: devolve 200 com lista vazia em
+      # vez de 429. Devagar e sempre.
+      ML_RATE_PER_SEC:  '2'
+      ML_PAUSA_MS:      '300'
+      MINIMO_POSICOES:  '3000'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependências
+        working-directory: collector
+        run: npm install --no-audit --no-fund
+
+      - name: Credencial do Mercado Livre
+        working-directory: collector
+        run: npm run collect auth-status
+
+      - name: Ranking do dia
+        working-directory: collector
+        run: npm run collect rank 12000
+
+      - name: Concorrentes e preços
+        working-directory: collector
+        run: npm run collect produtos 4000
+        continue-on-error: true    # se falhar, o ranking do dia já valeu
+
+      - name: Pedidos da extensão
+        working-directory: collector
+        run: npm run collect pedidos
+        continue-on-error: true
+
+      - name: Métricas e alertas
+        working-directory: collector
+        run: npm run collect rank-metrics full
+
+      - name: Manutenção semanal
+        if: success()
+        working-directory: collector
+        run: |
+          if [ "$(date +%u)" = "1" ]; then
+            npm run collect categories
+            npm run collect sellers 2000
+          else
+            echo "não é segunda-feira — pulando"
+          fi
+        continue-on-error: true
+
+      - name: Resumo
+        if: always()
+        working-directory: collector
+        run: npm run collect resumo
+
+      # ESTE PASSO É O QUE IMPORTA.
+      #
+      # Sem ele, uma coleta que roda e grava zero passa como sucesso — foi
+      # o que aconteceu em 24/07 e custou um dia inteiro de série. Aqui,
+      # se o volume de hoje for baixo demais ou cair mais de 50% em
+      # relação a ontem, o job falha e o GitHub manda e-mail.
+      - name: Verificar se coletou de verdade
+        working-directory: collector
+        run: npm run collect verificar
+
+      - name: O que fazer se falhou
+        if: failure()
+        run: |
+          echo "::error::A coleta de hoje não gravou dado suficiente."
+          echo "Rode localmente: cd collector && npm run collect diag"
+          echo "Ele testa o endpoint de destaques e diz se é limite de uso,"
+          echo "bloqueio ou mudança de formato da resposta."

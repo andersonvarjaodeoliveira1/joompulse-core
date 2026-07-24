@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------
+# Nada com segredo entra no repositório.
+#
+# A connection string do Supabase contém a senha do Postgres. Quem tem
+# ela tem acesso total de escrita ao banco. Uma vez commitada, fica no
+# histórico do Git para sempre — apagar o arquivo depois não resolve.
+# ---------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# Estado local do Supabase CLI (guarda credencial do projeto vinculado)
+.branches
+.temp
+supabase/.temp
+supabase/.branches
+
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+*.log
+npm-debug.log*
