@@ -214,18 +214,17 @@ export async function syncSellers(ml: MlClient, opts: { limit?: number } = {}) {
 
 // ---------------------------------------------------------------------
 /**
- * Semeadura inicial. Roda uma vez, escolhe as N categorias folha com
- * mais anúncios e enfileira a descoberta. É assim que o banco sai do zero.
+ * Semeadura inicial. Popula a árvore de categorias — é dela que
+ * categoriasParaRanquear() tira o que ler todo dia.
+ *
+ * NÃO enfileira mais discover_items. O /sites/MLB/search devolve 403
+ * desde 2026 (ver README) e o caminho de ranking não usa fila:
+ * rodadaDiaria() chama coletarRanking() direto.
  */
-export async function seed(ml: MlClient, topCategories = 200) {
+export async function seed(ml: MlClient, _topCategories = 200) {
   await db.ensurePartitions();
-  await syncCategories(ml);
-
-  const leaves = await db.leafCategories(topCategories);
-  log(`enfileirando ${leaves.length} categorias folha`);
-
-  for (const [i, leaf] of leaves.entries()) {
-    await db.enqueue('discover_items', leaf.id, { maxItems: 1000 }, i < 50 ? 2 : 1);
-  }
-  return leaves.length;
+  const n = await syncCategories(ml);
+  log(`${n} categorias gravadas`);
+  log('agora rode: npm run collect rodada');
+  return n;
 }
