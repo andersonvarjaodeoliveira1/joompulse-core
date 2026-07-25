@@ -144,7 +144,7 @@ function categoriaDaPagina() {
 function lerPagina() {
   const txt = document.body.innerText || '';
   const o = { vendidos: null, aprox: false, preco: null, criado: null, titulo: null,
-              nota: null, avaliacoes: null, vendedor: null, marca: null };
+              nota: null, avaliacoes: null, vendedor: null, marca: null, imagem: null };
 
   // "+100 vendidos" | "100 vendidos" | "+1mil vendidos"
   const mv = txt.match(/(\+)?\s*([\d.]+)\s*(mil)?\s*vendid/i);
@@ -211,6 +211,10 @@ function lerPagina() {
 
   const mMarca = txt.match(/Marca\s*[:\n]\s*([^\n]{2,40})/i);
   if (mMarca) o.marca = mMarca[1].trim();
+
+  const img = document.querySelector('meta[property="og:image"]')
+    || document.querySelector('.ui-pdp-gallery__figure img, .ui-pdp-image');
+  if (img) o.imagem = img.getAttribute('content') || img.getAttribute('src') || null;
 
   const mCriado = txt.match(/(?:criado|publicado)\s+em\s+([^\n]{5,30})/i);
   if (mCriado) o.criado = mCriado[1].trim();
@@ -451,8 +455,19 @@ function ligarBotoes(d) {
   const pedir = caixa && caixa.querySelector('#gr-pedir');
   if (pedir) pedir.onclick = async () => {
     pedir.disabled = true; pedir.textContent = 'enviando…';
-    const r = await rpc('solicitar_coleta',
-      { p_mlb: alvo.id, p_categoria: categoriaDaPagina(), p_url: location.href });
+    // A pagina que o usuario esta olhando tem titulo, imagem e preco. Sem
+    // isso o pedido vira uma linha com um codigo MLB e mais nada ate a
+    // coleta rodar — e ninguem reconhece o proprio produto no dia seguinte.
+    const pg = lerPagina();
+    const r = await rpc('solicitar_coleta', {
+      p_mlb: alvo.id, p_categoria: categoriaDaPagina(), p_url: location.href,
+      p_snapshot: {
+        titulo: pg.titulo, imagem: pg.imagem, preco: pg.preco,
+        vendidos: pg.vendidos, aprox: pg.aprox, nota: pg.nota,
+        avaliacoes: pg.avaliacoes, vendedor: pg.vendedor, marca: pg.marca,
+        lido_em: new Date().toISOString(),
+      },
+    });
     if (r && r.dados && r.dados.ok) {
       const n = r.dados.pedidos;
       pedir.textContent = n > 1 ? `✓ Registrado — ${n} pessoas pediram` : '✓ Pedido registrado';

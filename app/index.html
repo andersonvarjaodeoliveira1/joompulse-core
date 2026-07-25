@@ -806,20 +806,37 @@ function tfila(){
   if (!S.pedidos.length) return `<div class="none"><b>Nenhum pedido de coleta</b>
     Abra um produto fora da cobertura no Mercado Livre, pela extensao, e clique em Pedir coleta.</div>`;
   const rot = { pendente:['Na fila','u'], atendido:['Coletado','u'], sem_destaque:['Sem ranking publico','d'] };
-  return `<table><thead><tr><th>Anuncio</th><th>Categoria</th><th class="n">Pedidos</th>
+  return `<table><thead><tr><th>Produto</th><th class="n">Preco</th><th class="n">Vendidos</th>
+    <th class="n">Receita est.</th><th>Categoria</th><th class="n">Pedidos</th>
     <th>Situacao</th><th class="n">Pedido em</th><th></th></tr></thead><tbody>${
     S.pedidos.map(p=>{
       const r = rot[p.status] || [p.status,'f'];
+      // Foto do dia do pedido, lida da pagina do ML pela extensao. Nao e
+      // dado vivo: por isso a data aparece junto e some quando a coleta atende.
+      const f = p.snapshot || {};
+      const receita = (f.vendidos != null && f.preco != null) ? f.vendidos * f.preco : null;
       return `<tr>
-      <td><div class="nm">${esc(p.mlb)}</div>
-        ${p.url?`<div class="sb"><a href="${esc(p.url)}" target="_blank" rel="noopener">ver no Mercado Livre</a></div>`:''}</td>
+      <td style="max-width:320px"><div style="display:flex;gap:10px;align-items:center">
+        ${f.imagem?`<img src="${esc(f.imagem)}" alt="" width="44" height="44"
+           style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
+        <div style="min-width:0">
+          <div class="nm">${esc(f.titulo || p.mlb)}</div>
+          <div class="sb">${esc(p.mlb)}${f.vendedor?' · '+esc(f.vendedor):''}
+          ${p.url?` · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver no ML</a>`:''}</div>
+        </div></div></td>
+      <td class="n">${f.preco!=null?brl(f.preco):'—'}</td>
+      <td class="n">${f.vendidos!=null?(f.aprox?'~':'')+num(f.vendidos):'—'}</td>
+      <td class="n">${receita!=null?brl(receita):'—'}</td>
       <td>${esc(p.categoria ?? p.category_id ?? '—')}</td>
       <td class="n">${p.pedidos ?? 1}</td>
       <td><span class="mv ${r[1]}">${r[0]}</span></td>
       <td class="n">${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
       <td class="n">${p.produto?`<button class="btn" data-seg="${esc(p.produto)}">Monitorar</button>`:''}</td>
     </tr>`;}).join('')}</tbody></table>
-  <div class="tip"><b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
+  <div class="tip"><b>Preco, vendidos e receita sao a leitura da pagina no dia do pedido</b> —
+    o Mercado Livre arredonda o numero de vendidos, entao use como ordem de grandeza. Posicao no
+    ranking e concorrentes so aparecem depois da coleta.<br><br>
+    <b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
     gente pediu. Categoria sem ranking publico do Mercado Livre fica marcada como tal e nao e
     tentada de novo — cerca de 63% das categorias estao nessa situacao.</div>`;
 }
