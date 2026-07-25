@@ -10,6 +10,7 @@
  *   npm run collect categories  # sincroniza a árvore de categorias
  *   npm run collect rank        # lê o top 20 de cada categoria  <- o diário
  *   npm run collect produtos    # concorrentes e preços de cada produto
+ *   npm run collect itens       # nome/foto dos destaques tipo ITEM (não passam por produtos)
  *   npm run collect calibrar    # pares reais da própria conta
  *   npm run collect rodada      # tudo acima + métricas
  *   npm run collect fornecedor <csv>  # importa catálogo de fornecedor
@@ -24,7 +25,7 @@ import { MlClient } from './ml-client.js';
 import * as db from './db.js';
 import { accessToken, authorizationUrl, exchangeCode, credentialStatus } from './auth.js';
 import { syncCategories, discoverItems, refreshItems, syncSellers, seed } from './jobs.js';
-import { coletarRanking, sincronizarProdutos, colherCalibracao, rodadaDiaria } from './jobs-rank.js';
+import { coletarRanking, sincronizarProdutos, sincronizarItens, colherCalibracao, rodadaDiaria } from './jobs-rank.js';
 import * as rank from './db-rank.js';
 import { importarFornecedor, modeloCsv } from './fornecedores.js';
 import { atenderPedidos, statusPedidos } from './pedidos.js';
@@ -106,7 +107,7 @@ async function daily() {
 }
 
 /** Comandos que consomem a API do ML e não podem rodar em paralelo. */
-const PESADOS = new Set(['rank', 'produtos', 'rodada', 'pedidos', 'seed',
+const PESADOS = new Set(['rank', 'produtos', 'itens', 'rodada', 'pedidos', 'seed',
                          'worker', 'daily', 'categories', 'sellers', 'discover']);
 
 async function main() {
@@ -171,6 +172,10 @@ async function main() {
 
       case 'produtos':
         await sincronizarProdutos(client(), { lote: Number(process.argv[3] ?? 1000) });
+        break;
+
+      case 'itens':
+        await sincronizarItens(client(), { lote: Number(process.argv[3] ?? 500) });
         break;
 
       case 'calibrar':

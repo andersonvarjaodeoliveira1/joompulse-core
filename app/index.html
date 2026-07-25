@@ -675,7 +675,9 @@ function tprod(){
         ${S.selecao.has(p.product_id)?'checked':''} ${i>=livres?'disabled':''}></td>
       <td style="max-width:300px"><div class="prow">
         ${p.picture?`<img class="thumb" src="${esc(p.picture)}" alt="" loading="lazy">`:`<span class="thumb"></span>`}
-        <div><div class="nm">${esc(p.name ?? p.product_id)}</div>
+        <div><div class="nm">${esc(p.name ?? (p.tipo==='USER_PRODUCT'
+          ? 'Variação de vendedor — sem ficha pública no Mercado Livre'
+          : p.product_id))}</div>
           <div class="sb">${esc(p.product_id)} · ${esc(p.category_name ?? '')}</div></div>
       </div></td>
       <td class="n"><span class="pos">${p.position_now ?? '—'}</span></td>

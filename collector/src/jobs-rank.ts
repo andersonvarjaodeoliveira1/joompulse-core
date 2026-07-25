@@ -207,6 +207,59 @@ export async function sincronizarProdutos(
 
 // ---------------------------------------------------------------------
 /**
+ * Sincroniza produtos de catálogo tipo ITEM — destaque cujo id É o
+ * anúncio (não um /products/{id}). sincronizarProdutos pula esse tipo
+ * de propósito (ficha e productItems dão 404 nele); sem este job eles
+ * ficam pra sempre sem nome nem foto na busca.
+ *
+ * /items?ids= responde pra anúncio de terceiro mesmo quando /items/{id}
+ * sozinho dá 403 — é o mesmo caminho usado em pedidos.ts.
+ */
+export async function sincronizarItens(ml: MlClient, opts: { lote?: number } = {}) {
+  const inicio = Date.now();
+  const alvo = await rank.itensParaSincronizar(opts.lote ?? 300);
+
+  if (!alvo.length) {
+    log('nenhum item tipo ITEM pendente de sincronização');
+    return 0;
+  }
+  log(`sincronizando ${alvo.length} itens tipo ITEM`);
+
+  let sincronizados = 0;
+  try {
+    const encontrados = await ml.itemsMulti(alvo.map((p) => p.id));
+    if (encontrados.length) {
+      await rank.enrichCatalogProductsFromItems(encontrados);
+      // O anúncio É o produto rankeado aqui: catalog_product_id aponta
+      // pra si mesmo, então "concorrentes" mostra 1 (ele) em vez de
+      // ficar em branco pra sempre.
+      await rank.upsertItensDiretos(
+        encontrados.map((it) => ({ ...it, catalog_product_id: it.id })),
+      );
+      sincronizados = encontrados.length;
+    }
+
+    const idsEncontrados = new Set(encontrados.map((i) => i.id));
+    const idsFaltando = alvo.filter((p) => !idsEncontrados.has(p.id)).map((p) => p.id);
+    if (idsFaltando.length) await rank.marcarCatalogProductsSincronizados(idsFaltando);
+  } catch (e) {
+    log(`  sincronizar itens: ${e instanceof Error ? e.message : e}`);
+  }
+
+  await db.logRun({
+    jobType: 'sincronizar_itens',
+    ok: true,
+    itemsSeen: sincronizados,
+    apiCalls: ml.callCount,
+    durationMs: Date.now() - inicio,
+  });
+
+  log(`itens: ${sincronizados}/${alvo.length} sincronizados`);
+  return sincronizados;
+}
+
+// ---------------------------------------------------------------------
+/**
  * Colhe pares reais de calibração da conta conectada.
  *
  * Este é o único lugar do sistema onde existe sold_quantity verdadeiro.
@@ -285,6 +338,7 @@ export async function rodadaDiaria(ml: MlClient) {
   await db.ensurePartitions();
   await coletarRanking(ml, { lote: Number(process.env.RANK_BATCH ?? 2000) });
   await sincronizarProdutos(ml, { lote: Number(process.env.PRODUCT_BATCH ?? 1000) });
+  await sincronizarItens(ml, { lote: Number(process.env.ITEM_BATCH ?? 500) });
 
   log('recalculando métricas...');
   try {

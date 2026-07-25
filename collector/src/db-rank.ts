@@ -397,6 +397,42 @@ export async function produtosParaSincronizar(limite: number, dias = 2) {
   `;
 }
 
+/**
+ * Produtos de catálogo tipo ITEM: destaque cujo id é o anúncio em si,
+ * não um /products/{id} de catálogo. enrichProduct/productItems não se
+ * aplicam (404 garantido) — o dado vem direto do multiget de itens.
+ */
+export async function itensParaSincronizar(limite: number) {
+  return sql<{ id: string; category_id: string | null }[]>`
+    select id, category_id from catalog_products
+     where tipo = 'ITEM' and last_synced_at is null
+     order by last_seen_at asc
+     limit ${limite}
+  `;
+}
+
+/** Ficha do próprio anúncio: nome, foto, permalink. Não mexe em produtos. */
+export async function enrichCatalogProductsFromItems(itens: MlItem[]) {
+  for (const i of itens) {
+    await sql`
+      update catalog_products set
+        name = coalesce(${i.title ?? null}, name),
+        picture = coalesce(${i.thumbnail ?? i.secure_thumbnail ?? null}, picture),
+        permalink = coalesce(${i.permalink ?? null}, permalink),
+        status = ${i.status ?? 'active'},
+        last_synced_at = now()
+      where id = ${i.id}
+    `;
+  }
+  return itens.length;
+}
+
+/** Marca como tentado mesmo sem achar — evita reprocessar todo dia o que saiu do ar. */
+export async function marcarCatalogProductsSincronizados(ids: string[]) {
+  if (!ids.length) return;
+  await sql`update catalog_products set last_synced_at = now() where id = any(${ids}::text[])`;
+}
+
 export async function refreshRankMetrics(concurrent = true) {
   await sql`select refresh_rank_metrics(${concurrent})`;
 }
