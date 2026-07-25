@@ -805,7 +805,8 @@ V.monitor = () => {
 function tfila(){
   if (!S.pedidos.length) return `<div class="none"><b>Nenhum pedido de coleta</b>
     Abra um produto fora da cobertura no Mercado Livre, pela extensao, e clique em Pedir coleta.</div>`;
-  const rot = { pendente:['Na fila','u'], atendido:['Coletado','u'], sem_destaque:['Sem ranking publico','d'] };
+  const rot = { pendente:['Na fila','u'], atendido:['Coletado','u'],
+    sem_item:['Fora do alcance da coleta','d'], sem_destaque:['Sem ranking publico','d'] };
   return `<table><thead><tr><th>Produto</th><th class="n">Preco</th><th class="n">Vendidos</th>
     <th class="n">Receita acumulada</th><th>Categoria</th><th class="n">Pedidos</th>
     <th>Situacao</th><th class="n">Pedido em</th><th></th></tr></thead><tbody>${
@@ -838,7 +839,10 @@ function tfila(){
     ranking e concorrentes so aparecem depois da coleta.<br><br>
     <b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
     gente pediu. Categoria sem ranking publico do Mercado Livre fica marcada como tal e nao e
-    tentada de novo — cerca de 63% das categorias estao nessa situacao.</div>`;
+    tentada de novo — cerca de 63% das categorias estao nessa situacao.<br><br>
+    <b>"Fora do alcance da coleta"</b> significa que a categoria ate tem ranking, mas esse
+    anuncio especifico nao voltou quando fomos busca-lo direto — pode ter saido do ar ou ser
+    um formato que o Mercado Livre nao devolve avulso.</div>`;
 }
 function tmon(){
   if (!S.monitorados.length) return `<div class="none"><b>Nada sendo acompanhado</b>

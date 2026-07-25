@@ -58,10 +58,14 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
 
   log(`  ${porCategoria.size} categoria(s) distintas, ${semCategoria.length} pedido(s) sem categoria`);
 
-  let atendidos = 0;
   let semDestaque = 0;
   let produtosNovos = 0;
 
+  // Passo 1: atualiza o ranking da categoria. Isso alimenta
+  // product_rank_snapshots e descobre produtos de catálogo novos, mas
+  // NÃO é garantia de que o anúncio pedido específico entrou na base —
+  // highlights só traz o top 20, e o anúncio pedido pode estar fora
+  // dele. Quem decide o status de cada pedido é o passo 2.
   for (const [cat, pedidos] of porCategoria) {
     try {
       const d = await ml.highlights(cat);
@@ -93,12 +97,6 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
         update catalog_products set last_synced_at = null
          where category_id = ${cat} and last_synced_at is not null
       `;
-
-      await sql`
-        update collect_requests set status = 'atendido', atendido_em = now()
-         where id = any(${pedidos.map((p) => p.id)}::bigint[])
-      `;
-      atendidos += pedidos.length;
     } catch (e) {
       if (e instanceof NotFoundError) {
         await sql`
@@ -113,8 +111,57 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
   }
 
   if (semCategoria.length) {
-    log(`  ${semCategoria.length} pedido(s) sem categoria ficam na fila —`);
+    log(`  ${semCategoria.length} pedido(s) sem categoria tentam direto no passo 2 —`);
     log('  a extensão não conseguiu ler o rastro de navegação da página');
+  }
+
+  // Passo 2: busca o(s) anúncio(s) pedido(s) diretamente por /items?ids=
+  // (multiget), que responde para anúncio de terceiro mesmo quando
+  // /items/{id} sozinho dá 403. É isso que garante que "Coletado" nunca
+  // minta: só marca atendido o pedido cujo MLB realmente voltou aqui —
+  // em vez de assumir isso porque a categoria dele tinha ranking.
+  let atendidos = 0;
+  let semItem = 0;
+
+  const restantes = await sql<Pedido[]>`
+    select id, mlb, category_id, pedidos from collect_requests
+     where id = any(${fila.map((p) => p.id)}::bigint[]) and status = 'pendente'
+  `;
+
+  if (restantes.length) {
+    try {
+      const encontrados = await ml.itemsMulti(restantes.map((p) => p.mlb));
+      const idsEncontrados = new Set(encontrados.map((i) => i.id));
+
+      if (encontrados.length) {
+        produtosNovos += await rank.upsertItensDiretos(encontrados);
+      }
+
+      const idsAtendidos = restantes.filter((p) => idsEncontrados.has(p.mlb)).map((p) => p.id);
+      const idsSemItem = restantes.filter((p) => !idsEncontrados.has(p.mlb)).map((p) => p.id);
+
+      if (idsAtendidos.length) {
+        await sql`
+          update collect_requests set status = 'atendido', atendido_em = now()
+           where id = any(${idsAtendidos}::bigint[])
+        `;
+        atendidos = idsAtendidos.length;
+      }
+      if (idsSemItem.length) {
+        // A categoria pode até ter ranking, mas esse anúncio específico
+        // não voltou no multiget: fora do ar, MLBU sem par consultável,
+        // ou simplesmente fora do que o ML aceita devolver avulso.
+        await sql`
+          update collect_requests set status = 'sem_item', atendido_em = now()
+           where id = any(${idsSemItem}::bigint[])
+        `;
+        semItem = idsSemItem.length;
+      }
+    } catch (e) {
+      // Fica pendente para a próxima rodada — melhor do que marcar
+      // "atendido" errado por causa de um erro de rede pontual.
+      log(`  busca direta dos anúncios: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   await db.logRun({
@@ -125,7 +172,8 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
     durationMs: Date.now() - inicio,
   });
 
-  log(`pedidos: ${atendidos} atendido(s), ${semDestaque} sem ranking público, ${produtosNovos} produto(s) novos`);
+  log(`pedidos: ${atendidos} atendido(s), ${semItem} sem retorno no anúncio, ` +
+      `${semDestaque} sem ranking público, ${produtosNovos} produto(s) novos`);
   return atendidos;
 }
 

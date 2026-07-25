@@ -37,7 +37,7 @@ create table if not exists collect_requests (
   mlb         text not null,
   category_id text,
   url         text,
-  status      text not null default 'pendente',   -- pendente | atendido | sem_destaque
+  status      text not null default 'pendente',   -- pendente | atendido | sem_item | sem_destaque
   pedidos     int not null default 1,
   criado_em   timestamptz not null default now(),
   atendido_em timestamptz,

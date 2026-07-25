@@ -6,7 +6,7 @@
  * o Mercado Livre reabra o endpoint. Este aqui é o caminho vivo.
  */
 import { sql, captureDate } from './db.js';
-import type { MlHighlight, MlProduct, MlProductItem } from './ml-client.js';
+import type { MlHighlight, MlItem, MlProduct, MlProductItem } from './ml-client.js';
 
 // ---------------------------------------------------------------------
 // PRODUTOS DE CATÁLOGO
@@ -177,6 +177,106 @@ export async function upsertProductItems(
 
   await sql`update catalog_products set last_synced_at = now() where id = ${productId}`;
   return { anuncios: linhas.length, snapshots: snaps.length };
+}
+
+// ---------------------------------------------------------------------
+// ANÚNCIO PEDIDO DIRETAMENTE — atende pedido da extensão sem depender
+// de sorte no ranking.
+//
+// /items/{id} de terceiro dá 403, mas /items?ids= (multiget) responde.
+// É a única forma de confirmar que UM anúncio específico existe sem
+// esperar ele aparecer nos destaques de uma categoria — o que pode
+// nunca acontecer, já que highlights só traz o top 20.
+// ---------------------------------------------------------------------
+export async function upsertItensDiretos(itens: MlItem[]) {
+  if (!itens.length) return 0;
+
+  const catIds = [...new Set(itens.map((i) => i.category_id).filter(Boolean))] as string[];
+  if (catIds.length) {
+    await sql`
+      insert into categories (id, name) select unnest(${catIds}::text[]), '(pendente)'
+      on conflict (id) do nothing
+    `;
+  }
+
+  const sellerIds = [...new Set(itens.map((i) => i.seller_id).filter(Boolean))] as number[];
+  if (sellerIds.length) {
+    await sql`
+      insert into sellers (id) select unnest(${sellerIds}::bigint[])
+      on conflict (id) do nothing
+    `;
+  }
+
+  const linhas = itens.map((i) => ({
+    id: i.id,
+    title: i.title ?? `(sem título) ${i.id}`,
+    category_id: i.category_id ?? null,
+    seller_id: i.seller_id ?? null,
+    catalog_product_id: i.catalog_product_id ?? null,
+    is_catalog_listing: !!i.catalog_product_id,
+    listing_type_id: i.listing_type_id ?? null,
+    condition: i.condition ?? null,
+    shipping_free: i.shipping?.free_shipping ?? false,
+    shipping_logistic_type: i.shipping?.logistic_type ?? null,
+    official_store_id: i.official_store_id ?? null,
+    permalink: i.permalink ?? null,
+    thumbnail: i.thumbnail ?? i.secure_thumbnail ?? null,
+    status: i.status ?? 'active',
+    collect_priority: 1,
+  }));
+
+  await sql`
+    insert into items ${sql(linhas)}
+    on conflict (id) do update set
+      title = excluded.title,
+      category_id = coalesce(excluded.category_id, items.category_id),
+      seller_id = excluded.seller_id,
+      catalog_product_id = excluded.catalog_product_id,
+      is_catalog_listing = excluded.is_catalog_listing,
+      listing_type_id = excluded.listing_type_id,
+      condition = excluded.condition,
+      shipping_free = excluded.shipping_free,
+      shipping_logistic_type = excluded.shipping_logistic_type,
+      official_store_id = excluded.official_store_id,
+      permalink = excluded.permalink,
+      thumbnail = excluded.thumbnail,
+      status = excluded.status,
+      collect_priority = greatest(items.collect_priority, excluded.collect_priority),
+      last_seen_at = now()
+  `;
+
+  // Produto de catálogo por trás do anúncio: sem isso o item entra sem
+  // catalog_product_id resolvido em catalog_products, e "Monitorar" fica
+  // preso — tracked_products.product_id tem FK para catalog_products.
+  const produtos = itens.filter((i) => i.catalog_product_id && i.category_id);
+  if (produtos.length) {
+    await upsertCatalogProducts(
+      produtos.map((i) => ({ id: i.catalog_product_id as string, categoryId: i.category_id as string })),
+    );
+  }
+
+  const agora = new Date();
+  const data = captureDate(agora);
+  const snaps = itens
+    .filter((i) => i.price != null)
+    .map((i) => ({
+      item_id: i.id,
+      captured_at: agora,
+      captured_date: data,
+      price: i.price ?? null,
+      original_price: i.original_price ?? null,
+      sold_quantity: null,
+      seller_id: i.seller_id ?? null,
+    }));
+
+  if (snaps.length) {
+    await sql`
+      insert into item_snapshots ${sql(snaps)}
+      on conflict (item_id, captured_at) do nothing
+    `;
+  }
+
+  return linhas.length;
 }
 
 // ---------------------------------------------------------------------
