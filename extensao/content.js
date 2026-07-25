@@ -117,7 +117,8 @@ function categoriaDaPagina() {
 // =====================================================================
 function lerPagina() {
   const txt = document.body.innerText || '';
-  const o = { vendidos: null, aprox: false, preco: null, criado: null, titulo: null };
+  const o = { vendidos: null, aprox: false, preco: null, criado: null, titulo: null,
+              nota: null, avaliacoes: null, vendedor: null, marca: null };
 
   // "+100 vendidos" | "100 vendidos" | "+1mil vendidos"
   const mv = txt.match(/(\+)?\s*([\d.]+)\s*(mil)?\s*vendid/i);
@@ -144,6 +145,49 @@ function lerPagina() {
 
   const t = document.querySelector('h1.ui-pdp-title, h1');
   if (t) o.titulo = t.textContent.trim();
+
+  // -------------------------------------------------------------------
+  // Reputação, vendedor e marca — mesma lógica dos "vendidos": está na
+  // tela do usuário, a API não entrega para anúncio de terceiro.
+  //
+  // Os seletores do ML mudam sem aviso, então cada campo tem fallback e
+  // nenhum quebra a leitura se falhar. Campo ausente vira null e o
+  // painel simplesmente não desenha aquela linha.
+  // -------------------------------------------------------------------
+  const mNota = document.querySelector('meta[itemprop="ratingValue"]');
+  if (mNota?.content) {
+    const n = parseFloat(mNota.content.replace(',', '.'));
+    if (Number.isFinite(n)) o.nota = n;
+  }
+  if (o.nota == null) {
+    const el = document.querySelector('.ui-pdp-review__rating');
+    if (el) {
+      const n = parseFloat(el.textContent.trim().replace(',', '.'));
+      if (Number.isFinite(n)) o.nota = n;
+    }
+  }
+
+  const mQtd = document.querySelector('meta[itemprop="reviewCount"], meta[itemprop="ratingCount"]');
+  if (mQtd?.content) {
+    const n = parseInt(mQtd.content.replace(/\D/g, ''), 10);
+    if (Number.isFinite(n)) o.avaliacoes = n;
+  }
+  if (o.avaliacoes == null) {
+    const m = txt.match(/([\d.]+)\s*avalia[çc]/i);
+    if (m) {
+      const n = parseInt(m[1].replace(/\./g, ''), 10);
+      if (Number.isFinite(n)) o.avaliacoes = n;
+    }
+  }
+
+  const vend = document.querySelector('.ui-pdp-seller__link-trigger, .ui-box-component__link');
+  if (vend) o.vendedor = vend.textContent.trim().slice(0, 60);
+
+  const mMarca = txt.match(/Marca\s*[:\n]\s*([^\n]{2,40})/i);
+  if (mMarca) o.marca = mMarca[1].trim();
+
+  const mCriado = txt.match(/(?:criado|publicado)\s+em\s+([^\n]{5,30})/i);
+  if (mCriado) o.criado = mCriado[1].trim();
 
   return o;
 }
