@@ -353,9 +353,9 @@ const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
                         'sb_publishable_gabCC-2dHNLezVN4VmyCJA_sONtVPg8');
 const $ = s => document.querySelector(s);
 const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, buscou:false,
-            monitorados:[], alertas:[], aba:'lista',
+            monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
-            locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null };
+            locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num = n => n==null?'—':Number(n).toLocaleString('pt-BR');
@@ -379,7 +379,22 @@ sb.auth.onAuthStateChange((_e,s) => {
   if (s){ $('#gate').classList.add('hide'); $('#app').classList.remove('hide'); boot(); }
   else { $('#app').classList.add('hide'); $('#gate').classList.remove('hide'); }
 });
-const boot = async () => { await Promise.all([quota(), carregarMonitor()]); render(); };
+const boot = async () => {
+  await Promise.all([quota(), carregarMonitor()]);
+  lerUrl();
+  render();
+};
+
+// A extensao abre o app apontando para uma tela: #view=monitor&aba=fila.
+// Sem isso qualquer link cai na home e a pessoa procura sozinha.
+function lerUrl(){
+  const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  const v = h.get('view');
+  if (v) S.view = v;
+  const ab = h.get('aba');
+  if (ab) S.aba = ab;
+}
+window.addEventListener('hashchange', () => { lerUrl(); render(); });
 
 async function quota(){
   const { data, error } = await sb.rpc('quota_status');
@@ -610,7 +625,7 @@ V.produtos = () => {
     <button class="exp" id="b_exp">⤓ Baixar CSV</button>
   </div>`:''}
 
-  ${S.sel.size?`<div class="selbar"><b>${S.sel.size}</b> selecionado(s)
+  ${S.selecao.size?`<div class="selbar"><b>${S.selecao.size}</b> selecionado(s)
     <span style="flex:1"></span>
     <button class="btn" id="b_lote">Monitorar selecionados</button>
     <button class="btn g" id="b_nada">Limpar seleção</button></div>`:''}
@@ -632,7 +647,7 @@ function tprod(){
     const tr = i >= livres ? 'locked' : '';
     return `<tr class="k ${tr}" data-p="${esc(p.product_id)}">
       <td style="width:34px"><input type="checkbox" data-ck="${esc(p.product_id)}"
-        ${S.sel.has(p.product_id)?'checked':''} ${i>=livres?'disabled':''}></td>
+        ${S.selecao.has(p.product_id)?'checked':''} ${i>=livres?'disabled':''}></td>
       <td style="max-width:300px"><div class="prow">
         ${p.picture?`<img class="thumb" src="${esc(p.picture)}" alt="" loading="lazy">`:`<span class="thumb"></span>`}
         <div><div class="nm">${esc(p.name ?? p.product_id)}</div>
@@ -777,15 +792,37 @@ V.monitor = () => {
   <p class="sub">Produtos que você acompanha. Os alertas são gerados depois de cada coleta — mesmo que você não abra o app.</p>
   <div class="tabs">
     <button class="tb ${S.aba==='lista'?'on':''}" data-ab="lista">Acompanhando (${S.monitorados.length})</button>
+    <button class="tb ${S.aba==='fila'?'on':''}" data-ab="fila">Aguardando coleta (${S.pedidos.filter(p=>p.status==='pendente').length})</button>
     <button class="tb ${S.aba==='alertas'?'on':''}" data-ab="alertas">Alertas${novos?` <span class="badge">${novos}</span>`:''}</button>
     ${S.aba==='alertas'&&novos?'<button class="btn g" id="lidos" style="margin-left:auto">Marcar como lidos</button>':''}
   </div>
-  <div class="card" id="mres">${S.aba==='lista'?tmon():talert()}</div>
+  <div class="card" id="mres">${S.aba==='lista'?tmon():S.aba==='fila'?tfila():talert()}</div>
   <div class="tip"><b>O que dispara alerta.</b> Mudança de 3 ou mais posições, entrada ou saída do
     top 10, variação de preço acima de 5%, e 2 ou mais concorrentes entrando ou saindo. Os limiares
     existem para o alerta não virar ruído — o que dispara todo dia deixa de ser lido.</div>`;
 };
 
+function tfila(){
+  if (!S.pedidos.length) return `<div class="none"><b>Nenhum pedido de coleta</b>
+    Abra um produto fora da cobertura no Mercado Livre, pela extensao, e clique em Pedir coleta.</div>`;
+  const rot = { pendente:['Na fila','u'], atendido:['Coletado','u'], sem_destaque:['Sem ranking publico','d'] };
+  return `<table><thead><tr><th>Anuncio</th><th>Categoria</th><th class="n">Pedidos</th>
+    <th>Situacao</th><th class="n">Pedido em</th><th></th></tr></thead><tbody>${
+    S.pedidos.map(p=>{
+      const r = rot[p.status] || [p.status,'f'];
+      return `<tr>
+      <td><div class="nm">${esc(p.mlb)}</div>
+        ${p.url?`<div class="sb"><a href="${esc(p.url)}" target="_blank" rel="noopener">ver no Mercado Livre</a></div>`:''}</td>
+      <td>${esc(p.categoria ?? p.category_id ?? '—')}</td>
+      <td class="n">${p.pedidos ?? 1}</td>
+      <td><span class="mv ${r[1]}">${r[0]}</span></td>
+      <td class="n">${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
+      <td class="n">${p.produto?`<button class="btn" data-seg="${esc(p.produto)}">Monitorar</button>`:''}</td>
+    </tr>`;}).join('')}</tbody></table>
+  <div class="tip"><b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
+    gente pediu. Categoria sem ranking publico do Mercado Livre fica marcada como tal e nao e
+    tentada de novo — cerca de 63% das categorias estao nessa situacao.</div>`;
+}
 function tmon(){
   if (!S.monitorados.length) return `<div class="none"><b>Nada sendo acompanhado</b>
     Abra um produto na busca e clique em Monitorar.</div>`;
@@ -912,8 +949,12 @@ function calc(){
 }
 
 async function carregarMonitor(){
-  const [m,a] = await Promise.all([sb.rpc('listar_monitorados'), sb.rpc('listar_alertas',{p_limite:80})]);
-  S.monitorados = m.data ?? []; S.alertas = a.data ?? [];
+  const [m,a,f] = await Promise.all([
+    sb.rpc('listar_monitorados'),
+    sb.rpc('listar_alertas',{p_limite:80}),
+    sb.rpc('meus_pedidos'),
+  ]);
+  S.monitorados = m.data ?? []; S.alertas = a.data ?? []; S.pedidos = f.data ?? [];
 }
 async function seguir(id){
   const { data, error } = await sb.rpc('monitorar_produto',{ p_produto:id });
@@ -977,11 +1018,11 @@ function exportarCsv(){
 }
 
 async function monitorarLote(){
-  const ids = [...S.sel];
+  const ids = [...S.selecao];
   if (!ids.length) return;
   const { data, error } = await sb.rpc('monitorar_lote', { p_produtos: ids });
   if (error) return alert(error.message);
-  S.sel.clear();
+  S.selecao.clear();
   await carregarMonitor();
   alert(data.fora_do_limite > 0
     ? `${data.adicionados} adicionado(s). ${data.fora_do_limite} ficaram de fora: seu plano permite ${data.limite}.`
@@ -1069,7 +1110,7 @@ async function buscar(){
   $('#res').innerHTML = '<div class="load">buscando…</div>';
   const { data, error } = await sb.rpc('buscar_produtos', { ...S.F, p_limite:100 });
   if (error){ if(!eQuota(error)) $('#res').innerHTML=`<div class="none"><b>Erro</b>${esc(error.message)}</div>`; return; }
-  S.produtos = data ?? []; S.buscou = true; S.filtrosAbertos = false; S.sel.clear();
+  S.produtos = data ?? []; S.buscou = true; S.filtrosAbertos = false; S.selecao.clear();
   await quota(); render();
 }
 async function cats(){
@@ -1162,7 +1203,7 @@ function render(){
     if ($('#b_tog')) $('#b_tog').onclick = () => { S.filtrosAbertos=!S.filtrosAbertos; render(); };
     if ($('#b_exp')) $('#b_exp').onclick = exportarCsv;
     if ($('#b_lote')) $('#b_lote').onclick = monitorarLote;
-    if ($('#b_nada')) $('#b_nada').onclick = () => { S.sel.clear(); render(); };
+    if ($('#b_nada')) $('#b_nada').onclick = () => { S.selecao.clear(); render(); };
 
     document.querySelectorAll('[data-per]').forEach(b => b.onclick = () => {
       S.periodo = b.dataset.per; render(); });
@@ -1178,14 +1219,14 @@ function render(){
 
     document.querySelectorAll('[data-ck]').forEach(c => c.onclick = (ev) => {
       ev.stopPropagation();
-      c.checked ? S.sel.add(c.dataset.ck) : S.sel.delete(c.dataset.ck);
+      c.checked ? S.selecao.add(c.dataset.ck) : S.selecao.delete(c.dataset.ck);
       render(); });
     if ($('#ck_all')) $('#ck_all').onclick = (ev) => {
       ev.stopPropagation();
       const lim = S.quota?.features?.rows_full;
       const livres = (lim?.unlimited || lim?.limit === -1) ? S.produtos.length : (lim?.limit ?? 5);
-      if (ev.target.checked) S.produtos.slice(0,livres).forEach(p => S.sel.add(p.product_id));
-      else S.sel.clear();
+      if (ev.target.checked) S.produtos.slice(0,livres).forEach(p => S.selecao.add(p.product_id));
+      else S.selecao.clear();
       render(); };
 
     document.querySelectorAll('tr.k').forEach(tr => tr.onclick = (ev) => {
@@ -1200,6 +1241,7 @@ function render(){
   }
   if (S.view==='monitor'){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
+    document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async () => { b.disabled=true; b.textContent='...'; await seguir(b.dataset.seg); await carregarMonitor(); S.aba='lista'; render(); });
     document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => largar(b.dataset.rm));
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
