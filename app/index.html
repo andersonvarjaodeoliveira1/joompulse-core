@@ -171,6 +171,12 @@
   .catop span{font-size:11.5px;color:var(--ink-3)}
   .chosen{display:inline-flex;align-items:center;gap:7px;background:var(--tint);border:1px solid var(--soft);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--brand-2);font-weight:500}
   .chosen button{background:none;border:0;color:var(--brand-2);font-size:15px;line-height:1;padding:0}
+  .catno{display:flex;align-items:center}
+  .catarrow{flex:none;width:26px;height:30px;background:none;border:0;color:var(--ink-3);font-size:11px;cursor:pointer}
+  .catarrow.folha{visibility:hidden}
+  .catnome{flex:1;text-align:left;background:none;border:0;padding:7px 6px 7px 0;font-size:13px;border-bottom:1px solid var(--line)}
+  .catnome:hover{background:var(--tint)}
+  .catcarr{padding:9px 12px;font-size:12px;color:var(--ink-3)}
   .fbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--bg-2);border-top:1px solid var(--line)}
   .fbar .cnt{font-size:13.5px;color:var(--ink-2)}
   .fbar .cnt b{color:var(--ink);font-weight:600}
@@ -355,6 +361,7 @@ const $ = s => document.querySelector(s);
 const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
+            catAberto:false, catArvore:{}, catAbertos:new Set(),
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -517,6 +524,21 @@ function chipsAtivos(){
 }
 
 
+/** Árvore de categorias, no estilo do JoomPulse: raízes abertas de cara,
+ *  seta ▸ expande sem sair da posição. Folha não tem seta (nada abaixo). */
+function catArvoreHtml(parentId, depth){
+  const chave = parentId ?? '_raiz';
+  const nos = S.catArvore[chave];
+  if (!nos) return '<div class="catcarr">carregando…</div>';
+  return nos.map(n => {
+    const aberto = S.catAbertos.has(n.id);
+    return `<div class="catno" style="padding-left:${depth*14}px">
+      <button class="catarrow ${n.is_leaf?'folha':''}" data-toggle="${esc(n.id)}">${aberto?'▾':'▸'}</button>
+      <button class="catnome" data-cid="${esc(n.id)}" data-cn="${esc(n.nome)}">${esc(n.nome)}</button>
+    </div>${aberto?catArvoreHtml(n.id, depth+1):''}`;
+  }).join('');
+}
+
 V.produtos = () => {
   const F = S.F, av = S.modo==='avancada', chips = chipsAtivos();
   const painel = S.filtrosAbertos || !S.buscou;
@@ -527,10 +549,13 @@ V.produtos = () => {
       <div class="frow"><label>Categoria</label>
         ${S.catSel
           ? `<span class="chosen">${esc(S.catSel.nome)} <button id="catx">×</button></span>`
-          : `<div class="catwrap"><input id="f_cat" placeholder="digite para procurar" autocomplete="off">
-             ${S.catLista.length?`<div class="catdrop">${S.catLista.map(c=>
-               `<button class="catop" data-cid="${esc(c.id)}" data-cn="${esc(c.nome)}">
-                  <b>${esc(c.nome)}</b><span>${esc(c.caminho)} · ${c.produtos} produtos</span></button>`).join('')}</div>`:''}
+          : `<div class="catwrap"><input id="f_cat" placeholder="digite ou navegue pela árvore" autocomplete="off">
+             ${S.catAberto?`<div class="catdrop">${
+               S.catLista.length?S.catLista.map(c=>
+                 `<button class="catop" data-cid="${esc(c.id)}" data-cn="${esc(c.nome)}">
+                    <b>${esc(c.nome)}</b><span>${esc(c.caminho)} · ${c.produtos} produtos</span></button>`).join('')
+               :catArvoreHtml(null,0)
+             }</div>`:''}
              </div>`}</div>
       <div class="frow"><label>Texto no nome</label>
         <input id="f_txt" value="${esc(F.p_texto??'')}" placeholder="ex: creatina"></div>
@@ -1114,6 +1139,13 @@ async function acharCategorias(txt){
   S.catLista = data ?? [];
 }
 
+async function carregarNivelCategoria(parentId){
+  const chave = parentId ?? '_raiz';
+  if (S.catArvore[chave]) return;
+  const { data } = await sb.rpc('categoria_filhos', { p_parent_id: parentId ?? null });
+  S.catArvore[chave] = data ?? [];
+}
+
 async function localizar(){
   const ref = $('#f_ref')?.value.trim();
   if (!ref) return;
@@ -1207,14 +1239,33 @@ function render(){
 
     const ci = $('#f_cat');
     if (ci){ let t;
+      ci.onfocus = async () => {
+        if (S.catAberto) return;
+        S.catAberto = true;
+        await carregarNivelCategoria(null);
+        render();
+        const n = $('#f_cat'); if (n) n.focus();
+      };
       ci.oninput = () => { clearTimeout(t); t=setTimeout(async () => {
         await acharCategorias(ci.value.trim());
         const pos = ci.selectionStart; render();
         const n = $('#f_cat'); if (n){ n.focus(); n.value = ci.value; n.setSelectionRange(pos,pos); }
       }, 280); }; }
+    const cw = document.querySelector('.catwrap');
+    if (cw) cw.onclick = e => e.stopPropagation();
+    if (S.catAberto) document.addEventListener('click', () => {
+      S.catAberto = false; S.catLista = []; render();
+    }, { once:true });
+    document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = async () => {
+      const id = b.dataset.toggle;
+      if (S.catAbertos.has(id)) { S.catAbertos.delete(id); render(); return; }
+      S.catAbertos.add(id);
+      await carregarNivelCategoria(id);
+      render();
+    });
     document.querySelectorAll('[data-cid]').forEach(b => b.onclick = () => {
       S.catSel = { id:b.dataset.cid, nome:b.dataset.cn };
-      S.catLista=[]; S.F.p_categoria = b.dataset.cid; render(); contar(); });
+      S.catLista=[]; S.catAberto=false; S.F.p_categoria = b.dataset.cid; render(); contar(); });
     if ($('#catx')) $('#catx').onclick = () => {
       S.catSel=null; delete S.F.p_categoria; render(); contar(); };
 
