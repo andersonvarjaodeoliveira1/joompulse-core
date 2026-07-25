@@ -501,14 +501,6 @@ function chipsAtivos(){
   return out;
 }
 
-const PREDEF = [
-  { k:'subindo',  t:'Subindo rápido',       f:{ p_momentum:'subindo', p_delta_min:5 } },
-  { k:'calmo',    t:'Pouca concorrência',   f:{ p_conc_max:5 } },
-  { k:'firme',    t:'Consolidados no topo', f:{ p_consistencia:'consolidado', p_pos_max:10 } },
-  { k:'novo',     t:'Recém-chegados',       f:{ p_momentum:'novo' } },
-  { k:'disperso', t:'Preço bagunçado',      f:{ p_dispersao_min:0.4 } },
-  { k:'semfull',  t:'Brecha no Full',       f:{ p_full_max:0.3 } },
-];
 
 V.produtos = () => {
   const F = S.F, av = S.modo==='avancada', chips = chipsAtivos();
