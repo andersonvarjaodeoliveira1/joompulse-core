@@ -96,9 +96,18 @@ const rpc = (nome, corpo) =>
   new Promise((ok) => chrome.runtime.sendMessage({ tipo: 'rpc', nome, corpo }, ok));
 
 function categoriaDaPagina() {
-  for (const a of document.querySelectorAll('a[href*="/c/"], .andes-breadcrumb a, nav a')) {
-    const m = a.href?.match(/(MLB\d{3,6})(?!\d)/);
-    if (m) return m[1];
+  // O ML trocou o breadcrumb: era /c/MLB1132, virou /c/brinquedos-e-hobbies.
+  // O slug não tem o id, então o link não serve mais. Mas a página ainda
+  // carrega "category_id":"MLB2963" no JSON embutido — o dado chegou junto
+  // com o HTML, é só ler.
+  const h = document.documentElement.innerHTML;
+  const m = h.match(/"category_id"\s*:\s*"(MLB\d+)"/);
+  if (m) return m[1];
+
+  // Formato antigo, caso volte em alguma página.
+  for (const a of document.querySelectorAll('a[href*="/c/"], .andes-breadcrumb a')) {
+    const mm = a.href?.match(/\/c\/(MLB\d{3,6})(?!\d)/);
+    if (mm) return mm[1];
   }
   return null;
 }
@@ -221,6 +230,12 @@ function medias(vendidos, diasDeVida) {
  */
 function ancora() {
   const tentativas = [
+    // Coluna do meio, logo abaixo de "Novo | +50 vendidos". O olho já
+    // está aqui quando a pessoa avalia o anúncio.
+    '.ui-pdp-header__product-state',
+    '.ui-pdp-header__subtitle',
+    '.ui-pdp-header__container',
+    // Reservas na coluna de compra.
     '.ui-pdp-container__col-right .ui-box-component-pdp__visible--desktop',
     '.ui-pdp-container__col-right',
     '#buybox',
@@ -288,6 +303,23 @@ function html(d) {
   if (conhecido) {
     const s = d.delta_7d;
     const cor = s > 0 ? '#16A34A' : s < 0 ? '#DC2626' : '#8A93A0';
+
+    // Desconto maximo praticado no produto: a distancia entre o anuncio
+    // mais barato e o mais caro. Sai da faixa que ja temos, sem coleta nova.
+    const desconto = (d.preco_max && d.preco_min && d.preco_max > 0)
+      ? (d.preco_max - d.preco_min) / d.preco_max : null;
+
+    // momentum e consistencia ja vinham do banco e o painel ignorava.
+    const ROT_MOM = { subindo: ['Subindo', '#16A34A'], caindo: ['Caindo', '#DC2626'],
+                      novo: ['Recem-chegado', '#7C3AED'], estavel: ['Estavel', '#8A93A0'] };
+    const ROT_CON = { consolidado: ['Consolidado no topo', '#16A34A'],
+                      alternando: ['Alternando', '#B45309'],
+                      esporadico: ['Esporadico', '#8A93A0'] };
+    const etiquetas = [];
+    const em = ROT_MOM[String(d.momentum ?? '').toLowerCase()];
+    if (em) etiquetas.push(`<span class="gr-c-tag" style="color:${em[1]};border-color:${em[1]}33">${em[0]}</span>`);
+    const ec = ROT_CON[String(d.consistencia ?? '').toLowerCase()];
+    if (ec) etiquetas.push(`<span class="gr-c-tag" style="color:${ec[1]};border-color:${ec[1]}33">${ec[0]}</span>`);
     topo = `
       <div class="gr-c-topo">
         <div class="gr-c-pos">${d.posicao ?? '—'}<span>º</span></div>
@@ -300,11 +332,17 @@ function html(d) {
       </div>
       <div class="gr-c-grade">
         <div><span>Concorrentes</span><b>${d.concorrentes ?? '—'}</b></div>
+        <div><span>Vendedores</span><b>${d.vendedores ?? '—'}</b></div>
         <div><span>Preço mediano</span><b>${brl(d.preco_mediano)}</b></div>
+        <div><span>Melhor posição</span><b>${d.melhor_posicao != null ? d.melhor_posicao + 'º' : '—'}</b></div>
         <div><span>Dias no top 10</span><b>${d.dias_top10 ?? 0}/${d.dias_observados ?? 0}</b></div>
         <div><span>Usando Full</span><b>${pct(d.full_share)}</b></div>
+        ${desconto != null ? `<div><span>Desconto máx.</span><b>${pct(desconto)}</b></div>` : ''}
+        ${pg.nota != null ? `<div><span>Avaliação</span><b>${pg.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}${pg.avaliacoes != null ? ` <i style="font-style:normal;font-weight:500;color:#8A93A0">(${pg.avaliacoes.toLocaleString('pt-BR')})</i>` : ''}</b></div>` : ''}
       </div>
-      ${d.preco_min != null ? `<div class="gr-c-faixa">menor ${brl(d.preco_min)} · maior ${brl(d.preco_max)}</div>` : ''}`;
+      ${etiquetas.length ? `<div class="gr-c-tags">${etiquetas.join('')}</div>` : ''}
+      ${d.preco_min != null ? `<div class="gr-c-faixa">menor ${brl(d.preco_min)} · maior ${brl(d.preco_max)}</div>` : ''}
+      ${pg.vendedor || pg.marca ? `<div class="gr-c-faixa">${[pg.vendedor && 'vendedor ' + esc(pg.vendedor), pg.marca && 'marca ' + esc(pg.marca)].filter(Boolean).join(' · ')}</div>` : ''}`;
   } else {
     const cat = categoriaDaPagina();
     topo = `<div class="gr-c-vazio">
@@ -433,7 +471,8 @@ function montarCard() {
     <div class="gr-c-corpo"><div class="gr-c-load">consultando…</div></div>`;
 
   if (onde) {
-    onde.parentNode.insertBefore(caixa, onde);
+    // depois do bloco de estado do produto, nao antes do titulo
+    onde.parentNode.insertBefore(caixa, onde.nextSibling);
     caixa.classList.add('gr-c-inline');
   } else {
     aba = document.createElement('div');
