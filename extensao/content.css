@@ -88,3 +88,18 @@
   font-size:11px; font-weight:600; line-height:1;
   padding:5px 8px; border:1px solid; border-radius:999px; white-space:nowrap;
 }
+
+/* ---- seletor de pasta ---- */
+#gr-card .gr-c-modal{
+  margin-top:12px; border:1px solid #E8EAEF !important; border-radius:10px;
+  padding:12px !important; background:#FAFAFC !important;
+}
+#gr-card .gr-c-mt{ font-size:12.5px; font-weight:600; margin-bottom:9px; }
+#gr-card .gr-c-select, #gr-card .gr-c-input{
+  width:100% !important; padding:9px 10px !important; font-size:13px;
+  border:1px solid #E8EAEF !important; border-radius:8px;
+  background:#fff !important; color:#1A1A1E; font-family:inherit;
+  margin-bottom:8px;
+}
+#gr-card .gr-c-macoes{ display:flex !important; gap:8px; }
+#gr-card .gr-c-macoes .gr-c-btn{ margin-top:0 !important; flex:1; }

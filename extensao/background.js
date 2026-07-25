@@ -62,10 +62,25 @@ async function rpc(nome, corpo) {
   try { return { dados: JSON.parse(txt) }; } catch { return { dados: txt }; }
 }
 
+
+async function rest({ metodo, tabela, query, corpo, prefer }) {
+  const token = await tokenValido();
+  const url = `${URL_BASE}/rest/v1/${tabela}${query ? '?' + query : ''}`;
+  const headers = { apikey: CHAVE, authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  if (prefer) headers.prefer = prefer;
+  const r = await fetch(url, { method: metodo ?? 'GET', headers, body: corpo ? JSON.stringify(corpo) : undefined });
+  const txt = await r.text();
+  try { return { dados: JSON.parse(txt) }; } catch { return { dados: txt }; }
+}
+
 chrome.runtime.onMessage.addListener((msg, _remetente, responder) => {
   if (msg.tipo === 'rpc') {
     rpc(msg.nome, msg.corpo).then(responder);
     return true;   // resposta assíncrona
+  }
+  if (msg.tipo === 'rest') {
+    rest(msg).then(responder);
+    return true;
   }
   if (msg.tipo === 'sessao') {
     sessao().then((s) => responder({ logado: !!s, email: s?.email ?? null }));

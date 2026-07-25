@@ -109,6 +109,9 @@ const rpc = (nome, corpo) => new Promise((ok) => {
   }
 });
 
+const rest = (msg) =>
+  new Promise((ok) => chrome.runtime.sendMessage({ tipo: 'rest', ...msg }, (r) => ok(r ?? null)));
+
 function categoriaDaPagina() {
   // O ML trocou o breadcrumb: era /c/MLB1132, virou /c/brinquedos-e-hobbies.
   // O slug não tem o id, então o link não serve mais. Mas a página ainda
@@ -476,17 +479,97 @@ function ligarBotoes(d) {
   };
 
   const mon = caixa && caixa.querySelector('#gr-mon');
-  if (mon && !d.monitorado) mon.onclick = async () => {
-    mon.disabled = true; mon.textContent = 'adicionando…';
-    const r = await rpc('monitorar_produto', { p_produto: d.produto });
-    if (r && r.dados && r.dados.ok) {
-      d.monitorado = true;
-      mon.className = 'gr-c-btn gr-c-off'; mon.textContent = '✓ No seu monitor';
-    } else {
-      mon.disabled = false;
-      mon.textContent = r && r.dados && r.dados.motivo === 'limite_do_plano'
-        ? `limite de ${r.dados.limite} atingido` : 'não deu';
+  if (mon && !d.monitorado) mon.onclick = () => abrirPastas(d, mon);
+}
+
+// ===== seletor de pasta =====
+const PASTA_PADRAO = 'Meus melhores produtos';
+
+async function listarPastas() {
+  const r = await rest({ metodo: 'GET', tabela: 'tracked_folders',
+    query: 'select=id,name&order=created_at.asc' });
+  return (r && r.dados) || [];
+}
+
+async function criarPasta(nome) {
+  const r = await rest({ metodo: 'POST', tabela: 'tracked_folders',
+    corpo: { name: nome }, prefer: 'return=representation' });
+  const d = r && r.dados;
+  return Array.isArray(d) ? d[0] : d;
+}
+
+function abrirPastas(d, botao) {
+  if (caixa.querySelector('#gr-pastas')) return;
+  const painel = document.createElement('div');
+  painel.id = 'gr-pastas';
+  painel.className = 'gr-c-modal';
+  painel.innerHTML = '<div class="gr-c-mt">Adicionar a...</div>' +
+    '<div class="gr-c-load" style="padding:14px 0">carregando pastas...</div>';
+  botao.parentNode.insertBefore(painel, botao);
+
+  listarPastas().then(async (pastas) => {
+    if (!pastas.length) {
+      const nova = await criarPasta(PASTA_PADRAO);
+      if (nova) pastas = [nova];
     }
+    desenharPastas(painel, pastas, d, botao);
+  });
+}
+
+function desenharPastas(painel, pastas, d, botao) {
+  painel.innerHTML = '<div class="gr-c-mt">Adicionar a...</div>' +
+    (pastas.length
+      ? '<select class="gr-c-select" id="gr-psel">' +
+        pastas.map((p, i) => '<option value="' + esc(p.id) + '"' + (i === 0 ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') +
+        '<option value="__nova">+ Criar nova pasta...</option></select>' +
+        '<input class="gr-c-input" id="gr-pnome" placeholder="Nome da pasta nova" hidden>'
+      : '<div class="gr-c-nota">Nao carregou suas pastas. O produto entra sem pasta.</div>') +
+    '<div class="gr-c-macoes">' +
+    '<button class="gr-c-btn gr-c-sec" id="gr-pcancel">Cancelar</button>' +
+    '<button class="gr-c-btn" id="gr-pok">Adicionar</button></div>';
+
+  const sel = painel.querySelector('#gr-psel');
+  const nome = painel.querySelector('#gr-pnome');
+  if (sel) sel.onchange = () => {
+    const nova = sel.value === '__nova';
+    if (nome) { nome.hidden = !nova; if (nova) nome.focus(); }
+  };
+
+  painel.querySelector('#gr-pcancel').onclick = () => painel.remove();
+
+  painel.querySelector('#gr-pok').onclick = async () => {
+    const ok = painel.querySelector('#gr-pok');
+    ok.disabled = true; ok.textContent = 'salvando...';
+
+    let pastaId = sel ? sel.value : null;
+    if (pastaId === '__nova') {
+      const txt = (nome.value || '').trim();
+      if (!txt) { ok.disabled = false; ok.textContent = 'Adicionar'; nome.focus(); return; }
+      const nv = await criarPasta(txt);
+      pastaId = nv ? nv.id : null;
+    }
+
+    const r = await rpc('monitorar_produto', { p_produto: d.produto });
+    if (!(r && r.dados && r.dados.ok)) {
+      ok.disabled = false;
+      ok.textContent = (r && r.dados && r.dados.motivo === 'limite_do_plano')
+        ? 'limite de ' + r.dados.limite + ' atingido' : 'nao deu';
+      return;
+    }
+
+    let semPasta = false;
+    if (pastaId) {
+      const pt = await rest({ metodo: 'PATCH', tabela: 'tracked_products',
+        query: 'product_id=eq.' + encodeURIComponent(d.produto),
+        corpo: { folder_id: pastaId } });
+      if (!pt || pt.erro) semPasta = true;
+    }
+
+    d.monitorado = true;
+    painel.remove();
+    botao.className = 'gr-c-btn gr-c-off';
+    botao.textContent = semPasta ? 'No seu monitor' : 'Salvo na pasta';
+    botao.onclick = null;
   };
 }
 
