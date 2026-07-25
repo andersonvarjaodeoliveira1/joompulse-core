@@ -867,9 +867,6 @@ function tmon(){
       <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;const mes=(f.vendidos!=null&&d)?f.vendidos/(d/30):null;return (mes!=null&&f.preco!=null)?brl(mes*f.preco):'—';})()}</td>
       <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;return (f.vendidos!=null&&d)?num(Math.round(f.vendidos/(d/30))):'—';})()}</td>
       <td class="n">${m.snapshot&&m.snapshot.vendidos!=null?(m.snapshot.aprox?'~':'')+num(m.snapshot.vendidos):'—'}</td>
-      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;const mes=(f.vendidos!=null&&d)?f.vendidos/(d/30):null;return (mes!=null&&f.preco!=null)?brl(mes*f.preco):'—';})()}</td>
-      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;return (f.vendidos!=null&&d)?num(Math.round(f.vendidos/(d/30))):'—';})()}</td>
-      <td class="n">${m.snapshot&&m.snapshot.vendidos!=null?(m.snapshot.aprox?'~':'')+num(m.snapshot.vendidos):'—'}</td>
       <td class="n">${num(m.concorrentes)}</td>
       <td class="n">${m.alertas_novos>0?`<span class="chip p">${m.alertas_novos}</span>`:'—'}</td>
       <td class="n"><button class="btn g mini" data-rm="${esc(m.product_id)}">Remover</button></td>
