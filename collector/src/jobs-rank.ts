@@ -152,7 +152,7 @@ export async function coletarRanking(
 // ---------------------------------------------------------------------
 export async function sincronizarProdutos(
   ml: MlClient,
-  opts: { lote?: number; dias?: number; comFicha?: boolean } = {},
+  opts: { lote?: number; dias?: number; comFicha?: boolean; concorrencia?: number } = {},
 ) {
   const inicio = Date.now();
   const prods = await rank.produtosParaSincronizar(opts.lote ?? 300, opts.dias ?? 2);
@@ -165,8 +165,9 @@ export async function sincronizarProdutos(
 
   let anuncios = 0;
   let snapshots = 0;
+  let feitos = 0;
 
-  for (const [i, p] of prods.entries()) {
+  async function processar(p: { id: string; category_id: string | null }) {
     try {
       // Ficha do produto: nome, imagem, marca. Vale só na primeira vez.
       if (opts.comFicha !== false) {
@@ -183,14 +184,31 @@ export async function sincronizarProdutos(
         anuncios += res.anuncios;
         snapshots += res.snapshots;
       }
-
-      if (i > 0 && i % 100 === 0) log(`  ${i}/${prods.length}`);
     } catch (e) {
       if (!(e instanceof NotFoundError)) {
         log(`  produto ${p.id}: ${e instanceof Error ? e.message : e}`);
       }
     }
+    feitos++;
+    if (feitos % 100 === 0) log(`  ${feitos}/${prods.length}`);
   }
+
+  // Um produto = até 2 chamadas sequenciais (ficha + concorrentes). Um
+  // `for` simples fica ocioso esperando o round-trip de rede entre uma
+  // chamada e outra em vez de saturar os 8 req/s do rate limiter — é
+  // por isso que 25 mil produtos levavam ~17h em vez de ~2h. O
+  // TokenBucket de MlClient é compartilhado entre as lanes e continua
+  // sendo o único limitador real de requisições/segundo; mais lanes só
+  // evita ficar parado esperando, não estoura o limite.
+  const lanes = Math.max(1, opts.concorrencia ?? 8);
+  let cursor = 0;
+  async function lane() {
+    while (cursor < prods.length) {
+      const p = prods[cursor++];
+      await processar(p);
+    }
+  }
+  await Promise.all(Array.from({ length: lanes }, lane));
 
   await db.logRun({
     jobType: 'sincronizar_produtos',
@@ -341,7 +359,10 @@ export async function colherCalibracao(ml: MlClient) {
 export async function rodadaDiaria(ml: MlClient) {
   await db.ensurePartitions();
   await coletarRanking(ml, { lote: Number(process.env.RANK_BATCH ?? 2000) });
-  await sincronizarProdutos(ml, { lote: Number(process.env.PRODUCT_BATCH ?? 1000) });
+  await sincronizarProdutos(ml, {
+    lote: Number(process.env.PRODUCT_BATCH ?? 1000),
+    concorrencia: Number(process.env.PRODUCT_CONCURRENCY ?? 8),
+  });
   await sincronizarItens(ml, { lote: Number(process.env.ITEM_BATCH ?? 500) });
 
   log('recalculando métricas...');

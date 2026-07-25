@@ -171,7 +171,10 @@ async function main() {
         break;
 
       case 'produtos':
-        await sincronizarProdutos(client(), { lote: Number(process.argv[3] ?? 1000) });
+        await sincronizarProdutos(client(), {
+          lote: Number(process.argv[3] ?? 1000),
+          concorrencia: Number(process.argv[4] ?? 8),
+        });
         break;
 
       case 'itens':
