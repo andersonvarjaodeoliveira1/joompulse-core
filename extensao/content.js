@@ -368,7 +368,12 @@ function html(d) {
         ? 'Conhecemos este anúncio, mas o produto nunca apareceu nos destaques.'
         : 'Fora da nossa cobertura — 37% das categorias do ML têm ranking público.'}</p>
       <button class="gr-c-btn gr-c-sec" id="gr-pedir">Pedir coleta deste produto</button>
-      ${cat ? `<span class="gr-c-nota">categoria detectada: ${esc(cat)}</span>` : ''}</div>`;
+      <span class="gr-c-nota">A coleta roda uma vez por dia. Se a categoria tiver
+        ranking publico, os dados aparecem aqui em ate 24h — quanto mais gente
+        pedir o mesmo produto, antes ele entra na fila.</span>
+      ${cat ? `<span class="gr-c-nota">categoria detectada: ${esc(cat)}</span>`
+            : `<span class="gr-c-nota">nao conseguimos ler a categoria desta pagina —
+                 a coleta pode demorar mais</span>`}</div>`;
   }
 
   // Insights vindos da própria página — funcionam mesmo sem o produto
@@ -445,8 +450,20 @@ function ligarBotoes(d) {
     pedir.disabled = true; pedir.textContent = 'enviando…';
     const r = await rpc('solicitar_coleta',
       { p_mlb: alvo.id, p_categoria: categoriaDaPagina(), p_url: location.href });
-    pedir.textContent = r && r.dados && r.dados.ok
-      ? `✓ Pedido registrado (${r.dados.pedidos})` : 'não deu';
+    if (r && r.dados && r.dados.ok) {
+      const n = r.dados.pedidos;
+      pedir.textContent = n > 1 ? `✓ Registrado — ${n} pessoas pediram` : '✓ Pedido registrado';
+      pedir.className = 'gr-c-btn gr-c-off';
+      const nota = pedir.nextElementSibling;
+      if (nota && nota.classList.contains('gr-c-nota')) {
+        nota.textContent = n > 1
+          ? `${n} pedidos deste produto — ele sobe na fila da proxima coleta.`
+          : 'Entrou na fila. Volte amanha para ver se a categoria tem ranking publico.';
+      }
+    } else {
+      pedir.disabled = false;
+      pedir.textContent = 'nao deu — tente de novo';
+    }
   };
 
   const ins = caixa && caixa.querySelector('#gr-ins');
@@ -488,16 +505,44 @@ function montarCard() {
     <div class="gr-c-corpo"><div class="gr-c-load">consultando…</div></div>`;
 
   if (onde) {
-    // depois do bloco de estado do produto, nao antes do titulo
-    onde.parentNode.insertBefore(caixa, onde.nextSibling);
-    caixa.classList.add('gr-c-inline');
+    encaixar(onde);
   } else {
     aba = document.createElement('div');
     aba.id = 'gr-flutua';
     aba.appendChild(caixa);
     document.body.appendChild(aba);
     caixa.classList.add('gr-c-flutua');
+    esperarAncora();
   }
+}
+
+/** Move o card para dentro da pagina, depois do bloco de estado do produto. */
+function encaixar(onde) {
+  onde.parentNode.insertBefore(caixa, onde.nextSibling);
+  caixa.classList.remove('gr-c-flutua');
+  caixa.classList.add('gr-c-inline');
+  if (aba) { aba.remove(); aba = null; }
+}
+
+/**
+ * O header do ML e React: aos 600ms da primeira tentativa ele quase nunca
+ * terminou de desenhar. Antes o card desistia na primeira falha e ficava
+ * flutuando para sempre. Agora ele nasce flutuante e migra para o lugar
+ * certo assim que a ancora aparece.
+ *
+ * Para sozinho depois de 12s — se nao apareceu ate la, a pagina nao tem
+ * ponto de encaixe e o flutuante e mesmo a resposta certa.
+ */
+function esperarAncora() {
+  const inicio = Date.now();
+  const t = setInterval(() => {
+    if (!caixa || !caixa.isConnected || Date.now() - inicio > 12000) {
+      clearInterval(t);
+      return;
+    }
+    const onde = ancora();
+    if (onde) { clearInterval(t); encaixar(onde); }
+  }, 400);
 }
 
 // =====================================================================
