@@ -144,7 +144,7 @@ function categoriaDaPagina() {
 function lerPagina() {
   const txt = document.body.innerText || '';
   const o = { vendidos: null, aprox: false, preco: null, criado: null, titulo: null,
-              nota: null, avaliacoes: null, vendedor: null, marca: null, imagem: null };
+              nota: null, avaliacoes: null, vendedor: null, marca: null, imagem: null, diasNoAr: null };
 
   // "+100 vendidos" | "100 vendidos" | "+1mil vendidos"
   const mv = txt.match(/(\+)?\s*([\d.]+)\s*(mil)?\s*vendid/i);
@@ -216,8 +216,37 @@ function lerPagina() {
     || document.querySelector('.ui-pdp-gallery__figure img, .ui-pdp-image');
   if (img) o.imagem = img.getAttribute('content') || img.getAttribute('src') || null;
 
-  const mCriado = txt.match(/(?:criado|publicado)\s+em\s+([^\n]{5,30})/i);
-  if (mCriado) o.criado = mCriado[1].trim();
+  // O ML escreve a data de varias formas. "Inicio dos anuncios" e a que
+  // aparece na ficha tecnica; as outras vem de layouts mais antigos.
+  const padroes = [
+    /In[ií]cio dos an[uú]ncios\s*[:\n]\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4})/i,
+    /(?:criado|publicado)\s+em\s*[:\n]?\s*([^\n]{5,30})/i,
+    /An[uú]ncio criado em\s*[:\n]\s*([^\n]{5,30})/i,
+  ];
+  for (const re of padroes) {
+    const m = txt.match(re);
+    if (m) { o.criado = m[1].trim(); break; }
+  }
+
+  // Quantos dias o anuncio esta no ar. Sem isso a media de vendas usa o
+  // tempo da NOSSA coleta como base, que e um piso e subestima muito.
+  if (o.criado) {
+    const br = o.criado.match(/([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})/);
+    let dt = null;
+    if (br) dt = new Date(+br[3], +br[2] - 1, +br[1]);
+    else {
+      const MES = { jan:0, fev:1, mar:2, abr:3, mai:4, jun:5,
+                    jul:6, ago:7, set:8, out:9, nov:10, dez:11 };
+      const ex = o.criado.match(/([0-9]{1,2})\s*de\s*([a-zç]{3})[a-zç]*\.?\s*de\s*([0-9]{4})/i);
+      if (ex && MES[ex[2].toLowerCase()] !== undefined) {
+        dt = new Date(+ex[3], MES[ex[2].toLowerCase()], +ex[1]);
+      }
+    }
+    if (dt && !isNaN(dt)) {
+      const d = Math.round((Date.now() - dt.getTime()) / 86400000);
+      if (d > 0 && d < 20000) o.diasNoAr = d;
+    }
+  }
 
   return o;
 }
@@ -513,6 +542,17 @@ async function criarPasta(nome) {
   return Array.isArray(d) ? d[0] : d;
 }
 
+function fotoDaPagina() {
+  const pg = lerPagina();
+  return {
+    titulo: pg.titulo, imagem: pg.imagem, preco: pg.preco,
+    vendidos: pg.vendidos, aprox: pg.aprox, nota: pg.nota,
+    avaliacoes: pg.avaliacoes, vendedor: pg.vendedor, marca: pg.marca,
+    criado: pg.criado, dias_no_ar: pg.diasNoAr,
+    lido_em: new Date().toISOString(),
+  };
+}
+
 function abrirPastas(d, botao) {
   if (caixa.querySelector('#gr-pastas')) return;
   const painel = document.createElement('div');
@@ -576,8 +616,12 @@ function desenharPastas(painel, pastas, d, botao) {
     if (pastaId) {
       const pt = await rest({ metodo: 'PATCH', tabela: 'tracked_products',
         query: 'product_id=eq.' + encodeURIComponent(d.produto),
-        corpo: { folder_id: pastaId } });
+        corpo: { folder_id: pastaId, snapshot: fotoDaPagina() } });
       if (!pt || pt.erro) semPasta = true;
+    } else {
+      await rest({ metodo: 'PATCH', tabela: 'tracked_products',
+        query: 'product_id=eq.' + encodeURIComponent(d.produto),
+        corpo: { snapshot: fotoDaPagina() } });
     }
 
     d.monitorado = true;

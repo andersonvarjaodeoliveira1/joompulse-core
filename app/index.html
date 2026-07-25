@@ -845,10 +845,14 @@ function tmon(){
     Abra um produto na busca e clique em Monitorar.</div>`;
   return `<table><thead><tr><th>Produto</th><th class="n">Posição</th>
     <th class="n">Desde que entrou</th><th class="n">Preço</th><th class="n">Variação</th>
+    <th class="n">Receita media</th><th class="n">Vendas/mes</th><th class="n">Total vendas</th>
     <th class="n">Concorrentes</th><th class="n">Alertas</th><th></th></tr></thead><tbody>${
     S.monitorados.map(m=>`<tr>
-      <td style="max-width:290px"><div class="nm">${esc(m.nome ?? m.product_id)}</div>
-        <div class="sb">${esc(m.categoria ?? '')}</div></td>
+      <td style="max-width:290px"><div style="display:flex;gap:10px;align-items:center">
+        ${m.snapshot&&m.snapshot.imagem?`<img src="${esc(m.snapshot.imagem)}" alt="" width="40" height="40"
+          style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
+        <div style="min-width:0"><div class="nm">${esc(m.nome ?? m.product_id)}</div>
+        <div class="sb">${esc(m.categoria ?? '')}</div></div></div></td>
       <td class="n"><span class="pos">${m.pos_atual ?? '—'}</span></td>
       <td class="n">${m.delta_desde_inicio!=null
         ? `<span class="mv ${m.delta_desde_inicio>0?'u':m.delta_desde_inicio<0?'d':'f'}">${
@@ -860,6 +864,12 @@ function tmon(){
       <td class="n">${m.variacao_preco!=null
         ? `<span class="mv ${m.variacao_preco<0?'u':m.variacao_preco>0?'d':'f'}">${
             m.variacao_preco>0?'+':''}${pct(m.variacao_preco)}</span>` : '—'}</td>
+      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;const mes=(f.vendidos!=null&&d)?f.vendidos/(d/30):null;return (mes!=null&&f.preco!=null)?brl(mes*f.preco):'—';})()}</td>
+      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;return (f.vendidos!=null&&d)?num(Math.round(f.vendidos/(d/30))):'—';})()}</td>
+      <td class="n">${m.snapshot&&m.snapshot.vendidos!=null?(m.snapshot.aprox?'~':'')+num(m.snapshot.vendidos):'—'}</td>
+      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;const mes=(f.vendidos!=null&&d)?f.vendidos/(d/30):null;return (mes!=null&&f.preco!=null)?brl(mes*f.preco):'—';})()}</td>
+      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;return (f.vendidos!=null&&d)?num(Math.round(f.vendidos/(d/30))):'—';})()}</td>
+      <td class="n">${m.snapshot&&m.snapshot.vendidos!=null?(m.snapshot.aprox?'~':'')+num(m.snapshot.vendidos):'—'}</td>
       <td class="n">${num(m.concorrentes)}</td>
       <td class="n">${m.alertas_novos>0?`<span class="chip p">${m.alertas_novos}</span>`:'—'}</td>
       <td class="n"><button class="btn g mini" data-rm="${esc(m.product_id)}">Remover</button></td>
