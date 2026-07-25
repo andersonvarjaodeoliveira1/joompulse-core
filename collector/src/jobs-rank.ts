@@ -209,11 +209,15 @@ export async function sincronizarProdutos(
 /**
  * Sincroniza produtos de catálogo tipo ITEM — destaque cujo id É o
  * anúncio (não um /products/{id}). sincronizarProdutos pula esse tipo
- * de propósito (ficha e productItems dão 404 nele); sem este job eles
- * ficam pra sempre sem nome nem foto na busca.
+ * de propósito (ficha e productItems dão 404 nele).
  *
- * /items?ids= responde pra anúncio de terceiro mesmo quando /items/{id}
- * sozinho dá 403 — é o mesmo caminho usado em pedidos.ts.
+ * TESTADO AO VIVO em 25/07/2026: /items?ids= (multiget) dá 403
+ * access_denied pra anúncio de terceiro, igual /items/{id} sozinho —
+ * não é o desvio que parecia ser. Na prática, hoje, este job roda,
+ * tenta, não acha nada e marca como tentado (pra não bater na API todo
+ * dia à toa). Fica registrado porque é barato e esse endpoint já mudou
+ * de comportamento sem aviso antes — se abrir de novo, começa a
+ * preencher nome/foto sozinho, sem precisar de outro deploy.
  */
 export async function sincronizarItens(ml: MlClient, opts: { lote?: number } = {}) {
   const inicio = Date.now();

@@ -115,11 +115,16 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
     log('  a extensão não conseguiu ler o rastro de navegação da página');
   }
 
-  // Passo 2: busca o(s) anúncio(s) pedido(s) diretamente por /items?ids=
-  // (multiget), que responde para anúncio de terceiro mesmo quando
-  // /items/{id} sozinho dá 403. É isso que garante que "Coletado" nunca
-  // minta: só marca atendido o pedido cujo MLB realmente voltou aqui —
-  // em vez de assumir isso porque a categoria dele tinha ranking.
+  // Passo 2: tenta buscar o(s) anúncio(s) pedido(s) diretamente por
+  // /items?ids= (multiget). TESTADO AO VIVO em 25/07/2026: multiget dá
+  // 403 access_denied pra anúncio de terceiro, igual /items/{id}
+  // sozinho — a suposição de que multiget escapava da restrição (README
+  // antigo, e um doc de repasse) estava errada. Mantido mesmo assim:
+  // é barato (poucas dezenas de chamadas) e sem custo se o ML reabrir
+  // isso sem aviso, o que já aconteceu outras vezes neste projeto. Na
+  // prática, hoje, quase todo pedido de terceiro cai em 'sem_item' — o
+  // que é honesto, não um bug: não dá pra confirmar coleta de um
+  // anúncio específico de terceiro por nenhum caminho conhecido agora.
   let atendidos = 0;
   let semItem = 0;
 
@@ -148,9 +153,9 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
         atendidos = idsAtendidos.length;
       }
       if (idsSemItem.length) {
-        // A categoria pode até ter ranking, mas esse anúncio específico
-        // não voltou no multiget: fora do ar, MLBU sem par consultável,
-        // ou simplesmente fora do que o ML aceita devolver avulso.
+        // Na prática hoje isso é quase sempre 403 access_denied — o ML
+        // bloqueia detalhe de anúncio de terceiro por completo, não só
+        // pra alguns formatos. Ver comentário do passo 2 acima.
         await sql`
           update collect_requests set status = 'sem_item', atendido_em = now()
            where id = any(${idsSemItem}::bigint[])

@@ -675,8 +675,8 @@ function tprod(){
         ${S.selecao.has(p.product_id)?'checked':''} ${i>=livres?'disabled':''}></td>
       <td style="max-width:300px"><div class="prow">
         ${p.picture?`<img class="thumb" src="${esc(p.picture)}" alt="" loading="lazy">`:`<span class="thumb"></span>`}
-        <div><div class="nm">${esc(p.name ?? (p.tipo==='USER_PRODUCT'
-          ? 'Variação de vendedor — sem ficha pública no Mercado Livre'
+        <div><div class="nm">${esc(p.name ?? (p.tipo!=='PRODUCT'
+          ? 'Sem ficha pública — Mercado Livre bloqueia esse dado para terceiros'
           : p.product_id))}</div>
           <div class="sb">${esc(p.product_id)} · ${esc(p.category_name ?? '')}</div></div>
       </div></td>
@@ -867,9 +867,10 @@ function tfila(){
     <b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
     gente pediu. Categoria sem ranking publico do Mercado Livre fica marcada como tal e nao e
     tentada de novo — cerca de 63% das categorias estao nessa situacao.<br><br>
-    <b>"Fora do alcance da coleta"</b> significa que a categoria ate tem ranking, mas esse
-    anuncio especifico nao voltou quando fomos busca-lo direto — pode ter saido do ar ou ser
-    um formato que o Mercado Livre nao devolve avulso.</div>`;
+    <b>"Fora do alcance da coleta"</b> significa que tentamos buscar esse anuncio especifico
+    direto no Mercado Livre e ele nao voltou — hoje o ML bloqueia esse tipo de consulta pra
+    anuncio de terceiro. So aparece na busca de novo se ele entrar no top 20 de alguma
+    categoria por conta propria.</div>`;
 }
 function tmon(){
   if (!S.monitorados.length) return `<div class="none"><b>Nada sendo acompanhado</b>

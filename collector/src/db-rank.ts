@@ -180,13 +180,16 @@ export async function upsertProductItems(
 }
 
 // ---------------------------------------------------------------------
-// ANÚNCIO PEDIDO DIRETAMENTE — atende pedido da extensão sem depender
-// de sorte no ranking.
+// ANÚNCIO PEDIDO DIRETAMENTE — tentativa de atender pedido da extensão
+// sem depender de sorte no ranking.
 //
-// /items/{id} de terceiro dá 403, mas /items?ids= (multiget) responde.
-// É a única forma de confirmar que UM anúncio específico existe sem
-// esperar ele aparecer nos destaques de uma categoria — o que pode
-// nunca acontecer, já que highlights só traz o top 20.
+// A ideia era usar /items?ids= (multiget) pra escapar do 403 que
+// /items/{id} sozinho dá em anúncio de terceiro. Testado ao vivo em
+// 25/07/2026: multiget dá 403 igualzinho. Ou seja, hoje isso só
+// preenche dado quando o item pedido por acaso é o próprio dono do
+// token (calibração) ou volta a funcionar se o ML mudar de novo — o
+// que já aconteceu nesse endpoint antes. Grava o que vier; hoje isso
+// costuma ser nada.
 // ---------------------------------------------------------------------
 export async function upsertItensDiretos(itens: MlItem[]) {
   if (!itens.length) return 0;
