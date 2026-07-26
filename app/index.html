@@ -173,6 +173,13 @@
   .cattag{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
   .cattag input{flex:1;min-width:120px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px}
   .hint{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+  .exgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+  .exgrid img,.exph{width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;background:var(--bg-2)}
+  .exph{display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:11px;border:1px dashed var(--line)}
+  .exvideo{width:100%;aspect-ratio:16/9;border-radius:10px;margin-bottom:10px;background:#111;position:relative;overflow:hidden}
+  .exvideo video,.exvideo img{width:100%;height:100%;object-fit:cover;display:block}
+  .exvideo .exph{border-radius:10px;background:#1A1A1E;color:#8A93A0;border:0}
+  .excap{font-size:12px;color:var(--ink-3);text-align:center;margin-bottom:14px}
   .neg{color:var(--dn)}
 
   .modo{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:18px}
@@ -1360,6 +1367,30 @@ async function aplicarLinkCalc(){
 // verdade, com a quota real do plano (feature ai_content, já existe em
 // plans.limits) e um jeito de anexar produto de verdade.
 // ---------------------------------------------------------------------
+// Preencha aqui quando tiver links de exemplo com direito de uso (foto
+// própria, estoque licenciado, ou reaproveitar foto real já coletada).
+// Nunca aponte pra asset hospedado pela concorrente — ver conversa.
+const EXEMPLO_MIDIA = {
+  video: null,       // ex.: 'https://.../seu-video-exemplo.mp4'
+  imagens: [],        // ex.: ['https://.../1.jpg', ...] até 9
+};
+
+function blocoExemploVideo(){
+  return `<div class="exvideo">${EXEMPLO_MIDIA.video
+    ? `<video src="${esc(EXEMPLO_MIDIA.video)}" controls preload="metadata"></video>`
+    : `<div class="exph">sem exemplo ainda</div>`}</div>
+  <div class="excap">Exemplo de geração. Clique para visualizar.</div>`;
+}
+function blocoExemploImagens(){
+  const imgs = EXEMPLO_MIDIA.imagens.slice(0, 9);
+  const vazios = Math.max(0, 9 - imgs.length);
+  return `<div class="exgrid">
+    ${imgs.map(u => `<img src="${esc(u)}" alt="">`).join('')}
+    ${Array.from({length: vazios}, () => `<div class="exph">sem exemplo</div>`).join('')}
+  </div>
+  <div class="excap">Exemplo de geração. Clique para visualizar.</div>`;
+}
+
 V.clipes = () => S.clipesVista ? vistaGerarConteudo(S.clipesVista) : `<h1 class="pg">Clipes e imagens</h1>
   <p class="sub">Vídeo e fotos de produto gerados por IA, direto de uma foto que você já tem.</p>
   <div class="cwarn" style="margin-bottom:18px">⚠️ <b>A geração em si ainda não está ligada.</b> Falta escolher e
@@ -1367,15 +1398,17 @@ V.clipes = () => S.clipesVista ? vistaGerarConteudo(S.clipesVista) : `<h1 class=
     já funciona de verdade.</div>
   <div class="g2" style="grid-template-columns:1fr 1fr">
     <div class="card cbox">
-      <div class="ct">Vídeos realistas sem custos de produção</div>
-      <p class="sub" style="margin:2px 0 14px">Gere um vídeo do zero com narração que mostre um produto em uso
+      <div class="ct" style="text-align:center;margin-bottom:6px">Vídeos realistas sem custos de produção</div>
+      <p class="sub" style="margin:2px 0 14px;text-align:center">Gere um vídeo do zero com narração que mostre um produto em uso
         e ajude a aumentar sua conversão.</p>
+      ${blocoExemploVideo()}
       <button class="btn" data-clv="video" style="width:100%">✨ Gerar clipes</button>
     </div>
     <div class="card cbox">
-      <div class="ct">Imagens para destacar seus produtos</div>
-      <p class="sub" style="margin:2px 0 14px">Gere imagens de alta qualidade que mostram seu produto em
+      <div class="ct" style="text-align:center;margin-bottom:6px">Imagens para destacar seus produtos</div>
+      <p class="sub" style="margin:2px 0 14px;text-align:center">Gere imagens de alta qualidade que mostram seu produto em
         cenários de uso reais e ajudam o anúncio a se destacar nas buscas.</p>
+      ${blocoExemploImagens()}
       <button class="btn" data-clv="imagens" style="width:100%">✨ Gerar imagens</button>
     </div>
   </div>`;
