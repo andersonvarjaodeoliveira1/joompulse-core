@@ -165,6 +165,14 @@
   .preset button:hover{opacity:1}
   .cdet .row span{font-size:13px} .cdet .grp{font-size:11.5px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 2px}
   .cdet .grp:first-child{margin-top:2px}
+  .radios{display:flex;gap:18px;padding:9px 0 3px}
+  .radios label{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink);cursor:pointer;font-weight:400}
+  .radios input{accent-color:var(--brand);width:16px;height:16px}
+  .roval{padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg-2);color:var(--ink-2);font-size:13.5px;font-variant-numeric:tabular-nums}
+  .crow3{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+  .cattag{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .cattag input{flex:1;min-width:120px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+  .hint{font-size:11.5px;color:var(--ink-3);margin-top:4px}
   .neg{color:var(--dn)}
 
   .modo{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:18px}
@@ -303,6 +311,7 @@
     .shell{grid-template-columns:1fr}
     .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
     .g2{grid-template-columns:1fr} .top{flex-wrap:wrap;gap:9px;padding:10px 16px} .wrap{padding:16px}
+    .crow3{grid-template-columns:1fr 1fr}
   }
 </style>
 
@@ -385,7 +394,7 @@ const $ = s => document.querySelector(s);
 const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
-            catAberto:false, catArvore:{}, catAbertos:new Set(),
+            catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1049,15 +1058,26 @@ V.calc = () => {
       </div>
 
       <details class="csec" open>
-        <summary>Comissão <span class="sub2" id="pc_com_resumo"></span></summary>
+        <summary>Comissões <span class="sub2" id="pc_com_resumo"></span></summary>
         <div class="cbody">
-          <div class="crow">
-            <div class="cfld"><label>Tipo de anúncio</label>
-              <select id="pc_tipo"><option value="classico">Clássico</option><option value="premium">Premium</option></select></div>
-            <div class="cfld"><label>Comissão, % <i>(confira na Central do Vendedor)</i></label>
-              <input type="number" id="pc_comissao" value="${COMISSAO_PADRAO.classico}" step="0.1"></div>
+          <div class="cattag">
+            <span style="font-size:13px;color:var(--ink-2)">Categorias:</span>
+            ${S.calcCats.map((c,i)=>`<span class="preset">${esc(c)}<button data-catdel="${i}">×</button></span>`).join('')}
+            <input id="pc_cat_add" placeholder="ex: Eletrônicos (só anotação — não muda a %)">
+            <button class="btn" id="pc_cat_addbtn" style="padding:6px 12px;font-size:12.5px">Add</button>
           </div>
-          <div class="cfld chk" style="padding-top:2px">
+          <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px">Tipo de anúncio</label>
+          <div class="radios">
+            <label><input type="radio" name="pc_tipo" value="classico" checked>Clássico</label>
+            <label><input type="radio" name="pc_tipo" value="premium">Premium</label>
+          </div>
+          <div class="crow">
+            <div class="cfld"><label>Comissão, %</label>
+              <input type="number" id="pc_comissao" value="${COMISSAO_PADRAO.classico}" step="0.1"></div>
+            <div class="cfld"><label>Comissão em R$</label><div class="roval" id="pc_comissao_rs">R$ 0,00</div></div>
+          </div>
+          <div class="hint">É aplicada uma média de comissão (11%–19% conforme categoria) — confira o valor exato na Central do Vendedor.</div>
+          <div class="cfld chk" style="padding-top:10px">
             <input type="checkbox" id="pc_taxafixa" checked>
             <label for="pc_taxafixa" style="font-size:12.5px">Cobrar taxa fixa em vendas abaixo de R$79 (<input type="number" id="pc_taxafixa_v" value="6.50" step="0.01" style="width:60px;padding:3px 5px;border:1px solid var(--line);border-radius:6px">)</label>
           </div>
@@ -1067,31 +1087,47 @@ V.calc = () => {
       <details class="csec">
         <summary>Envio <span class="sub2" id="pc_env_resumo"></span></summary>
         <div class="cbody">
-          <div class="crow">
-            <div class="cfld"><label>Peso, g</label><input type="number" id="pc_peso" value="500" step="1"></div>
-            <div class="cfld"><label>Reputação do vendedor</label>
-              <select id="pc_reput"><option value="verde">Verde / MercadoLíder</option><option value="amarelo">Amarela</option><option value="vermelho">Vermelha</option><option value="nova">Sem reputação</option></select></div>
+          <div class="cfld" style="margin-bottom:10px"><label>Reputação do vendedor</label>
+            <select id="pc_reput"><option value="verde">Verde / MercadoLíder</option><option value="amarelo">Amarela</option><option value="vermelho">Vermelha</option><option value="nova">Sem reputação</option></select></div>
+          <div class="crow3">
+            <div class="cfld"><label>Peso, kg</label><input type="number" id="pc_peso" value="0.5" step="0.01"></div>
+            <div class="cfld"><label>Altura, cm</label><input type="number" id="pc_altura" step="0.1" placeholder="—"></div>
+            <div class="cfld"><label>Largura, cm</label><input type="number" id="pc_largura" step="0.1" placeholder="—"></div>
+            <div class="cfld"><label>Comprimento, cm</label><input type="number" id="pc_comprimento" step="0.1" placeholder="—"></div>
           </div>
-          <div class="crow">
-            <div class="cfld chk"><input type="checkbox" id="pc_gratis" checked><label for="pc_gratis">Ofereço frete grátis</label></div>
-            <div class="cfld"><label>Custo de envio pra mim, R$ <i>(veja no simulador de frete do ML)</i></label>
-              <input type="number" id="pc_frete" value="0" step="0.01"></div>
+          <div class="hint" id="pc_cubagem_hint" style="margin:-4px 0 10px"></div>
+          <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px">Frete grátis</label>
+          <div class="radios">
+            <label><input type="radio" name="pc_gratis" value="sim" checked>Sim</label>
+            <label><input type="radio" name="pc_gratis" value="nao">Não</label>
           </div>
+          <div class="cfld" style="margin-top:6px"><label>Custo de envio pra mim, R$</label>
+            <input type="number" id="pc_frete" value="0" step="0.01"></div>
+          <div class="hint">Preço aproximado pra você bancar o frete grátis — confira no simulador de frete do Mercado Livre, a tabela deles varia por peso, preço e reputação.</div>
         </div>
       </details>
 
       <details class="csec">
         <summary>Impostos <span class="sub2" id="pc_imp_resumo"></span></summary>
         <div class="cbody">
-          <div class="crow">
-            <div class="cfld"><label>Regime fiscal</label>
-              <select id="pc_regime">
-                <option value="simples">Simples Nacional</option>
-                <option value="mei">MEI</option>
-                <option value="presumido">Lucro Presumido</option>
-                <option value="nenhum">Nenhum / pessoa física</option>
+          <div class="cfld" style="margin-bottom:10px"><label>Regime fiscal</label>
+            <select id="pc_regime">
+              <option value="simples">Simples Nacional</option>
+              <option value="mei">MEI</option>
+              <option value="presumido">Lucro Presumido</option>
+              <option value="nenhum">Nenhum / pessoa física</option>
+            </select></div>
+          <div class="crow" id="pc_receita_wrap">
+            <div class="cfld"><label>Receita bruta anual (faixa)</label>
+              <select id="pc_faixa">
+                <option value="180000">Até R$ 180.000,00</option>
+                <option value="360000">R$ 180.000,01 – R$ 360.000,00</option>
+                <option value="720000">R$ 360.000,01 – R$ 720.000,00</option>
+                <option value="1800000">R$ 720.000,01 – R$ 1.800.000,00</option>
+                <option value="3600000">R$ 1.800.000,01 – R$ 3.600.000,00</option>
+                <option value="4800000">R$ 3.600.000,01 – R$ 4.800.000,00</option>
               </select></div>
-            <div class="cfld" id="pc_receita_wrap"><label>Receita bruta últimos 12 meses, R$</label>
+            <div class="cfld"><label>Receita bruta, últimos 12 meses, R$</label>
               <input type="number" id="pc_receita" value="120000" step="1000"></div>
           </div>
           <div class="cfld"><label>Impostos, % <i>(Simples calcula sozinho pelo Anexo I; outros regimes, digite)</i></label>
@@ -1125,13 +1161,14 @@ function calc(){
   const g = id => parseFloat(document.getElementById(id)?.value) || 0;
   const gi = id => document.getElementById(id)?.value;
   const checked = id => !!document.getElementById(id)?.checked;
+  const radio = (name, fallback) => document.querySelector(`input[name=${name}]:checked`)?.value ?? fallback;
 
   const venda = g('pc_venda'), compra = g('pc_compra'), qtd = Math.max(0, g('pc_vendas'));
-  const tipo = gi('pc_tipo') || 'classico';
+  const tipo = radio('pc_tipo', 'classico');
   let comissaoPct = g('pc_comissao');
   const taxaFixa = checked('pc_taxafixa') && venda > 0 && venda < 79 ? g('pc_taxafixa_v') : 0;
 
-  const gratis = checked('pc_gratis');
+  const gratis = radio('pc_gratis', 'sim') === 'sim';
   const freteUn = gratis ? g('pc_frete') : 0;
 
   const regime = gi('pc_regime') || 'nenhum';
@@ -1153,7 +1190,23 @@ function calc(){
   const re = $('#pc_env_resumo'); if (re) re.textContent = gratis ? brl(freteUn) : 'frete pago pelo comprador';
   const ri = $('#pc_imp_resumo'); if (ri) ri.textContent = `${impostoPct.toFixed(2)}%`;
   const rx = $('#pc_extra_resumo'); if (rx) rx.textContent = extra ? brl(extra) : 'nenhum';
+  const rvR = $('#pc_comissao_rs'); if (rvR) rvR.textContent = brl(comissaoR);
   const wrapReceita = $('#pc_receita_wrap'); if (wrapReceita) wrapReceita.style.display = regime === 'simples' ? '' : 'none';
+
+  // peso cúbico: fórmula padrão de transportadoras (A×L×C em cm ÷ 6000 = kg).
+  // Informativo — não muda o custo de envio, que continua editável.
+  const cub = $('#pc_cubagem_hint');
+  if (cub) {
+    const alt = g('pc_altura'), larg = g('pc_largura'), comp = g('pc_comprimento'), peso = g('pc_peso');
+    if (alt && larg && comp) {
+      const pesoCubico = (alt * larg * comp) / 6000;
+      const considerado = Math.max(peso, pesoCubico);
+      cub.textContent = `Peso cúbico: ${pesoCubico.toFixed(2)}kg — peso considerado pela transportadora: ${considerado.toFixed(2)}kg`;
+    } else {
+      cub.textContent = '';
+    }
+  }
+
   const impostoInput = $('#pc_imposto');
   if (impostoInput) {
     impostoInput.disabled = regime === 'simples';
@@ -1194,18 +1247,35 @@ function calc(){
     </details>`;
 }
 
+const CALC_IDS = ['pc_venda','pc_compra','pc_vendas','pc_comissao','pc_taxafixa','pc_taxafixa_v',
+  'pc_peso','pc_altura','pc_largura','pc_comprimento','pc_reput','pc_frete',
+  'pc_regime','pc_receita','pc_imposto','pc_extra'];
+const CALC_RADIOS = ['pc_tipo','pc_gratis'];
+
 function aplicarPresetCalc(p){
-  const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) { el.type==='checkbox' ? el.checked = v : el.value = v; } };
-  Object.entries(p.campos).forEach(([id, v]) => set(id, v));
-  render(); calc();
+  // Não chama render() aqui de propósito: V.calc() gera o HTML com os
+  // valores padrão fixos do template, então re-renderizar depois de
+  // setar os campos apagaria a predefinição que acabou de ser carregada.
+  // O DOM da view calc já existe (é daí que veio o clique), então só
+  // precisa atualizar os campos e recalcular.
+  CALC_IDS.forEach(id => {
+    const el = document.getElementById(id); const v = p.campos[id];
+    if (el && v !== undefined) el.type === 'checkbox' ? (el.checked = v) : (el.value = v);
+  });
+  CALC_RADIOS.forEach(name => {
+    const v = p.campos[name];
+    if (v === undefined) return;
+    const r = document.querySelector(`input[name=${name}][value=${v}]`);
+    if (r) r.checked = true;
+  });
+  calc();
 }
 function salvarPresetCalc(){
   const nome = prompt('Nome da predefinição:');
   if (!nome) return;
-  const ids = ['pc_venda','pc_compra','pc_vendas','pc_tipo','pc_comissao','pc_taxafixa','pc_taxafixa_v',
-    'pc_peso','pc_reput','pc_gratis','pc_frete','pc_regime','pc_receita','pc_imposto','pc_extra'];
   const campos = {};
-  ids.forEach(id => { const el = document.getElementById(id); if (el) campos[id] = el.type==='checkbox' ? el.checked : el.value; });
+  CALC_IDS.forEach(id => { const el = document.getElementById(id); if (el) campos[id] = el.type==='checkbox' ? el.checked : el.value; });
+  CALC_RADIOS.forEach(name => { campos[name] = document.querySelector(`input[name=${name}]:checked`)?.value; });
   const presets = presetsCalc();
   presets.push({ nome, campos });
   localStorage.setItem('gr_calc_presets', JSON.stringify(presets));
@@ -1566,17 +1636,28 @@ function render(){
   }
   if (S.view==='calc'){
     ['pc_venda','pc_compra','pc_vendas','pc_comissao','pc_taxafixa','pc_taxafixa_v',
-     'pc_peso','pc_reput','pc_gratis','pc_frete','pc_regime','pc_receita','pc_imposto','pc_extra']
+     'pc_peso','pc_altura','pc_largura','pc_comprimento','pc_reput','pc_frete',
+     'pc_regime','pc_receita','pc_imposto','pc_extra']
       .forEach(id => document.getElementById(id)?.addEventListener('input', calc));
-    const tipoEl = $('#pc_tipo');
-    if (tipoEl) tipoEl.onchange = () => {
-      const co = $('#pc_comissao'); if (co) co.value = COMISSAO_PADRAO[tipoEl.value] ?? co.value;
+    document.querySelectorAll('input[name=pc_gratis]').forEach(r => r.addEventListener('change', calc));
+    document.querySelectorAll('input[name=pc_tipo]').forEach(r => r.addEventListener('change', () => {
+      const co = $('#pc_comissao'); if (co) co.value = COMISSAO_PADRAO[r.value] ?? co.value;
+      calc();
+    }));
+    if ($('#pc_faixa')) $('#pc_faixa').onchange = () => {
+      const rc = $('#pc_receita'); if (rc) rc.value = $('#pc_faixa').value;
       calc();
     };
     if ($('#pc_calc')) $('#pc_calc').onclick = calc;
-    if ($('#pc_limpar')) $('#pc_limpar').onclick = () => render();
+    if ($('#pc_limpar')) $('#pc_limpar').onclick = () => { S.calcCats = []; render(); };
     if ($('#pc_salvar')) $('#pc_salvar').onclick = salvarPresetCalc;
     if ($('#pc_aplicar')) $('#pc_aplicar').onclick = aplicarLinkCalc;
+    if ($('#pc_cat_addbtn')) $('#pc_cat_addbtn').onclick = () => {
+      const el = $('#pc_cat_add'); const v = el?.value.trim();
+      if (v) { S.calcCats.push(v); render(); }
+    };
+    document.querySelectorAll('[data-catdel]').forEach(b => b.onclick = () => {
+      S.calcCats.splice(Number(b.dataset.catdel), 1); render(); });
     const presets = presetsCalc();
     document.querySelectorAll('[data-loadp]').forEach(b => b.onclick = () => aplicarPresetCalc(presets[Number(b.dataset.loadp)]));
     document.querySelectorAll('[data-delp]').forEach(b => b.onclick = () => excluirPresetCalc(Number(b.dataset.delp)));
