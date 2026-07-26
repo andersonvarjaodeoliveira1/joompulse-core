@@ -892,7 +892,10 @@ function tfila(){
       <td class="n">${p.pedidos ?? 1}</td>
       <td><span class="mv ${r[1]}">${r[0]}</span></td>
       <td class="n">${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
-      <td class="n">${p.produto?`<button class="btn" data-seg="${esc(p.produto)}">Monitorar</button>`:''}</td>
+      <td class="n"><div style="display:flex;gap:6px;justify-content:flex-end">
+        ${p.produto?`<button class="btn mini" data-seg="${esc(p.produto)}">Monitorar</button>`:''}
+        <button class="btn g mini" data-rmped="${esc(p.mlb)}" title="Remover da fila">Remover</button>
+      </div></td>
     </tr>`;}).join('')}</tbody></table>
   <div class="tip"><b>Preco, vendidos e receita sao a leitura da pagina no dia do pedido</b> —
     o Mercado Livre arredonda o numero de vendidos, entao use como ordem de grandeza. A receita e ACUMULADA desde que o anuncio existe, nao mensal — o ML nao publica a data de criacao, entao nao da para dividir pelo tempo. Posicao no
@@ -1325,6 +1328,12 @@ async function largar(id){
   await sb.rpc('desmonitorar_produto',{ p_produto:id });
   await carregarMonitor(); render();
 }
+async function removerPedido(mlb){
+  if (!confirm(`Remover ${mlb} da fila de coleta?`)) return;
+  const { error } = await sb.rpc('excluir_pedido', { p_mlb: mlb });
+  if (error) { alert(error.message); return; }
+  await carregarMonitor(); render();
+}
 
 async function buscarLocais(){
   const el = $('#lres'); if (el) el.innerHTML = '<div class="load">buscando…</div>';
@@ -1625,6 +1634,7 @@ function render(){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
     document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async () => { b.disabled=true; b.textContent='...'; await seguir(b.dataset.seg); await carregarMonitor(); S.aba='lista'; render(); });
     document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => largar(b.dataset.rm));
+    document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = () => removerPedido(b.dataset.rmped));
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
   }
