@@ -399,6 +399,7 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
+            clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1346,53 +1347,111 @@ async function aplicarLinkCalc(){
 }
 
 // ---------------------------------------------------------------------
-// CLIPES E IMAGENS — só a interface por enquanto.
+// CLIPES E IMAGENS — a navegação e a quota são reais; a geração em si
+// não é.
 //
 // Gerar vídeo/imagem de produto por IA precisa de um provedor pago
 // (ex.: Kling/Runway pra vídeo, Ideogram/Recraft pra imagem) que este
 // projeto ainda não tem configurado. Deixar o botão "funcionando" sem
 // gerar nada de verdade seria prometer o que não existe — o app inteiro
 // evita isso (ver as etiquetas honestas no Monitor e na Busca). Por
-// isso os botões ficam desabilitados com aviso, até ter um provedor.
+// isso "Gerar" fica desabilitado com aviso, até ter um provedor — mas
+// clicar em "Gerar imagens"/"Gerar clipes" no hub JÁ leva pra tela de
+// verdade, com a quota real do plano (feature ai_content, já existe em
+// plans.limits) e um jeito de anexar produto de verdade.
 // ---------------------------------------------------------------------
-V.clipes = () => `<h1 class="pg">Clipes e imagens</h1>
+V.clipes = () => S.clipesVista ? vistaGerarConteudo(S.clipesVista) : `<h1 class="pg">Clipes e imagens</h1>
   <p class="sub">Vídeo e fotos de produto gerados por IA, direto de uma foto que você já tem.</p>
-  <div class="cwarn" style="margin-bottom:18px">⚠️ <b>Ainda não gera nada de verdade.</b> Falta escolher e
-    conectar um provedor de geração de imagem/vídeo (tem custo por geração). Assim que estiver configurado,
-    os botões abaixo entram no ar sem precisar mexer no resto da tela.</div>
+  <div class="cwarn" style="margin-bottom:18px">⚠️ <b>A geração em si ainda não está ligada.</b> Falta escolher e
+    conectar um provedor de imagem/vídeo (tem custo por geração). O resto — anexar produto, quota do plano —
+    já funciona de verdade.</div>
   <div class="g2" style="grid-template-columns:1fr 1fr">
     <div class="card cbox">
       <div class="ct">Vídeos realistas sem custos de produção</div>
       <p class="sub" style="margin:2px 0 14px">Gere um vídeo do zero com narração que mostre um produto em uso
         e ajude a aumentar sua conversão.</p>
-      <div class="cfld" style="margin-bottom:12px">
-        <label>Produto (link, código MLB, ou foto)</label>
-        <input id="cl_ref_video" placeholder="cole o link do produto ou envie uma foto abaixo">
-      </div>
-      <div class="cfld" style="margin-bottom:14px">
-        <label>Foto do produto</label>
-        <input type="file" id="cl_foto_video" accept="image/*">
-      </div>
-      <button class="btn" disabled title="Configure um provedor de IA primeiro" style="width:100%;opacity:.5;cursor:not-allowed">✨ Gerar clipes</button>
+      <button class="btn" data-clv="video" style="width:100%">✨ Gerar clipes</button>
     </div>
     <div class="card cbox">
       <div class="ct">Imagens para destacar seus produtos</div>
       <p class="sub" style="margin:2px 0 14px">Gere imagens de alta qualidade que mostram seu produto em
         cenários de uso reais e ajudam o anúncio a se destacar nas buscas.</p>
-      <div class="cfld" style="margin-bottom:12px">
-        <label>Produto (link, código MLB, ou foto)</label>
-        <input id="cl_ref_img" placeholder="cole o link do produto ou envie uma foto abaixo">
-      </div>
-      <div class="cfld" style="margin-bottom:14px">
-        <label>Foto do produto</label>
-        <input type="file" id="cl_foto_img" accept="image/*">
-      </div>
-      <button class="btn" disabled title="Configure um provedor de IA primeiro" style="width:100%;opacity:.5;cursor:not-allowed">✨ Gerar imagens</button>
+      <button class="btn" data-clv="imagens" style="width:100%">✨ Gerar imagens</button>
     </div>
-  </div>
-  <div class="tip"><b>Por que não é só ligar.</b> Geração de imagem e vídeo por IA cobra por uso — não é algo
-    que dá pra travar em código sem alguém decidir provedor e orçamento antes. Quando isso estiver definido,
-    é só me passar a chave de API que eu integro sem mudar o resto da tela.</div>`;
+  </div>`;
+
+function vistaGerarConteudo(tipo){
+  const ehVideo = tipo === 'video';
+  const q = S.quota?.features?.ai_content;
+  const prods = S.clipesProdutos[tipo];
+  const exemplo = prods.find(p => p.imagem);
+  return `<button class="btn g mini" data-clv="" style="margin-bottom:14px">← Clipes e imagens</button>
+  <h1 class="pg">${ehVideo?'Gerar clipes':'Gerar imagens'}
+    <span class="chip" style="margin-left:8px;vertical-align:middle">IA — provedor a configurar</span></h1>
+  <div class="g2">
+    <div>
+      <div class="card cbox" style="margin-bottom:18px">
+        ${q ? (q.unlimited
+          ? `<span class="lb">Gerações usadas</span> <b>ilimitadas no seu plano</b>`
+          : `<div style="display:flex;justify-content:space-between;align-items:center">
+               <span>Gerações usadas: <b>${q.used}/${q.limit}</b></span>
+               ${q.remaining===0?'<span style="color:var(--brand-2);font-size:13px;font-weight:600">Ver planos</span>':''}
+             </div>
+             <span class="track" style="width:100%;height:8px;margin-top:8px">
+               <u style="width:${q.limit?Math.min(100,(q.used/q.limit*100)):0}%"></u></span>`)
+          : `<span class="sb">Carregando quota…</span>`}
+      </div>
+
+      <div class="ct" style="margin-bottom:10px">${ehVideo?'Gerar novos clipes':'Gerar novas imagens'}</div>
+      ${prods.map((p,i) => `<div class="card cbox" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 12px">
+        ${p.imagem?`<img src="${esc(p.imagem)}" width="40" height="40" style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
+        <div style="min-width:0;flex:1"><div class="nm" style="font-size:13.5px">${esc(p.nome ?? p.id)}</div></div>
+        <button class="btn g mini" data-clrm="${i}">Remover</button>
+      </div>`).join('')}
+      ${S.clipesAdd ? `<div class="card cbox" style="margin-bottom:10px">
+        <div style="display:flex;gap:8px">
+          <input id="cl_add_ref" placeholder="cole o link do produto ou o código MLB" ${S.clipesBusy?'disabled':''}>
+          <button class="btn" id="cl_add_ok" style="flex:none" ${S.clipesBusy?'disabled':''}>${S.clipesBusy?'...':'Adicionar'}</button>
+        </div>
+      </div>` : `<button class="btn g" data-cladd="1" style="width:100%;border-style:dashed;justify-content:flex-start;padding:16px">+ Adicionar produto</button>`}
+
+      <button class="btn" disabled title="Configure um provedor de IA primeiro"
+        style="width:100%;opacity:.5;cursor:not-allowed;margin-top:16px">✨ ${ehVideo?'Gerar clipes':'Gerar imagens'}</button>
+    </div>
+    <div class="card cbox">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span class="ct" style="margin:0">Resultado</span><span class="chip y">Exemplo</span>
+      </div>
+      <p class="sb" style="margin-bottom:14px">${ehVideo?'Geramos 1 vídeo':'Geramos 9 imagens'} para cada produto que você escolher.</p>
+      ${exemplo
+        ? `<img src="${esc(exemplo.imagem)}" style="width:100%;border-radius:10px;object-fit:cover;max-height:420px">
+           <div class="hint" style="margin-top:8px">Foto atual de "${esc(exemplo.nome ?? exemplo.id)}", já coletada — ainda não é uma geração por IA.</div>`
+        : `<div class="none" style="padding:30px 10px"><b>Sem prévia ainda</b>Anexe um produto pra ver a foto atual dele aqui.</div>`}
+    </div>
+  </div>`;
+}
+
+async function adicionarProdutoClipes(){
+  const el = $('#cl_add_ref'); const ref = el?.value.trim();
+  if (!ref) return;
+  S.clipesBusy = true; render();
+  try {
+    const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
+    if (error) { alert(error.message); return; }
+    if (data.tipo === 'texto') { alert('Não reconheci isso como link ou código de produto do Mercado Livre.'); return; }
+    if (data.tipo === 'nao_encontrado') { alert(`${data.mlb} ainda não está na nossa base.`); return; }
+    const { data: ficha, error: e2 } = await sb.rpc('ficha_produto', { p_produto: data.produto });
+    if (e2 || !ficha) { alert(e2?.message ?? 'Não consegui carregar esse produto.'); return; }
+    S.clipesProdutos[S.clipesVista].push({
+      id: ficha.produto?.id ?? data.produto,
+      nome: ficha.produto?.nome ?? data.produto,
+      imagem: ficha.produto?.imagem ?? null,
+    });
+    S.clipesAdd = false;
+  } finally {
+    S.clipesBusy = false; render();
+  }
+}
 
 async function carregarMonitor(){
   const [m,a,f] = await Promise.all([
@@ -1759,6 +1818,21 @@ function render(){
     document.querySelectorAll('[data-loadp]').forEach(b => b.onclick = () => aplicarPresetCalc(presets[Number(b.dataset.loadp)]));
     document.querySelectorAll('[data-delp]').forEach(b => b.onclick = () => excluirPresetCalc(Number(b.dataset.delp)));
     calc();
+  }
+  if (S.view==='clipes'){
+    document.querySelectorAll('[data-clv]').forEach(b => b.onclick = () => {
+      S.clipesVista = b.dataset.clv || null; S.clipesAdd = false; render();
+    });
+    document.querySelectorAll('[data-cladd]').forEach(b => b.onclick = () => {
+      S.clipesAdd = true; render();
+      const el = $('#cl_add_ref'); if (el) el.focus();
+    });
+    document.querySelectorAll('[data-clrm]').forEach(b => b.onclick = () => {
+      S.clipesProdutos[S.clipesVista].splice(Number(b.dataset.clrm), 1); render();
+    });
+    if ($('#cl_add_ok')) $('#cl_add_ok').onclick = adicionarProdutoClipes;
+    const clRef = $('#cl_add_ref');
+    if (clRef) clRef.addEventListener('keydown', (e) => { if (e.key==='Enter') adicionarProdutoClipes(); });
   }
   window.scrollTo(0,0);
 }
