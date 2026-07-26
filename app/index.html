@@ -381,6 +381,10 @@
         <button class="solo" data-v="clipes">
           <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2l1.8 4.6L16 8.4l-4.2 1.8L10 15l-1.8-4.8L4 8.4l4.2-1.8z"/><path d="M16 2l.7 1.8L18.5 4.5l-1.8.7L16 7l-.7-1.8L13.5 4.5l1.8-.7z"/></svg>Clipes e imagens</button>
       </div>
+      <div class="grp">
+        <button class="solo" data-v="assinatura">
+          <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M3 8h14"/></svg>Assinatura</button>
+      </div>
     </nav>
 
     <div class="main">
@@ -407,6 +411,7 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
+            planos:[], periodoPlano:'mes',
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1486,6 +1491,70 @@ async function adicionarProdutoClipes(){
   }
 }
 
+// ---------------------------------------------------------------------
+// ASSINATURA — planos e preços são reais (tabela plans). "Assinar"
+// fica desabilitado: cobrança recorrente precisa de um gateway de
+// pagamento (Mercado Pago, Stripe...) que este projeto não tem
+// conectado ainda. Fingir que processa pagamento sem gateway de
+// verdade enganaria quem tentasse assinar — mesmo raciocínio de
+// Clipes e imagens, com um agravante: aqui envolveria dinheiro.
+// ---------------------------------------------------------------------
+const NOME_PLANO = { free:'Gratuito', starter:'Starter', pro:'Pro', business:'Business' };
+const LABEL_LIMITE = {
+  product_search:'Buscas de produto/mês', rows_full:'Linhas completas por busca',
+  category_view:'Consultas de categoria/mês', seller_search:'Buscas de vendedor/mês',
+  tracked_items:'Produtos no Monitor', extension_view:'Consultas pela extensão/mês',
+  supplier_unlock:'Fornecedores desbloqueados/mês', competitor_analysis:'Análises de concorrência/mês',
+  ai_content:'Gerações de IA/mês', export_csv:'Exportações CSV/mês', calculator:'Usos da calculadora/mês',
+};
+
+async function carregarPlanos(){
+  const { data, error } = await sb.rpc('listar_planos');
+  if (error) return;
+  S.planos = data ?? [];
+}
+
+V.assinatura = () => {
+  const anual = S.periodoPlano === 'ano';
+  const planoAtual = S.quota?.plan;
+  return `<h1 class="pg">Escolha o plano ideal para expandir seu negócio</h1>
+  <p class="sub">Desbloqueie mais busca, mais monitoramento e mais análise.</p>
+  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 22px">
+    <span style="font-size:13.5px;font-weight:${anual?'400':'600'}">Mês</span>
+    <button id="pl_toggle" role="switch" aria-checked="${anual}"
+      style="width:42px;height:24px;border-radius:99px;border:0;background:${anual?'var(--brand)':'var(--line)'};position:relative;flex:none">
+      <span style="position:absolute;top:2px;left:${anual?'20px':'2px'};width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s"></span>
+    </button>
+    <span style="font-size:13.5px;font-weight:${anual?'600':'400'}">Anual</span>
+    <span class="chip g">Economize 50%</span>
+  </div>
+  ${!S.planos.length ? '<div class="load">carregando planos…</div>' : `
+  <div class="g2" style="grid-template-columns:repeat(${S.planos.length},1fr);align-items:start">
+    ${S.planos.map(p => {
+      const preco = anual ? p.price_annual_month : p.price_monthly;
+      const destaque = p.code === 'pro';
+      const seu = planoAtual === p.code;
+      const feats = Object.entries(p.limits)
+        .filter(([,v]) => v !== 0)
+        .map(([k,v]) => `${LABEL_LIMITE[k] ?? k}: <b>${v===-1?'ilimitado':num(v)}</b>`);
+      return `<div class="card cbox" style="${destaque?'border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)':''}">
+        ${destaque?`<div style="background:linear-gradient(90deg,var(--brand),#DB2777);color:#fff;font-size:11.5px;font-weight:600;text-align:center;padding:5px;border-radius:8px 8px 0 0;margin:-16px -16px 14px">⚡ Mais recomendado</div>`:''}
+        <div style="display:flex;align-items:center;gap:8px"><div class="ct" style="font-size:16px">${NOME_PLANO[p.code]}</div>
+          ${seu?'<span class="chip p">Seu plano</span>':''}</div>
+        <div style="margin:10px 0"><b style="font-size:26px">${brl(preco)}</b><span class="sb">/mês</span></div>
+        ${anual&&preco>0?`<div class="sb">Cobrado anualmente por ${brl(preco*12)}</div>`:''}
+        <button class="btn" disabled title="Configure um gateway de pagamento primeiro"
+          style="width:100%;margin:14px 0;opacity:.5;cursor:not-allowed">${seu?'Plano atual':'Assinar'}</button>
+        <div style="font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:8px">O que está incluído:</div>
+        ${feats.map(f => `<div class="row" style="padding:5px 0;border-bottom:0"><span style="font-size:12.5px">✓ ${f}</span></div>`).join('')}
+      </div>`;
+    }).join('')}
+  </div>`}
+  <div class="cwarn" style="margin-top:20px">⚠️ <b>"Assinar" ainda não processa pagamento.</b> Preços mostrados
+    são valor de referência — faltam decidir o valor final e conectar um gateway (Mercado Pago, Stripe...) antes
+    de cobrar de verdade. Mudar plano hoje é feito manualmente.</div>`;
+};
+
 async function carregarMonitor(){
   const [m,a,f] = await Promise.all([
     sb.rpc('listar_monitorados'),
@@ -1866,6 +1935,12 @@ function render(){
     if ($('#cl_add_ok')) $('#cl_add_ok').onclick = adicionarProdutoClipes;
     const clRef = $('#cl_add_ref');
     if (clRef) clRef.addEventListener('keydown', (e) => { if (e.key==='Enter') adicionarProdutoClipes(); });
+  }
+  if (S.view==='assinatura'){
+    if (!S.planos.length) carregarPlanos().then(render);
+    if ($('#pl_toggle')) $('#pl_toggle').onclick = () => {
+      S.periodoPlano = S.periodoPlano === 'ano' ? 'mes' : 'ano'; render();
+    };
   }
   window.scrollTo(0,0);
 }
