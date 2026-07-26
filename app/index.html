@@ -141,6 +141,30 @@
   .row b{font-variant-numeric:tabular-nums;font-weight:500}
   .row.t{border-top:2px solid var(--ink);border-bottom:0;margin-top:6px;padding-top:11px}
   .row.t span{color:var(--ink);font-weight:600} .row.t b{font-size:19px;font-weight:700}
+
+  /* calculadora de margem */
+  .csec{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+  .csec>summary{list-style:none;cursor:pointer;padding:13px 15px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+  .csec>summary::-webkit-details-marker{display:none}
+  .csec>summary::before{content:'▸';color:var(--ink-3);font-size:11px;transition:transform .15s}
+  .csec[open]>summary::before{transform:rotate(90deg)}
+  .csec .sub2{font-weight:400;font-size:12.5px;color:var(--ink-3);margin-left:auto;text-align:right}
+  .cbody{padding:2px 15px 15px}
+  .crow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .crow:last-child{margin-bottom:0}
+  .cfld label{display:block;font-size:12px;font-weight:500;color:var(--ink-2);margin-bottom:4px}
+  .cfld label i{font-weight:400;color:var(--ink-3);font-style:normal}
+  .cfld input,.cfld select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff}
+  .cfld input:focus,.cfld select:focus{border-color:var(--brand)}
+  .cfld.chk{display:flex;align-items:center;gap:8px;flex-direction:row;padding-top:19px}
+  .cfld.chk label{margin:0}
+  .cwarn{display:flex;gap:8px;align-items:flex-start;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:11px 12px;font-size:12.5px;color:#92400E;margin-top:12px}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .preset{background:var(--tint);color:var(--brand-2);border:0;border-radius:20px;padding:5px 12px 5px 14px;font-size:12.5px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .preset button{background:none;border:0;color:var(--brand-2);opacity:.6;font-size:13px;padding:0;line-height:1}
+  .preset button:hover{opacity:1}
+  .cdet .row span{font-size:13px} .cdet .grp{font-size:11.5px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 2px}
+  .cdet .grp:first-child{margin-top:2px}
   .neg{color:var(--dn)}
 
   .modo{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:18px}
@@ -971,37 +995,243 @@ function spark(v,w=560,h=110){
     ${p.map(q=>`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="#7C3AED"/>`).join('')}</svg>`;
 }
 
-V.calc = () => `<h1 class="pg">Calculadora de margem</h1>
+// Anexo I do Simples Nacional (comércio) — faixas oficiais, estáveis desde a
+// LC 155/2016. Alíquota efetiva = ((RBT12 × alíquota nominal) − parcela a
+// deduzir) / RBT12. É a única tabela de custo aqui calculada por fórmula:
+// comissão do ML e tabela de frete variam por categoria/reputação de um jeito
+// que muda sem aviso e sem fonte pública confiável pra travar em código —
+// por isso ficam editáveis, com valor inicial só como ponto de partida.
+const SIMPLES_ANEXO1 = [
+  { ate: 180000,   aliq: .04,  pd: 0 },
+  { ate: 360000,   aliq: .073, pd: 5940 },
+  { ate: 720000,   aliq: .095, pd: 13860 },
+  { ate: 1800000,  aliq: .107, pd: 22500 },
+  { ate: 3600000,  aliq: .143, pd: 87300 },
+  { ate: 4800000,  aliq: .19,  pd: 378000 },
+];
+function aliquotaSimples(rbt12){
+  const r = Math.max(0, rbt12 || 0);
+  const faixa = SIMPLES_ANEXO1.find(f => r <= f.ate) ?? SIMPLES_ANEXO1[SIMPLES_ANEXO1.length - 1];
+  if (r <= 0) return faixa.aliq * 100;
+  return Math.max(0, ((r * faixa.aliq) - faixa.pd) / r) * 100;
+}
+
+const COMISSAO_PADRAO = { classico: 12, premium: 17 };
+
+function presetsCalc(){
+  try { return JSON.parse(localStorage.getItem('gr_calc_presets') || '[]'); }
+  catch { return []; }
+}
+
+V.calc = () => {
+  const presets = presetsCalc();
+  return `<h1 class="pg">Calculadora de margem</h1>
   <p class="sub">O número que decide a compra. Comissão, frete e imposto saem antes do lucro.</p>
+  ${presets.length ? `<div class="presets">${presets.map((p,i)=>
+    `<span class="preset"><button data-loadp="${i}" style="opacity:1;color:inherit">${esc(p.nome)}</button>
+     <button data-delp="${i}">×</button></span>`).join('')}</div>` : ''}
   <div class="g2">
-    <div class="card" style="padding:16px"><div class="filters" style="border:0;padding:0;margin:0">
-      <div class="fld"><label>Preço de venda</label><input type="number" id="k1" value="199.90" step="0.01"></div>
-      <div class="fld"><label>Custo do produto</label><input type="number" id="k2" value="70.00" step="0.01"></div>
-      <div class="fld"><label>Comissão ML %</label><input type="number" id="k3" value="13" step="0.5"></div>
-      <div class="fld"><label>Frete por venda</label><input type="number" id="k4" value="0" step="0.01"></div>
-      <div class="fld"><label>Imposto %</label><input type="number" id="k5" value="6" step="0.5"></div>
-      <div class="fld"><label>Custo fixo/un.</label><input type="number" id="k6" value="2.50" step="0.01"></div>
-    </div></div>
-    <div class="card" style="padding:16px" id="kout"></div>
+    <div>
+      <div class="card cbox">
+        <div class="ct">Produto</div>
+        <div class="cfld" style="margin-bottom:10px">
+          <label>Link ou código do produto <i>(opcional — puxa o preço mediano da nossa base)</i></label>
+          <div style="display:flex;gap:8px">
+            <input id="pc_link" placeholder="cole o link do Mercado Livre ou o MLB">
+            <button class="btn" id="pc_aplicar" style="flex:none">Aplicar</button>
+          </div>
+        </div>
+        <div class="crow">
+          <div class="cfld"><label>Preço de venda, R$ *</label><input type="number" id="pc_venda" value="199.90" step="0.01"></div>
+          <div class="cfld"><label>Preço de compra, R$ *</label><input type="number" id="pc_compra" value="70.00" step="0.01"></div>
+        </div>
+        <div class="cfld"><label>Vendas por mês</label><input type="number" id="pc_vendas" value="1" min="0" step="1"></div>
+      </div>
+
+      <details class="csec" open>
+        <summary>Comissão <span class="sub2" id="pc_com_resumo"></span></summary>
+        <div class="cbody">
+          <div class="crow">
+            <div class="cfld"><label>Tipo de anúncio</label>
+              <select id="pc_tipo"><option value="classico">Clássico</option><option value="premium">Premium</option></select></div>
+            <div class="cfld"><label>Comissão, % <i>(confira na Central do Vendedor)</i></label>
+              <input type="number" id="pc_comissao" value="${COMISSAO_PADRAO.classico}" step="0.1"></div>
+          </div>
+          <div class="cfld chk" style="padding-top:2px">
+            <input type="checkbox" id="pc_taxafixa" checked>
+            <label for="pc_taxafixa" style="font-size:12.5px">Cobrar taxa fixa em vendas abaixo de R$79 (<input type="number" id="pc_taxafixa_v" value="6.50" step="0.01" style="width:60px;padding:3px 5px;border:1px solid var(--line);border-radius:6px">)</label>
+          </div>
+        </div>
+      </details>
+
+      <details class="csec">
+        <summary>Envio <span class="sub2" id="pc_env_resumo"></span></summary>
+        <div class="cbody">
+          <div class="crow">
+            <div class="cfld"><label>Peso, g</label><input type="number" id="pc_peso" value="500" step="1"></div>
+            <div class="cfld"><label>Reputação do vendedor</label>
+              <select id="pc_reput"><option value="verde">Verde / MercadoLíder</option><option value="amarelo">Amarela</option><option value="vermelho">Vermelha</option><option value="nova">Sem reputação</option></select></div>
+          </div>
+          <div class="crow">
+            <div class="cfld chk"><input type="checkbox" id="pc_gratis" checked><label for="pc_gratis">Ofereço frete grátis</label></div>
+            <div class="cfld"><label>Custo de envio pra mim, R$ <i>(veja no simulador de frete do ML)</i></label>
+              <input type="number" id="pc_frete" value="0" step="0.01"></div>
+          </div>
+        </div>
+      </details>
+
+      <details class="csec">
+        <summary>Impostos <span class="sub2" id="pc_imp_resumo"></span></summary>
+        <div class="cbody">
+          <div class="crow">
+            <div class="cfld"><label>Regime fiscal</label>
+              <select id="pc_regime">
+                <option value="simples">Simples Nacional</option>
+                <option value="mei">MEI</option>
+                <option value="presumido">Lucro Presumido</option>
+                <option value="nenhum">Nenhum / pessoa física</option>
+              </select></div>
+            <div class="cfld" id="pc_receita_wrap"><label>Receita bruta últimos 12 meses, R$</label>
+              <input type="number" id="pc_receita" value="120000" step="1000"></div>
+          </div>
+          <div class="cfld"><label>Impostos, % <i>(Simples calcula sozinho pelo Anexo I; outros regimes, digite)</i></label>
+            <input type="number" id="pc_imposto" value="4" step="0.1"></div>
+        </div>
+      </details>
+
+      <details class="csec">
+        <summary>Custo adicional <span class="sub2" id="pc_extra_resumo"></span></summary>
+        <div class="cbody">
+          <div class="cfld"><label>Embalagem, ADS, outros — por unidade, R$</label>
+            <input type="number" id="pc_extra" value="0" step="0.01"></div>
+        </div>
+      </details>
+
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn" id="pc_calc">Calcular</button>
+        <button class="btn" id="pc_limpar" style="background:#fff;color:var(--ink-2);border:1px solid var(--line)">Limpar</button>
+        <button class="btn" id="pc_salvar" style="background:#fff;color:var(--brand-2);border:1px solid var(--soft)">Salvar como predefinição</button>
+      </div>
+    </div>
+    <div class="card cbox" id="kout" style="align-self:flex-start;position:sticky;top:16px"></div>
   </div>
-  <div class="tip"><b>Confira a tarifa fixa.</b> Abaixo de certo valor o Mercado Livre cobra um fixo
-    por unidade que muda a conta inteira em produto barato.</div>`;
+  <div class="tip"><b>Comissão e frete são pontos de partida, não a tabela oficial.</b> O Mercado Livre
+    varia comissão por categoria (11%–19%) e o custo de frete grátis por mais de 250 combinações de peso,
+    preço e reputação — confira o valor exato na Central do Vendedor antes de decidir. Só o imposto do
+    Simples Nacional é calculado pela tabela oficial (Anexo I).</div>`;
+};
 
 function calc(){
   const g = id => parseFloat(document.getElementById(id)?.value) || 0;
-  const v=g('k1'),c=g('k2'),co=g('k3'),fr=g('k4'),im=g('k5'),fx=g('k6');
-  const cv=v*co/100, iv=v*im/100, L=v-c-cv-fr-iv-fx;
-  const o=$('#kout'); if(!o) return;
-  o.innerHTML=`<div class="row"><span>Preço de venda</span><b>${brl(v)}</b></div>
-    <div class="row"><span>Custo do produto</span><b class="neg">−${brl(c)}</b></div>
-    <div class="row"><span>Comissão (${co}%)</span><b class="neg">−${brl(cv)}</b></div>
-    <div class="row"><span>Frete</span><b class="neg">−${brl(fr)}</b></div>
-    <div class="row"><span>Imposto (${im}%)</span><b class="neg">−${brl(iv)}</b></div>
-    <div class="row"><span>Custo fixo</span><b class="neg">−${brl(fx)}</b></div>
-    <div class="row t"><span>Lucro líquido</span>
-      <b style="color:${L>0?'var(--up)':'var(--dn)'}">${brl(L)}</b></div>
-    <div class="row"><span>Margem líquida</span><b>${v?pct(L/v):'—'}</b></div>
-    <div class="row"><span>Retorno sobre o custo</span><b>${c?pct(L/c):'—'}</b></div>`;
+  const gi = id => document.getElementById(id)?.value;
+  const checked = id => !!document.getElementById(id)?.checked;
+
+  const venda = g('pc_venda'), compra = g('pc_compra'), qtd = Math.max(0, g('pc_vendas'));
+  const tipo = gi('pc_tipo') || 'classico';
+  let comissaoPct = g('pc_comissao');
+  const taxaFixa = checked('pc_taxafixa') && venda > 0 && venda < 79 ? g('pc_taxafixa_v') : 0;
+
+  const gratis = checked('pc_gratis');
+  const freteUn = gratis ? g('pc_frete') : 0;
+
+  const regime = gi('pc_regime') || 'nenhum';
+  let impostoPct = g('pc_imposto');
+  if (regime === 'simples') impostoPct = aliquotaSimples(g('pc_receita'));
+
+  const extra = g('pc_extra');
+
+  const comissaoR = venda * comissaoPct / 100;
+  const impostoR = venda * impostoPct / 100;
+  const despesas = compra + comissaoR + taxaFixa + freteUn + impostoR + extra;
+  const receitaBruta = venda;
+  const lucro = receitaBruta - despesas;
+  const margemLiquida = venda ? lucro / venda : null;
+  const margemBruta = venda ? (venda - compra) / venda : null;
+
+  // resumos nas abas fechadas, pra não precisar abrir tudo pra conferir
+  const rc = $('#pc_com_resumo'); if (rc) rc.textContent = `${comissaoPct}%${taxaFixa?' + taxa fixa':''}`;
+  const re = $('#pc_env_resumo'); if (re) re.textContent = gratis ? brl(freteUn) : 'frete pago pelo comprador';
+  const ri = $('#pc_imp_resumo'); if (ri) ri.textContent = `${impostoPct.toFixed(2)}%`;
+  const rx = $('#pc_extra_resumo'); if (rx) rx.textContent = extra ? brl(extra) : 'nenhum';
+  const wrapReceita = $('#pc_receita_wrap'); if (wrapReceita) wrapReceita.style.display = regime === 'simples' ? '' : 'none';
+  const impostoInput = $('#pc_imposto');
+  if (impostoInput) {
+    impostoInput.disabled = regime === 'simples';
+    if (regime === 'simples') impostoInput.value = impostoPct.toFixed(2);
+  }
+
+  const o = $('#kout'); if (!o) return;
+  const faltando = !venda || !compra;
+  const cor = lucro > 0 ? 'var(--up)' : 'var(--dn)';
+
+  o.innerHTML = `
+    <div class="stat"><div class="k">Margem líquida</div>
+      <div class="v" style="color:${cor}">${margemLiquida!=null?pct(margemLiquida):'—'}</div></div>
+    <div class="stat"><div class="k">Lucro líquido</div>
+      <div class="v" style="color:${cor}">${brl(lucro)}</div></div>
+    ${faltando?`<div class="cwarn">⚠️ Preencha preço de venda e preço de compra pra ter a margem líquida correta.</div>`:''}
+    <details class="cdet" style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:10px 0">Cálculo detalhado</summary>
+      <div class="grp">Margem bruta</div>
+      <div class="row"><span>Margem bruta</span><b>${margemBruta!=null?pct(margemBruta):'—'}</b></div>
+      <div class="row"><span>Receita bruta</span><b>${brl(receitaBruta)}</b></div>
+
+      <div class="grp">Por unidade</div>
+      <div class="row"><span>Despesas totais</span><b class="neg">−${brl(despesas)}</b></div>
+      <div class="row"><span>Receita (lucro líquido)</span><b style="color:${cor}">${brl(lucro)}</b></div>
+
+      <div class="grp">Incluindo todas as vendas do mês</div>
+      <div class="row"><span>Vendas mensais</span><b>${num(qtd)}</b></div>
+      <div class="row"><span>Despesas totais</span><b class="neg">−${brl(despesas*qtd)}</b></div>
+      <div class="row"><span>Receita (lucro líquido)</span><b style="color:${cor}">${brl(lucro*qtd)}</b></div>
+
+      <div class="grp">Todas as despesas (por unidade)</div>
+      <div class="row"><span>Preço de compra</span><b class="neg">−${brl(compra)}</b></div>
+      <div class="row"><span>Comissão (${comissaoPct}%)</span><b class="neg">−${brl(comissaoR)}</b></div>
+      ${taxaFixa?`<div class="row"><span>Taxa fixa</span><b class="neg">−${brl(taxaFixa)}</b></div>`:''}
+      <div class="row"><span>Frete</span><b class="neg">−${brl(freteUn)}</b></div>
+      <div class="row"><span>Impostos (${impostoPct.toFixed(2)}%)</span><b class="neg">−${brl(impostoR)}</b></div>
+      <div class="row"><span>Custos adicionais</span><b class="neg">−${brl(extra)}</b></div>
+    </details>`;
+}
+
+function aplicarPresetCalc(p){
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) { el.type==='checkbox' ? el.checked = v : el.value = v; } };
+  Object.entries(p.campos).forEach(([id, v]) => set(id, v));
+  render(); calc();
+}
+function salvarPresetCalc(){
+  const nome = prompt('Nome da predefinição:');
+  if (!nome) return;
+  const ids = ['pc_venda','pc_compra','pc_vendas','pc_tipo','pc_comissao','pc_taxafixa','pc_taxafixa_v',
+    'pc_peso','pc_reput','pc_gratis','pc_frete','pc_regime','pc_receita','pc_imposto','pc_extra'];
+  const campos = {};
+  ids.forEach(id => { const el = document.getElementById(id); if (el) campos[id] = el.type==='checkbox' ? el.checked : el.value; });
+  const presets = presetsCalc();
+  presets.push({ nome, campos });
+  localStorage.setItem('gr_calc_presets', JSON.stringify(presets));
+  render();
+}
+function excluirPresetCalc(i){
+  const presets = presetsCalc();
+  presets.splice(i, 1);
+  localStorage.setItem('gr_calc_presets', JSON.stringify(presets));
+  render();
+}
+async function aplicarLinkCalc(){
+  const el = $('#pc_link'); const ref = el?.value.trim();
+  if (!ref) return;
+  const btn = $('#pc_aplicar'); if (btn) btn.disabled = true;
+  const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
+  if (btn) btn.disabled = false;
+  if (error) { alert(error.message); return; }
+  if (data.tipo === 'nao_encontrado') { alert(`${data.mlb} ainda não está na nossa base — não dá pra puxar o preço automaticamente.`); return; }
+  if (data.tipo === 'texto') { alert('Não reconheci isso como link ou código de produto do Mercado Livre.'); return; }
+  const { data: ficha, error: e2 } = await sb.rpc('ficha_produto', { p_produto: data.produto });
+  if (e2 || !ficha) { alert(e2?.message ?? 'Não consegui carregar a ficha desse produto.'); return; }
+  const preco = ficha.concorrencia?.preco_mediano ?? ficha.preco?.preco_atual ?? null;
+  if (preco == null) { alert(`Achei "${ficha.produto?.nome ?? data.produto}", mas ainda não temos preço coletado pra ele.`); return; }
+  const v = $('#pc_venda'); if (v) v.value = preco;
+  calc();
 }
 
 async function carregarMonitor(){
@@ -1335,8 +1565,21 @@ function render(){
       S.monitorados.some(m=>m.product_id===id) ? largar(id) : seguir(id); };
   }
   if (S.view==='calc'){
-    ['k1','k2','k3','k4','k5','k6'].forEach(i =>
-      document.getElementById(i)?.addEventListener('input', calc));
+    ['pc_venda','pc_compra','pc_vendas','pc_comissao','pc_taxafixa','pc_taxafixa_v',
+     'pc_peso','pc_reput','pc_gratis','pc_frete','pc_regime','pc_receita','pc_imposto','pc_extra']
+      .forEach(id => document.getElementById(id)?.addEventListener('input', calc));
+    const tipoEl = $('#pc_tipo');
+    if (tipoEl) tipoEl.onchange = () => {
+      const co = $('#pc_comissao'); if (co) co.value = COMISSAO_PADRAO[tipoEl.value] ?? co.value;
+      calc();
+    };
+    if ($('#pc_calc')) $('#pc_calc').onclick = calc;
+    if ($('#pc_limpar')) $('#pc_limpar').onclick = () => render();
+    if ($('#pc_salvar')) $('#pc_salvar').onclick = salvarPresetCalc;
+    if ($('#pc_aplicar')) $('#pc_aplicar').onclick = aplicarLinkCalc;
+    const presets = presetsCalc();
+    document.querySelectorAll('[data-loadp]').forEach(b => b.onclick = () => aplicarPresetCalc(presets[Number(b.dataset.loadp)]));
+    document.querySelectorAll('[data-delp]').forEach(b => b.onclick = () => excluirPresetCalc(Number(b.dataset.delp)));
     calc();
   }
   window.scrollTo(0,0);
