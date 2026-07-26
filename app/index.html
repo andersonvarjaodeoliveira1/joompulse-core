@@ -1290,21 +1290,55 @@ function excluirPresetCalc(i){
   localStorage.setItem('gr_calc_presets', JSON.stringify(presets));
   render();
 }
+/** Busca ao vivo no Mercado Livre — usado quando o produto ainda não
+ *  está na nossa base. Cobre link de catálogo sempre; anúncio direto de
+ *  outro vendedor pode vir bloqueado (ver ml-preco, o ML restringe
+ *  esse tipo de consulta pra terceiro). */
+async function buscarPrecoAoVivo(ref){
+  const { data, error } = await sb.functions.invoke('ml-preco', { body: { ref } });
+  if (error) return { ok:false, erro: error.message };
+  return data;
+}
+
 async function aplicarLinkCalc(){
   const el = $('#pc_link'); const ref = el?.value.trim();
   if (!ref) return;
-  const btn = $('#pc_aplicar'); if (btn) btn.disabled = true;
-  const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
-  if (btn) btn.disabled = false;
-  if (error) { alert(error.message); return; }
-  if (data.tipo === 'nao_encontrado') { alert(`${data.mlb} ainda não está na nossa base — não dá pra puxar o preço automaticamente.`); return; }
-  if (data.tipo === 'texto') { alert('Não reconheci isso como link ou código de produto do Mercado Livre.'); return; }
-  const { data: ficha, error: e2 } = await sb.rpc('ficha_produto', { p_produto: data.produto });
-  if (e2 || !ficha) { alert(e2?.message ?? 'Não consegui carregar a ficha desse produto.'); return; }
-  const preco = ficha.concorrencia?.preco_mediano ?? ficha.preco?.preco_atual ?? null;
-  if (preco == null) { alert(`Achei "${ficha.produto?.nome ?? data.produto}", mas ainda não temos preço coletado pra ele.`); return; }
-  const v = $('#pc_venda'); if (v) v.value = preco;
-  calc();
+  const btn = $('#pc_aplicar'); if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
+    if (error) { alert(error.message); return; }
+    if (data.tipo === 'texto') { alert('Não reconheci isso como link ou código de produto do Mercado Livre.'); return; }
+
+    if (data.tipo !== 'nao_encontrado') {
+      const { data: ficha, error: e2 } = await sb.rpc('ficha_produto', { p_produto: data.produto });
+      const preco = !e2 && ficha ? (ficha.concorrencia?.preco_mediano ?? ficha.preco?.preco_atual ?? null) : null;
+      if (preco != null) {
+        const v = $('#pc_venda'); if (v) v.value = preco;
+        calc();
+        return;
+      }
+      // achou o produto na nossa base, mas sem preço coletado ainda —
+      // tenta ao vivo antes de desistir.
+    }
+
+    const vivo = await buscarPrecoAoVivo(ref);
+    if (vivo.ok && vivo.preco != null) {
+      const v = $('#pc_venda'); if (v) v.value = vivo.preco;
+      calc();
+      return;
+    }
+    if (vivo.ok && vivo.preco == null) {
+      alert(`Achei "${vivo.nome ?? data.mlb ?? ref}" no Mercado Livre, mas não consegui um preço agora — preencha manualmente.`);
+      return;
+    }
+    if (vivo.erro === 'bloqueado_ou_nao_encontrado') {
+      alert(`${data.mlb ?? ref}: o Mercado Livre bloqueia consulta a anúncio de terceiro desse tipo — preencha o preço manualmente, ou peça a coleta pela extensão.`);
+      return;
+    }
+    alert(`Não consegui achar "${ref}" — nem na nossa base, nem ao vivo no Mercado Livre.`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Aplicar'; }
+  }
 }
 
 async function carregarMonitor(){
