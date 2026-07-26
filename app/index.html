@@ -370,6 +370,10 @@
         <button class="solo" data-v="calc">
           <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M7 7h6M7 11h2M7 14h2"/></svg>Calculadora</button>
       </div>
+      <div class="grp">
+        <button class="solo" data-v="clipes">
+          <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2l1.8 4.6L16 8.4l-4.2 1.8L10 15l-1.8-4.8L4 8.4l4.2-1.8z"/><path d="M16 2l.7 1.8L18.5 4.5l-1.8.7L16 7l-.7-1.8L13.5 4.5l1.8-.7z"/></svg>Clipes e imagens</button>
+      </div>
     </nav>
 
     <div class="main">
@@ -1340,6 +1344,55 @@ async function aplicarLinkCalc(){
     if (btn) { btn.disabled = false; btn.textContent = 'Aplicar'; }
   }
 }
+
+// ---------------------------------------------------------------------
+// CLIPES E IMAGENS — só a interface por enquanto.
+//
+// Gerar vídeo/imagem de produto por IA precisa de um provedor pago
+// (ex.: Kling/Runway pra vídeo, Ideogram/Recraft pra imagem) que este
+// projeto ainda não tem configurado. Deixar o botão "funcionando" sem
+// gerar nada de verdade seria prometer o que não existe — o app inteiro
+// evita isso (ver as etiquetas honestas no Monitor e na Busca). Por
+// isso os botões ficam desabilitados com aviso, até ter um provedor.
+// ---------------------------------------------------------------------
+V.clipes = () => `<h1 class="pg">Clipes e imagens</h1>
+  <p class="sub">Vídeo e fotos de produto gerados por IA, direto de uma foto que você já tem.</p>
+  <div class="cwarn" style="margin-bottom:18px">⚠️ <b>Ainda não gera nada de verdade.</b> Falta escolher e
+    conectar um provedor de geração de imagem/vídeo (tem custo por geração). Assim que estiver configurado,
+    os botões abaixo entram no ar sem precisar mexer no resto da tela.</div>
+  <div class="g2" style="grid-template-columns:1fr 1fr">
+    <div class="card cbox">
+      <div class="ct">Vídeos realistas sem custos de produção</div>
+      <p class="sub" style="margin:2px 0 14px">Gere um vídeo do zero com narração que mostre um produto em uso
+        e ajude a aumentar sua conversão.</p>
+      <div class="cfld" style="margin-bottom:12px">
+        <label>Produto (link, código MLB, ou foto)</label>
+        <input id="cl_ref_video" placeholder="cole o link do produto ou envie uma foto abaixo">
+      </div>
+      <div class="cfld" style="margin-bottom:14px">
+        <label>Foto do produto</label>
+        <input type="file" id="cl_foto_video" accept="image/*">
+      </div>
+      <button class="btn" disabled title="Configure um provedor de IA primeiro" style="width:100%;opacity:.5;cursor:not-allowed">✨ Gerar clipes</button>
+    </div>
+    <div class="card cbox">
+      <div class="ct">Imagens para destacar seus produtos</div>
+      <p class="sub" style="margin:2px 0 14px">Gere imagens de alta qualidade que mostram seu produto em
+        cenários de uso reais e ajudam o anúncio a se destacar nas buscas.</p>
+      <div class="cfld" style="margin-bottom:12px">
+        <label>Produto (link, código MLB, ou foto)</label>
+        <input id="cl_ref_img" placeholder="cole o link do produto ou envie uma foto abaixo">
+      </div>
+      <div class="cfld" style="margin-bottom:14px">
+        <label>Foto do produto</label>
+        <input type="file" id="cl_foto_img" accept="image/*">
+      </div>
+      <button class="btn" disabled title="Configure um provedor de IA primeiro" style="width:100%;opacity:.5;cursor:not-allowed">✨ Gerar imagens</button>
+    </div>
+  </div>
+  <div class="tip"><b>Por que não é só ligar.</b> Geração de imagem e vídeo por IA cobra por uso — não é algo
+    que dá pra travar em código sem alguém decidir provedor e orçamento antes. Quando isso estiver definido,
+    é só me passar a chave de API que eu integro sem mudar o resto da tela.</div>`;
 
 async function carregarMonitor(){
   const [m,a,f] = await Promise.all([
