@@ -180,6 +180,24 @@
   .exvideo video,.exvideo img{width:100%;height:100%;object-fit:cover;display:block}
   .exvideo .exph{border-radius:10px;background:#1A1A1E;color:#8A93A0;border:0}
   .excap{font-size:12px;color:var(--ink-3);text-align:center;margin-bottom:14px}
+
+  /* assistente */
+  .assist{position:fixed;right:20px;bottom:20px;width:380px;max-height:70vh;background:#fff;
+    border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);
+    display:flex;flex-direction:column;z-index:50}
+  .assist.hide{display:none}
+  .ahead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .ahead b{font-size:14px}
+  .ahead button{margin-left:auto;background:none;border:0;font-size:18px;color:var(--ink-3);line-height:1;padding:0}
+  .amsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:160px}
+  .amsg{max-width:88%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;white-space:pre-wrap}
+  .amsg.user{align-self:flex-end;background:var(--brand);color:#fff}
+  .amsg.ai{align-self:flex-start;background:var(--bg-2);color:var(--ink)}
+  .amsg.ai.busy{color:var(--ink-3)}
+  .amsg.erro{align-self:flex-start;background:#FEF2F2;color:var(--dn)}
+  .ainput{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+  .ainput input{flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px}
+  @media (max-width:640px){ .assist{right:10px;left:10px;width:auto;bottom:10px} }
   .neg{color:var(--dn)}
 
   .modo{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:18px}
@@ -393,10 +411,24 @@
         <div class="sp"></div>
         <div class="qbar" id="q"></div>
         <button class="lnk" id="pl">—</button>
-        <button class="up">Fazer upgrade</button>
+        <button class="btn g mini" id="abrirAssist" style="margin-right:4px">✨ Assistente</button>
+        <button class="up" id="irAssinatura">Fazer upgrade</button>
         <button class="avatar" id="sair" title="Sair">↩</button>
       </header>
       <main class="wrap" id="sheet"><h1 class="sr">Gringa Radar</h1></main>
+    </div>
+  </div>
+
+  <div class="assist hide" id="assistPanel">
+    <div class="ahead">
+      <b>✨ Assistente</b>
+      <span class="hint" style="margin:0">responde com os dados da sua conta</span>
+      <button id="assistClose" aria-label="Fechar">×</button>
+    </div>
+    <div class="amsgs" id="assistMsgs"></div>
+    <div class="ainput">
+      <input id="assistInput" placeholder="ex: por que o produto X caiu de posição?">
+      <button class="btn" id="assistSend">Enviar</button>
     </div>
   </div>
 </div>
@@ -412,6 +444,7 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
             planos:[], periodoPlano:'mes',
+            assistOpen:false, assistMsgs:[], assistBusy:false,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -430,6 +463,11 @@ $('#reg').onclick = async () => {
 };
 $('#pw').onkeydown = e => { if (e.key==='Enter') $('#go').click(); };
 $('#sair').onclick = () => sb.auth.signOut();
+$('#abrirAssist').onclick = () => { S.assistOpen = !S.assistOpen; renderAssist(); };
+$('#assistClose').onclick = () => { S.assistOpen = false; renderAssist(); };
+$('#assistSend').onclick = enviarPerguntaAssistente;
+$('#assistInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') enviarPerguntaAssistente(); });
+$('#irAssinatura').onclick = () => { S.view = 'assinatura'; render(); };
 $('#stripx').onclick = () => $('#strip').remove();
 
 sb.auth.onAuthStateChange((_e,s) => {
@@ -1554,6 +1592,50 @@ V.assinatura = () => {
     são valor de referência — faltam decidir o valor final e conectar um gateway (Mercado Pago, Stripe...) antes
     de cobrar de verdade. Mudar plano hoje é feito manualmente.</div>`;
 };
+
+// ---------------------------------------------------------------------
+// ASSISTENTE — responde com os dados reais da conta (monitorados,
+// alertas, quota, e o produto aberto quando houver). A Edge Function
+// consome a quota ai_content ANTES de chamar a IA, pra nunca gastar
+// chamada de API num pedido que o plano já não permite.
+// ---------------------------------------------------------------------
+function renderAssist(){
+  const panel = $('#assistPanel'); if (!panel) return;
+  panel.classList.toggle('hide', !S.assistOpen);
+  const box = $('#assistMsgs'); if (!box) return;
+  box.innerHTML = (S.assistMsgs.length ? S.assistMsgs.map(m =>
+      `<div class="amsg ${m.role}">${esc(m.texto)}</div>`).join('')
+    : `<div class="amsg ai">Oi! Pergunte sobre os produtos que você monitora, um alerta, ou o que uma
+        métrica da tela significa.</div>`)
+    + (S.assistBusy ? `<div class="amsg ai busy">pensando…</div>` : '');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function enviarPerguntaAssistente(){
+  const el = $('#assistInput'); const pergunta = el?.value.trim();
+  if (!pergunta || S.assistBusy) return;
+  el.value = '';
+  S.assistMsgs.push({ role:'user', texto: pergunta });
+  S.assistBusy = true; renderAssist();
+
+  const contexto = (S.view === 'detalhe' && S.detalhe?.produto?.product_id)
+    ? { produtoId: S.detalhe.produto.product_id } : {};
+
+  try {
+    const { data, error } = await sb.functions.invoke('assistente', { body: { pergunta, contexto } });
+    if (error || !data?.ok) {
+      S.assistMsgs.push({ role:'erro', texto: data?.erro === 'quota'
+        ? 'Sua quota de IA deste mês acabou. Veja os planos em Assinatura.'
+        : 'Não consegui responder agora. Tenta de novo em um instante.' });
+    } else {
+      S.assistMsgs.push({ role:'ai', texto: data.resposta });
+    }
+  } catch {
+    S.assistMsgs.push({ role:'erro', texto:'Não consegui responder agora. Tenta de novo em um instante.' });
+  } finally {
+    S.assistBusy = false; renderAssist();
+  }
+}
 
 async function carregarMonitor(){
   const [m,a,f] = await Promise.all([
