@@ -448,7 +448,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
                         'sb_publishable_gabCC-2dHNLezVN4VmyCJA_sONtVPg8');
 const $ = s => document.querySelector(s);
-const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, buscou:false,
+const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
@@ -836,6 +836,15 @@ V.categorias = () => `
     <div class="fld"><label>Nome da categoria</label><input id="c_txt" placeholder="ex: suplementos"></div>
     <div class="acts"><button class="btn" id="c_go">Carregar</button></div>
   </div>
+  ${S.categoriasRecentes.length?`<div class="card" style="margin-bottom:14px">
+    <div class="ct">Categorias recentes</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${S.categoriasRecentes.map(c=>`<button class="chip ${c.oportunidade==='alta'?'g':c.oportunidade==='media'?'y':'p'}"
+        data-crec="${esc(c.category_id)}" style="cursor:pointer;border:none" title="Buscado em ${new Date(c.ultima_busca).toLocaleDateString('pt-BR')}">
+        ${esc(c.nome)}${c.oportunidade?` · ${esc(c.oportunidade)}`:''}
+      </button>`).join('')}
+    </div>
+  </div>`:''}
   <div class="card" id="cres">${S.categorias.length?tcat():
     `<div class="none"><b>Clique em Carregar</b>Cada carga consome uma unidade da quota de categorias.</div>`}</div>
   <div class="tip"><b>Por que rotatividade e não faturamento.</b> A API do Mercado Livre não entrega
@@ -2019,10 +2028,24 @@ async function buscar(){
 }
 async function cats(){
   $('#cres').innerHTML = '<div class="load">carregando…</div>';
-  const { data, error } = await sb.rpc('listar_categorias',
-    { p_texto:$('#c_txt')?.value.trim()||null, p_limite:100 });
+  const texto = $('#c_txt')?.value.trim()||null;
+  const { data, error } = await sb.rpc('listar_categorias', { p_texto:texto, p_limite:100 });
   if (error){ if(!eQuota(error)) $('#cres').innerHTML=`<div class="none"><b>Erro</b>${esc(error.message)}</div>`; return; }
-  S.categorias = data ?? []; await quota(); render();
+  S.categorias = data ?? []; await quota();
+  logarBuscaCategorias(texto, S.categorias); // nao bloqueia o render
+  await carregarCategoriasRecentes();
+  render();
+}
+function logarBuscaCategorias(texto, categorias){
+  if (!categorias.length) return;
+  const linhas = categorias.slice(0,50).map(c => ({ category_id:c.category_id, texto }));
+  sb.from('category_search_log').insert(linhas).then(({error}) => {
+    if (error) console.error('log de busca de categoria falhou', error.message);
+  });
+}
+async function carregarCategoriasRecentes(){
+  const { data, error } = await sb.rpc('categorias_recentes', { p_limite:8 });
+  if (!error) S.categoriasRecentes = data ?? [];
 }
 async function abrir(id){
   let p = S.produtos.find(x=>x.product_id===id);
@@ -2182,6 +2205,10 @@ function render(){
       abrir(tr.dataset.p); });
   }
   if (S.view==='categorias' && $('#c_go')) $('#c_go').onclick = cats;
+  if (S.view==='categorias') document.querySelectorAll('[data-crec]').forEach(b => b.onclick = () => {
+    const c = S.categoriasRecentes.find(x=>x.category_id===b.dataset.crec);
+    if (c) { $('#c_txt').value = c.nome; cats(); }
+  });
   if (S.view==='locais'){
     if (!S.locaisCategorias.length) carregarCategoriasLocais().then(render);
     if ($('#l_go')) $('#l_go').onclick = () => { S.locaisOffset = 0; buscarLocais(); };
@@ -2293,7 +2320,8 @@ function render(){
 }
 
 document.querySelectorAll('.item,.solo').forEach(b =>
-  b.onclick = () => { S.view = b.dataset.v; render(); });
+  b.onclick = () => { S.view = b.dataset.v; render();
+    if (b.dataset.v === 'categorias') carregarCategoriasRecentes().then(render); });
 document.querySelectorAll('.gh').forEach(h => h.onclick = () => {
   document.getElementById(h.dataset.g).classList.toggle('hide');
 });
