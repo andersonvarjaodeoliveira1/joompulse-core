@@ -177,7 +177,7 @@ export async function refreshItems(ml: MlClient, opts: { batch?: number } = {}) 
 }
 
 // ---------------------------------------------------------------------
-export async function syncSellers(ml: MlClient, opts: { limit?: number } = {}) {
+export async function syncSellers(ml: MlClient, opts: { limit?: number; concorrencia?: number } = {}) {
   const started = Date.now();
   const limit = opts.limit ?? 1000;
 
@@ -189,17 +189,28 @@ export async function syncSellers(ml: MlClient, opts: { limit?: number } = {}) {
   `;
 
   let ok = 0;
-  for (const row of rows) {
-    try {
-      const user = await ml.user(row.id);
-      await db.upsertSeller(user);
-      ok++;
-    } catch (e) {
-      if (!(e instanceof NotFoundError)) {
-        log(`  vendedor ${row.id}: ${e instanceof Error ? e.message : e}`);
+
+  // Mesmo gargalo já visto em sincronizarProdutos: um "for" sequencial
+  // fica ocioso esperando o round-trip de rede em vez de saturar o
+  // rate limiter. Lanes concorrentes puxando da mesma fila, mesmo
+  // TokenBucket compartilhado como único limitador real de req/s.
+  const lanes = Math.max(1, opts.concorrencia ?? 8);
+  let cursor = 0;
+  async function lane() {
+    while (cursor < rows.length) {
+      const row = rows[cursor++];
+      try {
+        const user = await ml.user(row.id);
+        await db.upsertSeller(user);
+        ok++;
+      } catch (e) {
+        if (!(e instanceof NotFoundError)) {
+          log(`  vendedor ${row.id}: ${e instanceof Error ? e.message : e}`);
+        }
       }
     }
   }
+  await Promise.all(Array.from({ length: lanes }, lane));
 
   await db.logRun({
     jobType: 'sync_sellers',

@@ -368,7 +368,10 @@ async function main() {
         await daily();
         break;
       case 'sellers':
-        await syncSellers(client(), { limit: Number(process.argv[3] ?? 1000) });
+        await syncSellers(client(), {
+          limit: Number(process.argv[3] ?? 1000),
+          concorrencia: Number(process.argv[4] ?? 8),
+        });
         break;
       case 'categories':
         await syncCategories(client());

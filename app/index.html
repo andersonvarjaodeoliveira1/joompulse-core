@@ -445,6 +445,7 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
             planos:[], periodoPlano:'mes',
             assistOpen:false, assistMsgs:[], assistBusy:false,
+            vendedores:[], vendBusca:'', vendResultado:[], vendBuscando:false, vendAdd:false,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -912,9 +913,10 @@ V.monitor = () => {
     <button class="tb ${S.aba==='lista'?'on':''}" data-ab="lista">Acompanhando (${S.monitorados.length})</button>
     <button class="tb ${S.aba==='fila'?'on':''}" data-ab="fila">Aguardando coleta (${S.pedidos.filter(p=>p.status==='pendente').length})</button>
     <button class="tb ${S.aba==='alertas'?'on':''}" data-ab="alertas">Alertas${novos?` <span class="badge">${novos}</span>`:''}</button>
+    <button class="tb ${S.aba==='vendedores'?'on':''}" data-ab="vendedores">Vendedores (${S.vendedores.length})</button>
     ${S.aba==='alertas'&&novos?'<button class="btn g" id="lidos" style="margin-left:auto">Marcar como lidos</button>':''}
   </div>
-  <div class="card" id="mres">${S.aba==='lista'?tmon():S.aba==='fila'?tfila():talert()}</div>
+  <div class="card" id="mres">${S.aba==='lista'?tmon():S.aba==='fila'?tfila():S.aba==='vendedores'?tvend():talert()}</div>
   <div class="tip"><b>O que dispara alerta.</b> Mudança de 3 ou mais posições, entrada ou saída do
     top 10, variação de preço acima de 5%, e 2 ou mais concorrentes entrando ou saindo. Os limiares
     existem para o alerta não virar ruído — o que dispara todo dia deixa de ser lido.</div>`;
@@ -997,6 +999,34 @@ function tmon(){
       <td class="n">${m.alertas_novos>0?`<span class="chip p">${m.alertas_novos}</span>`:'—'}</td>
       <td class="n"><button class="btn g mini" data-rm="${esc(m.product_id)}">Remover</button></td>
     </tr>`).join('')}</tbody></table>`;
+}
+
+function tvend(){
+  const buscaBox = `<div class="card cbox" style="margin-bottom:12px">
+    <div style="display:flex;gap:8px">
+      <input id="v_busca" placeholder="nome do vendedor (ex: NORTINOX)" value="${esc(S.vendBusca)}">
+      <button class="btn" id="v_ir" ${S.vendBuscando?'disabled':''}>${S.vendBuscando?'...':'Buscar'}</button>
+    </div>
+    ${S.vendResultado.length ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+      ${S.vendResultado.map(r => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">
+        <div style="flex:1;min-width:0"><div class="nm" style="font-size:13.5px">${esc(r.nickname ?? r.id)}</div>
+          <div class="sb">${esc([r.city,r.state].filter(Boolean).join(' · ') || '—')} · ${num(r.anuncios_vistos)} anúncio(s) na nossa base
+          ${r.is_official_store?' · <span class="chip p">Loja oficial</span>':''}</div></div>
+        <button class="btn mini" data-vadd="${r.id}">Acompanhar</button>
+      </div>`).join('')}
+    </div>` : (S.vendBusca.trim().length>=2 && !S.vendBuscando ? '<div class="sb" style="margin-top:8px">Nada encontrado com esse nome.</div>' : '')}
+  </div>`;
+
+  if (!S.vendedores.length) return buscaBox + `<div class="none"><b>Ainda não há nada aqui</b>
+    Busque um vendedor acima pra começar a acompanhar.</div>`;
+
+  return buscaBox + `<table><thead><tr><th>Vendedor</th><th>Cidade/UF</th><th></th></tr></thead><tbody>${
+    S.vendedores.map(v => { const s = v.sellers || {}; return `<tr>
+      <td><div class="nm">${esc(s.nickname ?? v.seller_id)}${s.is_official_store?' <span class="chip p">Loja oficial</span>':''}</div>
+        ${s.permalink?`<div class="sb"><a href="${esc(s.permalink)}" target="_blank" rel="noopener">ver perfil no ML</a></div>`:''}</td>
+      <td>${esc([s.city,s.state].filter(Boolean).join(' · ') || '—')}</td>
+      <td class="n"><button class="btn g mini" data-vrm="${v.seller_id}">Remover</button></td>
+    </tr>`; }).join('')}</tbody></table>`;
 }
 
 function talert(){
@@ -1641,12 +1671,33 @@ async function enviarPerguntaAssistente(){
 }
 
 async function carregarMonitor(){
-  const [m,a,f] = await Promise.all([
+  const [m,a,f,v] = await Promise.all([
     sb.rpc('listar_monitorados'),
     sb.rpc('listar_alertas',{p_limite:80}),
     sb.rpc('meus_pedidos'),
+    sb.from('tracked_sellers').select('seller_id,created_at,sellers(nickname,city,state,permalink,is_official_store)').order('created_at',{ascending:false}),
   ]);
   S.monitorados = m.data ?? []; S.alertas = a.data ?? []; S.pedidos = f.data ?? [];
+  S.vendedores = v.data ?? [];
+}
+async function buscarVendedores(){
+  const t = S.vendBusca.trim();
+  if (t.length < 2) { S.vendResultado = []; render(); return; }
+  S.vendBuscando = true; render();
+  const { data, error } = await sb.rpc('buscar_vendedores', { p_texto:t, p_limite:20 });
+  S.vendBuscando = false;
+  if (error) { if(!eQuota(error)) alert(error.message); return; }
+  S.vendResultado = data ?? []; render();
+}
+async function acompanharVendedor(id){
+  const { error } = await sb.from('tracked_sellers').insert({ seller_id:id });
+  if (error) { alert(error.message); return; }
+  S.vendAdd=false; S.vendBusca=''; S.vendResultado=[];
+  await carregarMonitor(); render();
+}
+async function largarVendedor(id){
+  await sb.from('tracked_sellers').delete().eq('seller_id', id);
+  await carregarMonitor(); render();
 }
 async function seguir(id){
   const { data, error } = await sb.rpc('monitorar_produto',{ p_produto:id });
@@ -1970,6 +2021,13 @@ function render(){
     document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = () => removerPedido(b.dataset.rmped));
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
+    if ($('#v_busca')){
+      $('#v_busca').oninput = (e) => { S.vendBusca = e.target.value; };
+      $('#v_busca').addEventListener('keydown', (e) => { if (e.key==='Enter') buscarVendedores(); });
+    }
+    if ($('#v_ir')) $('#v_ir').onclick = buscarVendedores;
+    document.querySelectorAll('[data-vadd]').forEach(b => b.onclick = () => acompanharVendedor(Number(b.dataset.vadd)));
+    document.querySelectorAll('[data-vrm]').forEach(b => b.onclick = () => largarVendedor(Number(b.dataset.vrm)));
   }
   if (S.view==='detalhe'){
     if ($('#volta')) $('#volta').onclick = () => { S.view='produtos'; render(); };
