@@ -458,7 +458,7 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             vendedores:[], vendBusca:'', vendResultado:[], vendBuscando:false, vendAdd:false,
             locaisCategorias:[], locaisCatSel:new Set(), locaisAba:'todos', locaisFiltrosAbertos:true,
             locaisFavoritos:new Set(JSON.parse(localStorage.getItem('gr_locais_fav')||'[]')),
-            locaisCriado:null, locaisCaixaMin:null, locaisCaixaMax:null, locaisOffset:0,
+            locaisCriado:null, locaisCaixaMin:null, locaisCaixaMax:null, locaisOffset:0, histMon:{},
             detalheAba:'catalogo', similares:[], similaresCarregado:false,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
@@ -1055,7 +1055,7 @@ function tfila(){
 function tmon(){
   if (!S.monitorados.length) return `<div class="none"><b>Nada sendo acompanhado</b>
     Abra um produto na busca e clique em Monitorar.</div>`;
-  return `<table><thead><tr><th>Produto</th><th class="n">Posição</th>
+  return `<table><thead><tr><th>Produto</th><th>Tendência (21d)</th><th class="n">Posição</th>
     <th class="n">Desde que entrou</th><th class="n">Preço</th><th class="n">Variação</th>
     <th class="n">Receita acumulada</th><th class="n">Vendas/mes</th><th class="n">Total vendas</th>
     <th class="n">Concorrentes</th><th class="n">Alertas</th><th></th></tr></thead><tbody>${
@@ -1065,6 +1065,9 @@ function tmon(){
           style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
         <div style="min-width:0"><div class="nm">${esc(m.nome ?? m.product_id)}</div>
         <div class="sb">${esc(m.categoria ?? '')}</div></div></div></td>
+      <td style="width:110px">${(S.histMon[m.product_id]||[]).length>1
+        ? spark(S.histMon[m.product_id],100,32)
+        : '<span class="sb">sem dado</span>'}</td>
       <td class="n"><span class="pos">${m.pos_atual ?? '—'}</span></td>
       <td class="n">${m.delta_desde_inicio!=null
         ? `<span class="mv ${m.delta_desde_inicio>0?'u':m.delta_desde_inicio<0?'d':'f'}">${
@@ -1131,7 +1134,6 @@ function talert(){
 
 V.detalhe = () => {
   const d = S.detalhe; if (!d) return '<div class="none">Nada selecionado.</div>';
-  const h = d.historico.map(x=>x.posicao);
   const pri = d.historico[0], ult = d.historico[d.historico.length-1];
   const seguido = S.monitorados.some(m=>m.product_id===d.produto.product_id);
   return `<div style="display:flex;gap:8px;margin-bottom:14px">
@@ -1149,8 +1151,8 @@ V.detalhe = () => {
   </div>
   <div class="g2">
     <div class="card"><div class="cbox">
-      <div class="ct">Posição no ranking — ${d.historico.length} dia(s). Linha para cima = subiu.</div>
-      ${spark(h)}
+      <div class="ct">Posição e preço — ${d.historico.length} dia(s). Linha roxa = posição (pra cima = subiu); linha verde = preço mediano.</div>
+      ${spark2(d.historico)}
       ${pri?`<div class="sb" style="display:flex;justify-content:space-between;margin-top:8px">
         <span>${pri.dia} · ${pri.posicao}º</span><span>${ult.dia} · ${ult.posicao}º</span></div>`:''}
     </div></div>
@@ -1203,6 +1205,36 @@ function spark(v,w=560,h=110){
     <path d="${d} L ${w} ${h} L 0 ${h} Z" fill="#7C3AED" opacity=".08"/>
     <path d="${d}" fill="none" stroke="#7C3AED" stroke-width="2.2" stroke-linejoin="round"/>
     ${p.map(q=>`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="#7C3AED"/>`).join('')}</svg>`;
+}
+
+/** Posição + preço juntos, eixos independentes. Ponto com <title> = tooltip nativo (data/valor). */
+function spark2(hist,w=560,h=170){
+  if (!hist.length) return '<div class="none">sem histórico ainda</div>';
+  const pos = hist.map(x=>x.posicao).filter(v=>v!=null);
+  const preco = hist.map(x=>x.preco).filter(v=>v!=null);
+  const linha = (vals,getY,cor) => {
+    const pts = hist.map((x,i)=>{
+      const v = getY(x); if (v==null) return null;
+      return [(i/Math.max(hist.length-1,1))*w, v, x];
+    }).filter(Boolean);
+    if (pts.length<2) return '';
+    const ys = pts.map(p=>p[1]);
+    const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
+    const esInvertido = cor==='#7C3AED'; // posição: menor é melhor -> inverte pra "subiu" ficar visualmente pra cima
+    const py = y => esInvertido ? ((y-mn)/rg)*(h-30)+15 : (h-30) - ((y-mn)/rg)*(h-30) - 15;
+    const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
+    const pontos = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" fill="${cor}">
+      <title>${esc(p[2].dia)} · ${cor==='#7C3AED'?p[1]+'º':brl(p[1])}</title></circle>`).join('');
+    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>${pontos}`;
+  };
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico">
+    ${linha(pos, x=>x.posicao, '#7C3AED')}
+    ${linha(preco, x=>x.preco, '#16A34A')}
+  </svg>
+  <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
+    <span>● posição</span><span style="color:var(--up)">● preço mediano</span>
+    <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
+  </div>`;
 }
 
 // Anexo I do Simples Nacional (comércio) — faixas oficiais, estáveis desde a
@@ -1781,14 +1813,17 @@ async function enviarPerguntaAssistente(){
 }
 
 async function carregarMonitor(){
-  const [m,a,f,v] = await Promise.all([
+  const [m,a,f,v,hm] = await Promise.all([
     sb.rpc('listar_monitorados'),
     sb.rpc('listar_alertas',{p_limite:80}),
     sb.rpc('meus_pedidos'),
     sb.from('tracked_sellers').select('seller_id,created_at,sellers(nickname,city,state,permalink,is_official_store)').order('created_at',{ascending:false}),
+    sb.rpc('historico_monitorados',{p_dias:21}),
   ]);
   S.monitorados = m.data ?? []; S.alertas = a.data ?? []; S.pedidos = f.data ?? [];
   S.vendedores = v.data ?? [];
+  S.histMon = {};
+  (hm.data ?? []).forEach(r => { (S.histMon[r.product_id] ??= []).push(r.posicao); });
 }
 async function buscarVendedores(){
   const t = S.vendBusca.trim();
