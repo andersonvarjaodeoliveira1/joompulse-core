@@ -768,7 +768,7 @@ function tprod(){
           : p.product_id))}</div>
           <div class="sb">${esc(p.product_id)} · ${esc(p.category_name ?? '')}</div></div>
       </div></td>
-      <td class="n"><span class="pos">${p.position_now ?? '—'}</span></td>
+      <td class="n">${p.position_now!=null?`<span class="pos" title="${esc(String(p.position_now))}° em ${esc(p.category_name??'—')}">${p.position_now}</span>`:'<span class="pos">—</span>'}</td>
       <td class="n ${b}"><span>${mov(p[per])}</span></td>
       <td class="n ${b}"><span>${p.days_in_top10 ?? '—'}/${p.days_observed ?? '—'}</span></td>
       <td class="n ${b}"><span>${num(p.listings)}</span></td>
@@ -777,6 +777,8 @@ function tprod(){
         p.min_price!=null?brl(p.min_price)+' – '+brl(p.max_price):'—'}</span></td>
       <td class="n ${b}"><span>${p.full_share!=null
         ?`<span class="chip ${p.full_share>=.5?'g':''}">${pct(p.full_share)}</span>`:'—'}</span></td>
+      <td class="n ${b}" title="Ha quanto tempo monitoramos, nao a data real de criacao do anuncio (ML nao publica isso)">${
+        p.first_seen_at?num(Math.max(0,Math.floor((Date.now()-new Date(p.first_seen_at))/86400000)))+'d':'—'}</td>
     </tr>`;
   }).join('');
 
@@ -787,6 +789,7 @@ function tprod(){
       <th class="n">Mov. ${S.periodo==='30'?'30d':'7d'}</th>
       <th class="n">Top 10</th><th class="n">Concorrentes</th>
       <th class="n">Preço mediano</th><th class="n">Faixa</th><th class="n">Full</th>
+      <th class="n" title="Ha quanto tempo monitoramos, nao data real de criacao (ML nao publica)">Tempo no ar</th>
     </tr></thead><tbody>${linhas}</tbody></table>
     ${travadas>0?`<div class="upsell"><b>${travadas} produto(s) com dados ocultos</b>
       <p>O plano gratuito mostra os ${livres} primeiros por completo. Os outros aparecem borrados
