@@ -888,10 +888,14 @@ function cardsLocais(){
     const c = S.contatos[p.fornecedor_id];
     return `<div class="lc">
       <div class="lhead">
-        ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="">`
-                   : `<div class="limg">sem foto</div>`}
+        <div style="position:relative">
+          ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="">`
+                     : `<div class="limg">sem foto</div>`}
+          ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No catálogo ML</span>`:''}
+        </div>
         <div><div class="lnome">${esc(p.nome)}</div>
-          <div class="sb">${p.unidades_por_caixa ?? 1} por caixa${p.moq?` · mínimo ${p.moq}`:''}</div></div>
+          <div class="sb">${p.unidades_por_caixa ?? 1} por caixa${p.moq?` · mínimo ${p.moq}`:''}
+            ${p.criado_em?` · publicado em ${new Date(p.criado_em).toLocaleDateString('pt-BR')}`:''}</div></div>
       </div>
       <div class="lbody">
         <div class="lprice">
