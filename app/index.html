@@ -1029,14 +1029,14 @@ function tfila(){
       // dado vivo: por isso a data aparece junto e some quando a coleta atende.
       const f = p.snapshot || {};
       const receita = (f.vendidos != null && f.preco != null) ? f.vendidos * f.preco : null;
-      return `<tr>
+      return `<tr class="k" data-p="${p.produto?esc(p.produto):''}" data-url="${p.url?esc(p.url):''}">
       <td style="max-width:320px"><div style="display:flex;gap:10px;align-items:center">
         ${f.imagem?`<img src="${esc(f.imagem)}" alt="" width="44" height="44"
            style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
         <div style="min-width:0">
           <div class="nm">${esc(f.titulo || p.mlb)}</div>
           <div class="sb">${esc(p.mlb)}${f.vendedor?' · '+esc(f.vendedor):''}
-          ${p.url?` · <a href="${esc(p.url)}" target="_blank" rel="noopener">ver no ML</a>`:''}</div>
+          ${p.url?` · <a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ver no ML</a>`:''}</div>
         </div></div></td>
       <td class="n">${f.preco!=null?brl(f.preco):'—'}</td>
       <td class="n">${f.vendidos!=null?(f.aprox?'~':'')+num(f.vendidos):'—'}</td>
@@ -2239,10 +2239,13 @@ function render(){
   }
   if (S.view==='monitor'){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
-    document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async () => { b.disabled=true; b.textContent='...'; await seguir(b.dataset.seg); await carregarMonitor(); S.aba='lista'; render(); });
+    document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async (ev) => { ev.stopPropagation(); b.disabled=true; b.textContent='...'; await seguir(b.dataset.seg); await carregarMonitor(); S.aba='lista'; render(); });
     document.querySelectorAll('[data-rm]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); largar(b.dataset.rm); });
-    document.querySelectorAll('tr.k[data-p]').forEach(tr => tr.onclick = () => abrir(tr.dataset.p));
-    document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = () => removerPedido(b.dataset.rmped));
+    document.querySelectorAll('tr.k[data-p]').forEach(tr => tr.onclick = () => {
+      if (tr.dataset.p) abrir(tr.dataset.p);
+      else if (tr.dataset.url) window.open(tr.dataset.url, '_blank', 'noopener');
+    });
+    document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); removerPedido(b.dataset.rmped); });
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
     if ($('#v_busca')){
