@@ -13,9 +13,18 @@
     --bg-2:#F7F8FA; --line:#E8EAEF;
     --up:#16A34A; --dn:#DC2626; --warn:#D97706;
     --f:"Inter",system-ui,-apple-system,sans-serif;
+    --bg:#fff; --card:#fff;
   }
+  html[data-tema="escuro"]{
+    --brand:#9F75F0; --brand-2:#B794F6; --tint:#2A2140; --soft:#3D2E5C;
+    --ink:#EDEDF2; --ink-2:#B8BDC7; --ink-3:#7C8291;
+    --bg-2:#1C1D24; --line:#33353E;
+    --bg:#111218; --card:#191A21;
+  }
+  html[data-tema="escuro"] body{background:var(--bg)}
+  html[data-tema="escuro"] .card,html[data-tema="escuro"] .cbox{background:var(--card)}
   *{box-sizing:border-box} html,body{margin:0;padding:0}
-  body{background:#fff;color:var(--ink);font-family:var(--f);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;transition:background .15s,color .15s}
   button,input,select{font:inherit;color:inherit} button{cursor:pointer}
   :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -411,6 +420,7 @@
         <div class="sp"></div>
         <div class="qbar" id="q"></div>
         <button class="lnk" id="pl">—</button>
+        <button class="btn g mini" id="tema" style="margin-right:4px;width:34px;padding:5px 0" title="Mudar tema">🌙</button>
         <button class="btn g mini" id="abrirAssist" style="margin-right:4px">✨ Assistente</button>
         <button class="up" id="irAssinatura">Fazer upgrade</button>
         <button class="avatar" id="sair" title="Sair">↩</button>
@@ -465,6 +475,17 @@ $('#reg').onclick = async () => {
 };
 $('#pw').onkeydown = e => { if (e.key==='Enter') $('#go').click(); };
 $('#sair').onclick = () => sb.auth.signOut();
+(function(){
+  const salvo = localStorage.getItem('gr_tema') || 'claro';
+  document.documentElement.setAttribute('data-tema', salvo);
+  const btn = $('#tema'); if (btn) btn.textContent = salvo === 'escuro' ? '☀️' : '🌙';
+})();
+$('#tema').onclick = () => {
+  const atual = document.documentElement.getAttribute('data-tema') === 'escuro' ? 'claro' : 'escuro';
+  document.documentElement.setAttribute('data-tema', atual);
+  localStorage.setItem('gr_tema', atual);
+  $('#tema').textContent = atual === 'escuro' ? '☀️' : '🌙';
+};
 $('#abrirAssist').onclick = () => { S.assistOpen = !S.assistOpen; renderAssist(); };
 $('#assistClose').onclick = () => { S.assistOpen = false; renderAssist(); };
 $('#assistSend').onclick = enviarPerguntaAssistente;
