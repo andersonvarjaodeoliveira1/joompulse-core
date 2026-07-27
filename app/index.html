@@ -856,7 +856,7 @@ function tcat(){
   return `<table><thead><tr><th>Categoria</th><th class="n">Oportunidade</th>
     <th class="n">Rotatividade 7d</th><th class="n">Produtos</th><th class="n">Concorrentes/prod</th>
     <th class="n">Preço mediano</th><th class="n">Dias</th></tr></thead><tbody>${S.categorias.map(c=>`
-    <tr><td><div class="nm">${esc(c.categoria)}</div>
+    <tr class="k" data-cid="${esc(c.category_id)}" data-cn="${esc(c.categoria)}"><td><div class="nm">${esc(c.categoria)}</div>
       <div class="sb">${esc((c.path_names||[]).slice(0,2).join(' › '))}</div></td>
       <td class="n"><span class="chip ${c.oportunidade==='alta'?'g':c.oportunidade==='media'?'y':'p'}">${esc(c.oportunidade)}</span></td>
       <td class="n">${c.rotatividade_7d!=null?`${pct(c.rotatividade_7d)} <span class="sb" style="display:inline">(${c.entrantes})</span>`:'<span style="color:var(--ink-3)">sem base</span>'}</td>
@@ -2208,6 +2208,11 @@ function render(){
   if (S.view==='categorias') document.querySelectorAll('[data-crec]').forEach(b => b.onclick = () => {
     const c = S.categoriasRecentes.find(x=>x.category_id===b.dataset.crec);
     if (c) { $('#c_txt').value = c.nome; cats(); }
+  });
+  if (S.view==='categorias') document.querySelectorAll('#cres tr.k[data-cid]').forEach(tr => tr.onclick = () => {
+    S.catSel = { id:tr.dataset.cid, nome:tr.dataset.cn };
+    S.F = { p_categoria: tr.dataset.cid }; S.pred = null;
+    S.view = 'produtos'; render(); buscar();
   });
   if (S.view==='locais'){
     if (!S.locaisCategorias.length) carregarCategoriasLocais().then(render);
