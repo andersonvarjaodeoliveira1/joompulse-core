@@ -44,7 +44,7 @@
 
   .strip{background:linear-gradient(90deg,#4C1D95,#7C3AED);color:#fff;padding:9px 16px;text-align:center;font-size:13.5px}
   .strip b{color:#FDE68A}
-  .strip button{margin-left:12px;background:#fff;color:var(--brand-2);border:0;border-radius:6px;padding:4px 12px;font-size:12.5px;font-weight:600}
+  .strip button{margin-left:12px;background:var(--card);color:var(--brand-2);border:0;border-radius:6px;padding:4px 12px;font-size:12.5px;font-weight:600}
 
   .shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
   .side{border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto}
@@ -65,7 +65,7 @@
   .ic{width:18px;height:18px;flex:none}
 
   .main{min-width:0;display:flex;flex-direction:column}
-  .top{display:flex;align-items:center;gap:12px;padding:12px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:9}
+  .top{display:flex;align-items:center;gap:12px;padding:12px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:9}
   .mkt{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-weight:500}
   .mkt .dot{width:18px;height:18px;border-radius:50%;background:#FFE600;display:grid;place-items:center;font-size:10px}
   .sp{flex:1}
@@ -90,11 +90,11 @@
   .hero{background:linear-gradient(100deg,var(--brand),#9333EA);border-radius:14px;padding:24px 26px;color:#fff;position:relative;overflow:hidden}
   .hero h3{margin:0 0 7px;font-size:19px;font-weight:600}
   .hero p{margin:0 0 16px;opacity:.94;max-width:44ch}
-  .hero .b{background:#fff;color:var(--brand-2);border:0;border-radius:9px;padding:9px 17px;font-weight:600;font-size:13.5px}
+  .hero .b{background:var(--card);color:var(--brand-2);border:0;border-radius:9px;padding:9px 17px;font-weight:600;font-size:13.5px}
   .hero .art{position:absolute;right:-24px;top:-24px;opacity:.16;pointer-events:none}
 
   .qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
-  .qc{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:15px;background:#fff;text-align:left}
+  .qc{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:15px;background:var(--card);text-align:left}
   .qc:hover{border-color:var(--brand)}
   .sq{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none}
   .qc span{font-size:14px;font-weight:500}
@@ -110,7 +110,7 @@
   .acts{display:flex;gap:8px;align-items:flex-end}
   .btn{background:var(--brand);color:#fff;border:0;border-radius:9px;padding:9px 18px;font-size:13.5px;font-weight:600}
   .btn:hover{background:var(--brand-2)} .btn[disabled]{opacity:.45;cursor:not-allowed}
-  .btn.g{background:#fff;color:var(--ink-2);border:1px solid var(--line)}
+  .btn.g{background:var(--card);color:var(--ink-2);border:1px solid var(--line)}
   .btn.g:hover{background:var(--bg-2);color:var(--ink)}
 
   .card{border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -163,7 +163,7 @@
   .crow:last-child{margin-bottom:0}
   .cfld label{display:block;font-size:12px;font-weight:500;color:var(--ink-2);margin-bottom:4px}
   .cfld label i{font-weight:400;color:var(--ink-3);font-style:normal}
-  .cfld input,.cfld select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff}
+  .cfld input,.cfld select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:var(--card)}
   .cfld input:focus,.cfld select:focus{border-color:var(--brand)}
   .cfld.chk{display:flex;align-items:center;gap:8px;flex-direction:row;padding-top:19px}
   .cfld.chk label{margin:0}
@@ -191,7 +191,7 @@
   .excap{font-size:12px;color:var(--ink-3);text-align:center;margin-bottom:14px}
 
   /* assistente */
-  .assist{position:fixed;right:20px;bottom:20px;width:380px;max-height:70vh;background:#fff;
+  .assist{position:fixed;right:20px;bottom:20px;width:380px;max-height:70vh;background:var(--card);
     border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);
     display:flex;flex-direction:column;z-index:50}
   .assist.hide{display:none}
@@ -214,7 +214,7 @@
   .mb:hover{color:var(--ink)}
   .mb.on{color:var(--brand-2);border-bottom-color:var(--brand);font-weight:600}
   .preds{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-  .pd{background:#fff;border:1px solid var(--line);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:500;color:var(--ink-2)}
+  .pd{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:500;color:var(--ink-2)}
   .pd:hover{border-color:var(--brand);color:var(--brand-2)}
   .pd.on{background:var(--tint);border-color:var(--brand);color:var(--brand-2);font-weight:600}
   .fbox{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
@@ -225,11 +225,11 @@
   .fh .sq{width:26px;height:26px;border-radius:7px}
   .frow{margin-bottom:13px}
   .frow>label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px}
-  .frow input,.frow select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff}
+  .frow input,.frow select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:var(--card)}
   .frow input:focus,.frow select:focus{border-color:var(--brand)}
   .duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .catwrap{position:relative}
-  .catdrop{position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.09);max-height:250px;overflow-y:auto;margin-top:3px}
+  .catdrop{position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.09);max-height:250px;overflow-y:auto;margin-top:3px}
   .catop{display:block;width:100%;text-align:left;background:none;border:0;padding:9px 12px;font-size:13px;border-bottom:1px solid var(--line)}
   .catop:last-child{border-bottom:0}
   .catop:hover{background:var(--tint)}
@@ -247,17 +247,17 @@
   .fbar .cnt{font-size:13.5px;color:var(--ink-2)}
   .fbar .cnt b{color:var(--ink);font-weight:600}
   .fbar .sp{flex:1}
-  .barra{display:flex;gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px;background:#fff}
+  .barra{display:flex;gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px;background:var(--card)}
   .barra input{flex:1;border:0;padding:13px 16px;font-size:14px;outline:none}
   .barra button{border:0;background:var(--bg-2);border-left:1px solid var(--line);padding:0 18px;color:var(--ink-2);font-size:13.5px;font-weight:500}
   .barra button:hover{background:var(--tint);color:var(--brand-2)}
   .predl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
   .predl>span{font-size:13px;color:var(--ink-2);margin-right:2px}
   .fgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
-  .fcard{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#fff}
+  .fcard{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--card)}
   .fcard h3{font-size:14px;font-weight:600;margin:0 0 13px}
   .qc2{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-  .qc2 button{background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 10px;font-size:12.5px;color:var(--ink-2)}
+  .qc2 button{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 10px;font-size:12.5px;color:var(--ink-2)}
   .qc2 button:hover{border-color:var(--brand);color:var(--brand-2)}
   .qc2 button.on{background:var(--tint);border-color:var(--brand);color:var(--brand-2);font-weight:600}
   .radios{display:flex;gap:14px;flex-wrap:wrap}
@@ -267,11 +267,11 @@
   .sem{position:relative;margin-bottom:14px}
   .sem>label{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px}
   .sem>label i{color:var(--dn);font-style:normal}
-  .semb{width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;display:flex;align-items:center}
+  .semb{width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;display:flex;align-items:center}
   .semb:hover{border-color:var(--brand)}
   .semb.vazio{color:var(--ink-3)}
   .semb::after{content:'▾';margin-left:auto;color:var(--ink-3);font-size:11px}
-  .semd{position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.12);margin-top:4px;overflow:hidden}
+  .semd{position:absolute;top:100%;left:0;right:0;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.12);margin-top:4px;overflow:hidden}
   .semo{display:block;width:100%;text-align:left;background:none;border:0;padding:11px 14px;border-bottom:1px solid var(--line)}
   .semo:last-child{border-bottom:0}
   .semo:hover{background:var(--tint)}
@@ -289,10 +289,10 @@
   .rbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
   .rcount{font-size:14px;color:var(--ink-2)} .rcount b{color:var(--ink);font-weight:600}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .seg button{background:#fff;border:0;padding:7px 15px;font-size:13px;font-weight:500;color:var(--ink-2);border-right:1px solid var(--line)}
+  .seg button{background:var(--card);border:0;padding:7px 15px;font-size:13px;font-weight:500;color:var(--ink-2);border-right:1px solid var(--line)}
   .seg button:last-child{border-right:0}
   .seg button.on{background:var(--tint);color:var(--brand-2);font-weight:600}
-  .exp{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:500;color:var(--ink-2)}
+  .exp{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 14px;font-size:13px;font-weight:500;color:var(--ink-2)}
   .exp:hover{border-color:var(--brand);color:var(--brand-2)}
   td.blur{position:relative;color:transparent!important;user-select:none}
   td.blur>*{filter:blur(6px);opacity:.55}
@@ -306,7 +306,7 @@
   .thumb{width:42px;height:42px;border-radius:7px;background:var(--bg-2);object-fit:cover;flex:none}
   .prow{display:flex;gap:11px;align-items:center}
   .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
-  .lc{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+  .lc{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);display:flex;flex-direction:column}
   .lc:hover{border-color:var(--brand)}
   .lhead{display:flex;gap:12px;padding:14px}
   .limg{width:66px;height:66px;border-radius:9px;background:var(--bg-2);flex:none;object-fit:cover;display:grid;place-items:center;color:var(--ink-3);font-size:11px}
@@ -1284,8 +1284,8 @@ V.calc = () => {
 
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn" id="pc_calc">Calcular</button>
-        <button class="btn" id="pc_limpar" style="background:#fff;color:var(--ink-2);border:1px solid var(--line)">Limpar</button>
-        <button class="btn" id="pc_salvar" style="background:#fff;color:var(--brand-2);border:1px solid var(--soft)">Salvar como predefinição</button>
+        <button class="btn" id="pc_limpar" style="background:var(--card);color:var(--ink-2);border:1px solid var(--line)">Limpar</button>
+        <button class="btn" id="pc_salvar" style="background:var(--card);color:var(--brand-2);border:1px solid var(--soft)">Salvar como predefinição</button>
       </div>
     </div>
     <div class="card cbox" id="kout" style="align-self:flex-start;position:sticky;top:16px"></div>
