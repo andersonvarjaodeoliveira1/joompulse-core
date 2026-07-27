@@ -975,7 +975,7 @@ function tmon(){
     <th class="n">Desde que entrou</th><th class="n">Preço</th><th class="n">Variação</th>
     <th class="n">Receita acumulada</th><th class="n">Vendas/mes</th><th class="n">Total vendas</th>
     <th class="n">Concorrentes</th><th class="n">Alertas</th><th></th></tr></thead><tbody>${
-    S.monitorados.map(m=>`<tr>
+    S.monitorados.map(m=>`<tr class="k" data-p="${esc(m.product_id)}">
       <td style="max-width:290px"><div style="display:flex;gap:10px;align-items:center">
         ${m.snapshot&&m.snapshot.imagem?`<img src="${esc(m.snapshot.imagem)}" alt="" width="40" height="40"
           style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
@@ -1054,8 +1054,15 @@ V.detalhe = () => {
     <button class="btn g" id="volta">← Voltar</button>
     <button class="btn ${seguido?'g':''}" id="mon">${seguido?'✓ Monitorando':'+ Monitorar'}</button>
   </div>
-  <h1 class="pg">${esc(d.produto.name ?? d.produto.product_id)}</h1>
-  <p class="sub">${esc(d.produto.category_name ?? '')} · ${esc(d.produto.product_id)}</p>
+  <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:4px">
+    ${d.produto.picture?`<img src="${esc(d.produto.picture)}" alt="" width="64" height="64" style="border-radius:10px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
+    <div>
+      <h1 class="pg" style="margin-bottom:2px">${esc(d.produto.name ?? d.produto.product_id)}</h1>
+      <p class="sub" style="margin:0">${esc(d.produto.category_name ?? '')} · ${esc(d.produto.product_id)}
+        ${d.produto.brand?` · ${esc(d.produto.brand)}`:''}
+        ${d.produto.permalink?` · <a href="${esc(d.produto.permalink)}" target="_blank" rel="noopener">ver no Mercado Livre</a>`:''}</p>
+    </div>
+  </div>
   <div class="g2">
     <div class="card"><div class="cbox">
       <div class="ct">Posição no ranking — ${d.historico.length} dia(s). Linha para cima = subiu.</div>
@@ -1068,6 +1075,8 @@ V.detalhe = () => {
       <div class="stat"><div class="k">Melhor posição</div><div class="v">${d.produto.best_position ?? '—'}º</div></div>
       <div class="stat"><div class="k">Dias no top 10</div><div class="v">${d.produto.days_in_top10 ?? 0}/${d.produto.days_observed ?? 0}</div></div>
       <div class="stat"><div class="k">Preço mediano</div><div class="v">${brl(d.produto.median_price)}</div></div>
+      <div class="stat"><div class="k">Faixa de preço (${num(d.produto.listings)} anúncio(s))</div>
+        <div class="v" style="font-size:16px">${d.produto.min_price!=null?brl(d.produto.min_price)+' – '+brl(d.produto.max_price):'—'}</div></div>
     </div>
   </div>
   <h2 class="sc">Quem disputa este produto (${d.concorrentes.length})</h2>
@@ -1877,11 +1886,28 @@ async function cats(){
   S.categorias = data ?? []; await quota(); render();
 }
 async function abrir(id){
-  const p = S.produtos.find(x=>x.product_id===id);
+  let p = S.produtos.find(x=>x.product_id===id);
   $('#sheet').innerHTML='<div class="load">carregando produto…</div>';
-  const [h,c] = await Promise.all([
+  const chamadas = [
     sb.rpc('historico_produto',{p_produto:id}),
-    sb.rpc('concorrentes_produto',{p_produto:id})]);
+    sb.rpc('concorrentes_produto',{p_produto:id}),
+  ];
+  // Aberto direto do Monitor (sem ter passado pela Busca antes): S.produtos
+  // está vazio ou é de outra busca. ficha_produto busca o resumo de verdade
+  // em vez de mostrar a página quase em branco.
+  if (!p) chamadas.push(sb.rpc('ficha_produto', { p_produto: id }));
+  const [h, c, f] = await Promise.all(chamadas);
+  if (!p && f?.data) {
+    const fp = f.data.produto ?? {}; const r = f.data.ranking ?? {}; const k = f.data.concorrencia ?? {};
+    p = {
+      product_id: id, name: fp.nome, picture: fp.imagem, permalink: fp.link,
+      category_name: fp.categoria, brand: fp.marca,
+      position_now: r.position_now, best_position: r.best_position,
+      days_in_top10: r.days_in_top10, days_observed: r.days_observed,
+      median_price: k.preco_mediano, min_price: k.preco_minimo, max_price: k.preco_maximo,
+      listings: k.anuncios,
+    };
+  }
   S.detalhe = { produto:p ?? {product_id:id}, historico:h.data ?? [], concorrentes:c.data ?? [] };
   S.view='detalhe'; render();
 }
@@ -2017,7 +2043,8 @@ function render(){
   if (S.view==='monitor'){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
     document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async () => { b.disabled=true; b.textContent='...'; await seguir(b.dataset.seg); await carregarMonitor(); S.aba='lista'; render(); });
-    document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => largar(b.dataset.rm));
+    document.querySelectorAll('[data-rm]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); largar(b.dataset.rm); });
+    document.querySelectorAll('tr.k[data-p]').forEach(tr => tr.onclick = () => abrir(tr.dataset.p));
     document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = () => removerPedido(b.dataset.rmped));
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
