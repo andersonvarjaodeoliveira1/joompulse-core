@@ -999,8 +999,8 @@ function tmon(){
     <th class="n">Concorrentes</th><th class="n">Alertas</th><th></th></tr></thead><tbody>${
     S.monitorados.map(m=>`<tr class="k" data-p="${esc(m.product_id)}">
       <td style="max-width:290px"><div style="display:flex;gap:10px;align-items:center">
-        ${m.snapshot&&m.snapshot.imagem?`<img src="${esc(m.snapshot.imagem)}" alt="" width="40" height="40"
-          style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
+        ${(m.imagem||(m.snapshot&&m.snapshot.imagem))?`<img src="${esc(m.imagem||m.snapshot.imagem)}" alt="" width="40" height="40"
+          style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
         <div style="min-width:0"><div class="nm">${esc(m.nome ?? m.product_id)}</div>
         <div class="sb">${esc(m.categoria ?? '')}</div></div></div></td>
       <td class="n"><span class="pos">${m.pos_atual ?? '—'}</span></td>
