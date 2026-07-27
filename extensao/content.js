@@ -444,6 +444,10 @@ function blocosInsight(pg, d) {
   const COMISSAO = 0.12, IMPOSTO = 0.07;
 
   return `
+    ${pg.criado ? `<div class="gr-c-ib">
+      <div class="gr-c-it">Anúncio criado em <i>lido da página</i></div>
+      <div style="font-size:14px;font-weight:600">${esc(pg.criado)}${pg.diasNoAr ? ` <span style="font-weight:400;color:#8A93A0;font-size:12px">(${pg.diasNoAr.toLocaleString('pt-BR')} dias no ar)</span>` : ''}</div>
+    </div>` : ''}
     <div class="gr-c-ib">
       <div class="gr-c-it">Vendas <i>segundo a página</i></div>
       <div class="gr-c-igrade">
