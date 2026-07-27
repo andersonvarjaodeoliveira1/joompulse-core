@@ -446,6 +446,7 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             planos:[], periodoPlano:'mes',
             assistOpen:false, assistMsgs:[], assistBusy:false,
             vendedores:[], vendBusca:'', vendResultado:[], vendBuscando:false, vendAdd:false,
+            detalheAba:'catalogo', similares:[], similaresCarregado:false,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1079,18 +1080,35 @@ V.detalhe = () => {
         <div class="v" style="font-size:16px">${d.produto.min_price!=null?brl(d.produto.min_price)+' – '+brl(d.produto.max_price):'—'}</div></div>
     </div>
   </div>
-  <h2 class="sc">Quem disputa este produto (${d.concorrentes.length})</h2>
-  <div class="card">${d.concorrentes.length?`<table><thead><tr>
-    <th>Vendedor</th><th>Anúncio</th><th class="n">Preço</th><th>Envio</th><th>Loja</th>
-    </tr></thead><tbody>${d.concorrentes.map(c=>`<tr>
-      <td><div class="nm">${esc(c.nickname ?? c.seller_id)}</div><div class="sb">${esc(c.estado ?? '')}</div></td>
+  <div class="tabs" style="margin-top:18px">
+    <button class="tb ${S.detalheAba==='catalogo'?'on':''}" data-dab="catalogo">Produtos do catálogo (${d.concorrentes.length})</button>
+    <button class="tb ${S.detalheAba==='similares'?'on':''}" data-dab="similares">Produtos similares</button>
+  </div>
+  <div class="card">${S.detalheAba==='catalogo' ? (d.concorrentes.length?`<table><thead><tr>
+    <th>Anúncio</th><th class="n">Preço</th><th>Vendedor</th><th>Detalhes do vendedor</th><th>Detalhes da listagem</th><th>Categoria</th>
+    </tr></thead><tbody>${d.concorrentes.map(c=>{
+      const link = c.nickname ? `https://perfil.mercadolivre.com.br/${encodeURIComponent(c.nickname)}` : null;
+      return `<tr class="${link?'k':''}" ${link?`data-open="${esc(link)}"`:''}>
       <td class="sb">${esc(c.item_id)}</td>
       <td class="n" style="font-weight:500">${brl(c.preco)}</td>
+      <td>${link?`<a href="${esc(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(c.nickname)}</a>`:esc(c.seller_id ?? '—')}</td>
+      <td>${esc(c.estado ?? '—')}${c.oficial?' · <span class="chip g">Oficial</span>':''}</td>
       <td>${c.full?'<span class="chip y">Full</span>':'<span class="chip">Comum</span>'}
           ${c.frete_gratis?' <span class="chip">Frete grátis</span>':''}</td>
-      <td>${c.oficial?'<span class="chip g">Oficial</span>':''}</td>
+      <td class="sb">${esc(d.produto.category_name ?? '—')}</td>
+    </tr>`;}).join('')}</tbody></table>`
+    :'<div class="none"><b>Sem concorrentes coletados</b>Rode <code>npm run collect produtos</code>.</div>')
+  : (!S.similaresCarregado ? '<div class="load">carregando…</div>' : S.similares.length ? `<table><thead><tr>
+    <th>Produto</th><th class="n">Posição</th><th class="n">Preço mediano</th><th class="n">Anúncios</th></tr></thead><tbody>${
+    S.similares.map(sp=>`<tr class="k" data-p="${esc(sp.product_id)}">
+      <td style="max-width:280px"><div style="display:flex;gap:10px;align-items:center">
+        ${sp.picture?`<img src="${esc(sp.picture)}" width="36" height="36" style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
+        <div class="nm" style="font-size:13.5px">${esc(sp.name ?? sp.product_id)}</div></div></td>
+      <td class="n"><span class="pos">${sp.position_now ?? '—'}</span></td>
+      <td class="n">${brl(sp.median_price)}</td>
+      <td class="n">${num(sp.listings)}</td>
     </tr>`).join('')}</tbody></table>`
-    :'<div class="none"><b>Sem concorrentes coletados</b>Rode <code>npm run collect produtos</code>.</div>'}</div>`;
+    : '<div class="none"><b>Nada parecido rankeado ainda nessa categoria</b></div>')}</div>`;
 };
 function spark(v,w=560,h=110){
   if (!v.length) return '<div class="none">sem histórico ainda</div>';
@@ -1905,11 +1923,19 @@ async function abrir(id){
       position_now: r.position_now, best_position: r.best_position,
       days_in_top10: r.days_in_top10, days_observed: r.days_observed,
       median_price: k.preco_mediano, min_price: k.preco_minimo, max_price: k.preco_maximo,
-      listings: k.anuncios,
+      listings: k.anuncios, category_id: fp.categoria_id,
     };
   }
   S.detalhe = { produto:p ?? {product_id:id}, historico:h.data ?? [], concorrentes:c.data ?? [] };
+  S.detalheAba = 'catalogo'; S.similares = []; S.similaresCarregado = false;
   S.view='detalhe'; render();
+}
+async function carregarSimilares(){
+  if (S.similaresCarregado) return;
+  const catId = S.detalhe?.produto?.category_id;
+  if (!catId) { S.similaresCarregado = true; return; }
+  const { data } = await sb.rpc('produtos_similares', { p_categoria:catId, p_excluir:S.detalhe.produto.product_id, p_limite:20 });
+  S.similares = data ?? []; S.similaresCarregado = true;
 }
 
 function render(){
@@ -2061,6 +2087,13 @@ function render(){
     if ($('#mon')) $('#mon').onclick = () => {
       const id = S.detalhe.produto.product_id;
       S.monitorados.some(m=>m.product_id===id) ? largar(id) : seguir(id); };
+    document.querySelectorAll('[data-dab]').forEach(b => b.onclick = async () => {
+      S.detalheAba = b.dataset.dab;
+      if (S.detalheAba === 'similares' && !S.similaresCarregado) { await carregarSimilares(); }
+      render();
+    });
+    document.querySelectorAll('tr[data-open]').forEach(tr => tr.onclick = () => window.open(tr.dataset.open, '_blank'));
+    document.querySelectorAll('#sheet tr.k[data-p]').forEach(tr => tr.onclick = () => abrir(tr.dataset.p));
   }
   if (S.view==='calc'){
     ['pc_venda','pc_compra','pc_vendas','pc_comissao','pc_taxafixa','pc_taxafixa_v',
