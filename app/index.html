@@ -456,6 +456,9 @@ const S = { view:'home', produtos:[], categorias:[], detalhe:null, quota:null, b
             planos:[], periodoPlano:'mes',
             assistOpen:false, assistMsgs:[], assistBusy:false,
             vendedores:[], vendBusca:'', vendResultado:[], vendBuscando:false, vendAdd:false,
+            locaisCategorias:[], locaisCatSel:new Set(), locaisAba:'todos', locaisFiltrosAbertos:true,
+            locaisFavoritos:new Set(JSON.parse(localStorage.getItem('gr_locais_fav')||'[]')),
+            locaisCriado:null, locaisCaixaMin:null, locaisCaixaMax:null, locaisOffset:0,
             detalheAba:'catalogo', similares:[], similaresCarregado:false,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
@@ -857,41 +860,94 @@ function tcat(){
 
 V.locais = () => {
   const q = S.quota?.features?.supplier_unlock;
+  const aberto = S.locaisFiltrosAbertos;
   return `
   <h1 class="pg">Produtos locais</h1>
   <p class="sub">Fornecedores no Brasil com preço de custo, comparado ao que o produto está valendo no Mercado Livre.</p>
-  <div class="filters">
-    <div class="fld"><label>Produto</label><input id="l_txt" placeholder="ex: balança"></div>
-    <div class="fld"><label>Custo máximo</label><input id="l_custo" type="number" placeholder="R$"></div>
-    <div class="fld"><label>Margem bruta mínima</label>
-      <select id="l_marg"><option value="">Qualquer</option>
-        <option value="0.3">Acima de 30%</option><option value="0.5">Acima de 50%</option>
-        <option value="0.7">Acima de 70%</option></select></div>
-    <div class="fld"><label>Estado</label><input id="l_uf" placeholder="ex: SP" maxlength="2"></div>
-    <div class="fld"><label>Vínculo</label>
-      <select id="l_vinc"><option value="">Todos</option>
-        <option value="1">Só com preço de mercado</option></select></div>
-    <div class="acts"><button class="btn" id="l_go">Buscar</button></div>
+  <div class="cfld" style="max-width:520px;display:flex;gap:8px;margin-bottom:14px">
+    <input id="l_txt" placeholder="Pesquisar por nome do produto">
+    <button class="btn" id="l_go" style="flex:none">Buscar</button>
   </div>
-  ${q ? `<div class="tip" style="margin:0 0 16px">
-    <b>Desbloqueios restantes neste mês: ${q.unlimited?'ilimitados':q.remaining}.</b>
-    Ver os contatos de um fornecedor consome um. Reabrir um que você já liberou é grátis.</div>`:''}
-  <div id="lres">${S.locais.length ? cardsLocais()
-    : `<div class="card"><div class="none"><b>Nenhum fornecedor cadastrado ainda</b>
-       Importe um catálogo com <code>npm run collect fornecedor ./catalogo.csv</code>
-       ou clique em Buscar se já importou.</div></div>`}</div>`;
+  <div style="display:grid;grid-template-columns:${aberto?'260px 1fr':'44px 1fr'};gap:20px;align-items:start">
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        ${aberto?'<b style="font-size:15px">Filtros</b>':''}
+        <button class="btn g mini" id="l_toggle_f" style="padding:6px 10px">${aberto?'‹':'›'}</button>
+      </div>
+      ${aberto?`<div class="card cbox">
+        <div class="ct">Categorias</div>
+        <div style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:2px">
+          ${S.locaisCategorias.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer">
+            <input type="checkbox" data-lcat="${esc(c.id)}" ${S.locaisCatSel.has(c.id)?'checked':''}>
+            <span style="flex:1">${esc(c.nome)}</span><span class="sb">${num(c.total)}</span>
+          </label>`).join('')}
+        </div>
+      </div>
+      <div class="card cbox" style="margin-top:12px">
+        <div class="ct">Faixa de custo personalizada</div>
+        <div class="crow"><div class="cfld"><label>De</label><input type="number" id="l_custo_min" placeholder="R$"></div>
+          <div class="cfld"><label>Até</label><input type="number" id="l_custo_max" placeholder="R$"></div></div>
+      </div>
+      <div class="card cbox" style="margin-top:12px">
+        <div class="ct">Anúncio criado</div>
+        <div class="radios" style="flex-direction:column;gap:8px;padding:4px 0">
+          ${[[null,'Qualquer época'],[7,'Nos últimos 7 dias'],[30,'Nos últimos 30 dias'],[90,'Nos últimos 90 dias']].map(([v,l])=>
+            `<label><input type="radio" name="l_criado" value="${v??''}" ${S.locaisCriado===v?'checked':''}>${l}</label>`).join('')}
+        </div>
+      </div>
+      <div class="card cbox" style="margin-top:12px">
+        <div class="ct">Itens por caixa</div>
+        <div class="radios" style="flex-direction:column;gap:8px;padding:4px 0">
+          ${[[null,null,'Qualquer'],[null,10,'Até 10'],[null,50,'Até 50'],[null,100,'Até 100'],[100,null,'100+']].map(([mn,mx,l])=>
+            `<label><input type="radio" name="l_caixa" value="${mn??''}|${mx??''}" ${S.locaisCaixaMin===mn&&S.locaisCaixaMax===mx?'checked':''}>${l}</label>`).join('')}
+        </div>
+      </div>
+      <div class="card cbox" style="margin-top:12px">
+        <div class="ct">Margem bruta mínima</div>
+        <select id="l_marg"><option value="">Qualquer</option>
+          <option value="0.3">Acima de 30%</option><option value="0.5">Acima de 50%</option>
+          <option value="0.7">Acima de 70%</option></select>
+      </div>`:''}
+    </div>
+    <div>
+      <div class="tabs" style="margin-bottom:14px">
+        <button class="tb ${S.locaisAba==='todos'?'on':''}" data-lab="todos">Todos os produtos</button>
+        <button class="tb ${S.locaisAba==='favoritos'?'on':''}" data-lab="favoritos">Favoritos (${S.locaisFavoritos.size})</button>
+      </div>
+      <div class="sb" style="margin-bottom:12px">${num(S.locais.length)} produto(s) encontrado(s)</div>
+      ${q ? `<div class="tip" style="margin:0 0 16px">
+        <b>Desbloqueios restantes neste mês: ${q.unlimited?'ilimitados':q.remaining}.</b>
+        Ver os contatos de um fornecedor consome um. Reabrir um que você já liberou é grátis.</div>`:''}
+      <div id="lres">${cardsLocais()}</div>
+    </div>
+  </div>`;
 };
 
+async function carregarCategoriasLocais(){
+  if (S.locaisCategorias.length) return;
+  const { data } = await sb.rpc('categorias_locais_contagem');
+  S.locaisCategorias = data ?? [];
+}
+
 function cardsLocais(){
-  if (!S.locais.length) return `<div class="card"><div class="none"><b>Nada encontrado</b></div></div>`;
-  return `<div class="lgrid">${S.locais.map(p=>{
+  const lista = S.locaisAba === 'favoritos'
+    ? S.locais.filter(p => S.locaisFavoritos.has(p.produto_id))
+    : S.locais;
+  if (!lista.length) return `<div class="card"><div class="none">
+    <b>${S.locaisAba==='favoritos'?'Nenhum favorito ainda':'Nada encontrado'}</b>
+    ${S.locaisAba==='favoritos'?'Clique no ♡ de um produto pra guardar aqui.'
+      :'Sem fornecedor cadastrado ainda — importe com <code>npm run collect fornecedor arquivo.csv</code>.'}</div></div>`;
+  return `<div class="lgrid">${lista.map(p=>{
     const c = S.contatos[p.fornecedor_id];
+    const fav = S.locaisFavoritos.has(p.produto_id);
     return `<div class="lc">
       <div class="lhead">
         <div style="position:relative">
           ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="">`
                      : `<div class="limg">sem foto</div>`}
           ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No catálogo ML</span>`:''}
+          <button class="btn g mini" data-lfav="${esc(p.produto_id)}"
+            style="position:absolute;top:4px;right:4px;padding:2px 6px;line-height:1">${fav?'♥':'♡'}</button>
         </div>
         <div><div class="lnome">${esc(p.nome)}</div>
           <div class="sb">${p.unidades_por_caixa ?? 1} por caixa${p.moq?` · mínimo ${p.moq}`:''}
@@ -928,7 +984,9 @@ function cardsLocais(){
           : `<button class="lock" data-unl="${esc(p.fornecedor_id)}">🔒 Mostrar contatos</button>`}
       </div>
     </div>`;
-  }).join('')}</div>`;
+  }).join('')}</div>
+  ${S.locaisAba==='todos' && S.locais.length > 0 && S.locais.length % 60 === 0
+    ? `<div style="text-align:center;margin-top:16px"><button class="btn" id="l_mais">Carregar mais</button></div>` : ''}`;
 }
 
 V.monitor = () => {
@@ -1771,15 +1829,18 @@ async function removerPedido(mlb){
   await carregarMonitor(); render();
 }
 
-async function buscarLocais(){
-  const el = $('#lres'); if (el) el.innerHTML = '<div class="load">buscando…</div>';
+async function buscarLocais(acumular){
+  const el = $('#lres'); if (el && !acumular) el.innerHTML = '<div class="load">buscando…</div>';
+  const criadoDesde = S.locaisCriado ? new Date(Date.now() - S.locaisCriado*86400000).toISOString().slice(0,10) : null;
   const { data, error } = await sb.rpc('listar_produtos_locais', {
-    p_texto: vT('l_txt'), p_custo_max: vF('l_custo'),
+    p_texto: vT('l_txt'), p_custo_max: vF('l_custo_max'), p_custo_min: vF('l_custo_min'),
     p_margem_min: vF('l_marg'),
-    p_estado: (vT('l_uf')||'').toUpperCase() || null,
-    p_so_vinculados: $('#l_vinc')?.value === '1', p_limite: 60 });
+    p_categorias: S.locaisCatSel.size ? [...S.locaisCatSel] : null,
+    p_criado_desde: criadoDesde,
+    p_caixa_min: S.locaisCaixaMin, p_caixa_max: S.locaisCaixaMax,
+    p_limite: 60, p_offset: S.locaisOffset });
   if (error){ if (el) el.innerHTML = `<div class="card"><div class="none"><b>Erro</b>${esc(error.message)}</div></div>`; return; }
-  S.locais = data ?? []; render();
+  S.locais = acumular ? [...S.locais, ...(data ?? [])] : (data ?? []); render();
 }
 
 async function desbloquear(fid){
@@ -2087,7 +2148,30 @@ function render(){
   }
   if (S.view==='categorias' && $('#c_go')) $('#c_go').onclick = cats;
   if (S.view==='locais'){
-    if ($('#l_go')) $('#l_go').onclick = buscarLocais;
+    if (!S.locaisCategorias.length) carregarCategoriasLocais().then(render);
+    if ($('#l_go')) $('#l_go').onclick = () => { S.locaisOffset = 0; buscarLocais(); };
+    if ($('#l_toggle_f')) $('#l_toggle_f').onclick = () => { S.locaisFiltrosAbertos = !S.locaisFiltrosAbertos; render(); };
+    document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.locaisAba = b.dataset.lab; render(); });
+    document.querySelectorAll('[data-lcat]').forEach(c => c.onchange = () => {
+      c.checked ? S.locaisCatSel.add(c.dataset.lcat) : S.locaisCatSel.delete(c.dataset.lcat);
+      S.locaisOffset = 0; buscarLocais();
+    });
+    document.querySelectorAll('input[name=l_criado]').forEach(r => r.onchange = () => {
+      S.locaisCriado = r.value ? Number(r.value) : null; S.locaisOffset = 0; buscarLocais();
+    });
+    document.querySelectorAll('input[name=l_caixa]').forEach(r => r.onchange = () => {
+      const [mn, mx] = r.value.split('|');
+      S.locaisCaixaMin = mn ? Number(mn) : null; S.locaisCaixaMax = mx ? Number(mx) : null;
+      S.locaisOffset = 0; buscarLocais();
+    });
+    if ($('#l_marg')) $('#l_marg').onchange = () => { S.locaisOffset = 0; buscarLocais(); };
+    if ($('#l_mais')) $('#l_mais').onclick = () => { S.locaisOffset += 60; buscarLocais(true); };
+    document.querySelectorAll('[data-lfav]').forEach(b => b.onclick = () => {
+      const id = b.dataset.lfav;
+      S.locaisFavoritos.has(id) ? S.locaisFavoritos.delete(id) : S.locaisFavoritos.add(id);
+      localStorage.setItem('gr_locais_fav', JSON.stringify([...S.locaisFavoritos]));
+      render();
+    });
     document.querySelectorAll('[data-unl]').forEach(b =>
       b.onclick = () => desbloquear(b.dataset.unl));
   }
