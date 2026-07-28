@@ -448,7 +448,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
                         'sb_publishable_gabCC-2dHNLezVN4VmyCJA_sONtVPg8');
 const $ = s => document.querySelector(s);
-const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], detalhe:null, quota:null, buscou:false,
+const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
@@ -867,6 +867,47 @@ function tcat(){
     </tr>`).join('')}</tbody></table>`;
 }
 
+V.catdetalhe = () => {
+  const c = S.catDetalhe;
+  return `
+  <button class="btn g mini" id="cd_voltar" style="margin-bottom:14px">‹ Categorias</button>
+  ${!c ? '<div class="card"><div class="load">carregando…</div></div>' : `
+  <div class="rhead">
+    <div><div class="sb">${esc((c.path_names||[]).join(' › '))}</div>
+      <h1 class="pg" style="margin-top:2px">${esc(c.categoria)}</h1></div>
+    <span style="flex:1"></span>
+    <span class="chip ${c.oportunidade==='alta'?'g':c.oportunidade==='media'?'y':'p'}" style="font-size:13px">${esc(c.oportunidade)}</span>
+  </div>
+  <div class="stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0">
+    <div class="card cbox"><div class="ct">Rotatividade 7d</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.rotatividade_7d!=null?pct(c.rotatividade_7d):'—'}</div>
+      <div class="sb">${c.entrantes} entrante(s) no top ${c.produtos_rankeados}</div></div>
+    <div class="card cbox"><div class="ct">Preço mediano</div>
+      <div class="v" style="font-size:22px;font-weight:700">${brl(c.preco_mediano)}</div></div>
+    <div class="card cbox"><div class="ct">Concorrentes/produto</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.concorrentes_medio ?? '—'}</div>
+      <div class="sb">${num(c.anuncios_totais)} anúncio(s) no total</div></div>
+    <div class="card cbox"><div class="ct">Dispersão de preço</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.dispersao_media!=null?pct(c.dispersao_media):'—'}</div>
+      <div class="sb">quanto maior, mais desorganizado o mercado</div></div>
+    <div class="card cbox"><div class="ct">Vendido via Full</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.full_medio!=null?pct(c.full_medio):'—'}</div></div>
+    <div class="card cbox"><div class="ct">Dias observados</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.dias_observados ?? 0}</div></div>
+  </div>
+  <div class="tip" style="margin-bottom:14px"><b>Sem Receita e Vendas aqui.</b> Testamos ao vivo: o Mercado Livre
+    não entrega quantidade vendida de anúncio de terceiro por nenhum caminho que a conta tem acesso — nem no
+    endpoint de catálogo, nem no de itens. Qualquer número de receita por categoria seria inventado. O que dá
+    pra afirmar com dado real é estrutura de mercado: rotatividade, concorrência e preço, acima.</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ct">Tendência real (30 dias)</div>
+    ${sparkCategoria(S.catDetalheHist)}
+  </div>
+  <h2 style="font-size:16px;margin:18px 0 10px">Produtos desta categoria</h2>
+  <div class="card" id="res">${S.buscou?tprod():'<div class="load">carregando produtos…</div>'}</div>
+  `}`;
+};
+
 V.locais = () => {
   const q = S.quota?.features?.supplier_unlock;
   const aberto = S.locaisFiltrosAbertos;
@@ -1242,6 +1283,33 @@ function spark2(hist,w=560,h=170){
   </svg>
   <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
     <span>● posição</span><span style="color:var(--up)">● preço mediano</span>
+    <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
+  </div>`;
+}
+
+/** Mesmo desenho do spark2, mas pra série de categoria: produtos no top + preço mediano do dia. */
+function sparkCategoria(hist,w=560,h=170){
+  if (hist.length<2) return '<div class="none">sem histórico ainda — volte depois de alguns dias de coleta</div>';
+  const linha = (getY,cor) => {
+    const pts = hist.map((x,i)=>{
+      const v = getY(x); if (v==null) return null;
+      return [(i/Math.max(hist.length-1,1))*w, v, x];
+    }).filter(Boolean);
+    if (pts.length<2) return '';
+    const ys = pts.map(p=>p[1]);
+    const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
+    const py = y => (h-30) - ((y-mn)/rg)*(h-30) - 15;
+    const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
+    const pontos = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" fill="${cor}">
+      <title>${new Date(p[2].dia).toLocaleDateString('pt-BR')} · ${cor==='#7C3AED'?p[1]+' produtos':brl(p[1])}</title></circle>`).join('');
+    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>${pontos}`;
+  };
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico da categoria">
+    ${linha(x=>x.produtos_no_top, '#7C3AED')}
+    ${linha(x=>x.preco_mediano, '#16A34A')}
+  </svg>
+  <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
+    <span>● produtos no top 20</span><span style="color:var(--up)">● preço mediano</span>
     <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
   </div>`;
 }
@@ -2047,6 +2115,20 @@ async function carregarCategoriasRecentes(){
   const { data, error } = await sb.rpc('categorias_recentes', { p_limite:8 });
   if (!error) S.categoriasRecentes = data ?? [];
 }
+
+async function abrirCategoria(id, nome){
+  S.view = 'catdetalhe'; S.catDetalhe = null; S.catDetalheHist = [];
+  S.catSel = { id, nome }; S.F = { p_categoria:id }; S.pred = null; S.buscou = false;
+  render();
+  const [d, h] = await Promise.all([
+    sb.rpc('categoria_detalhe', { p_categoria:id }),
+    sb.rpc('categoria_historico', { p_categoria:id, p_dias:30 }),
+  ]);
+  S.catDetalhe = d.data?.[0] ?? null;
+  S.catDetalheHist = h.data ?? [];
+  render();
+  await buscar();
+}
 async function abrir(id){
   let p = S.produtos.find(x=>x.product_id===id);
   $('#sheet').innerHTML='<div class="load">carregando produto…</div>';
@@ -2088,7 +2170,7 @@ function render(){
   $('#sheet').innerHTML = (V[S.view] ?? V.home)();
   pintaQuota();
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.view=b.dataset.go; render(); });
-  if (S.view==='produtos'){
+  if (S.view==='produtos' || S.view==='catdetalhe'){
     if ($('#b_go')) $('#b_go').onclick = buscar;
     if ($('#b_ref')) $('#b_ref').onclick = localizar;
     if ($('#f_ref')) $('#f_ref').onkeydown = (e) => { if (e.key==='Enter') localizar(); };
@@ -2210,10 +2292,12 @@ function render(){
     if (c) { $('#c_txt').value = c.nome; cats(); }
   });
   if (S.view==='categorias') document.querySelectorAll('#cres tr.k[data-cid]').forEach(tr => tr.onclick = () => {
-    S.catSel = { id:tr.dataset.cid, nome:tr.dataset.cn };
-    S.F = { p_categoria: tr.dataset.cid }; S.pred = null;
-    S.view = 'produtos'; render(); buscar();
+    abrirCategoria(tr.dataset.cid, tr.dataset.cn);
   });
+  if (S.view==='catdetalhe' && $('#cd_voltar')) $('#cd_voltar').onclick = () => {
+    S.view = 'categorias'; S.catDetalhe = null; S.catDetalheHist = [];
+    S.catSel = null; S.F = {}; S.buscou = false; S.produtos = []; render();
+  };
   if (S.view==='locais'){
     if (!S.locaisCategorias.length) carregarCategoriasLocais().then(render);
     if ($('#l_go')) $('#l_go').onclick = () => { S.locaisOffset = 0; buscarLocais(); };
