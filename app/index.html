@@ -459,7 +459,8 @@ const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catD
             locaisCategorias:[], locaisCatSel:new Set(), locaisAba:'todos', locaisFiltrosAbertos:true,
             locaisFavoritos:new Set(JSON.parse(localStorage.getItem('gr_locais_fav')||'[]')),
             locaisCriado:null, locaisCaixaMin:null, locaisCaixaMax:null, locaisOffset:0, histMon:{},
-            detalheAba:'catalogo', similares:[], similaresCarregado:false,
+            locaisMeliOn:false, locaisMeliCache:{}, locaisMeliBuscando:false,
+            detalheAba:'catalogo', similares:[], similaresCarregado:false, detalheLocal:null,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -945,6 +946,17 @@ V.locais = () => {
         </div>
       </div>
       <div class="card cbox" style="margin-top:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="l_meli_tog" role="switch" aria-checked="${S.locaisMeliOn}"
+            style="width:38px;height:22px;border-radius:99px;border:0;background:${S.locaisMeliOn?'var(--brand)':'var(--line)'};position:relative;flex:none;cursor:pointer">
+            <span style="position:absolute;top:2px;left:${S.locaisMeliOn?'18px':'2px'};width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s"></span>
+          </button>
+          <span style="flex:1;font-size:13.5px">Encontrado no MeLi</span>
+        </div>
+        <div class="sb" style="margin-top:6px">Busca ao vivo no catálogo do Mercado Livre pelo nome do produto,
+          pros que ainda não têm vínculo direto.${S.locaisMeliBuscando?' Buscando…':''}</div>
+      </div>
+      <div class="card cbox" style="margin-top:12px">
         <div class="ct">Faixa de custo personalizada</div>
         <div class="crow"><div class="cfld"><label>De</label><input type="number" id="l_custo_min" placeholder="R$"></div>
           <div class="cfld"><label>Até</label><input type="number" id="l_custo_max" placeholder="R$"></div></div>
@@ -984,6 +996,22 @@ V.locais = () => {
   </div>`;
 };
 
+async function buscarMeliParaLocais(){
+  const alvos = S.locais.filter(p => !p.catalog_product_id && !S.locaisMeliCache[p.produto_id]);
+  if (!alvos.length) return;
+  S.locaisMeliBuscando = true; render();
+  const LOTE = 3;
+  for (let i=0; i<alvos.length; i+=LOTE){
+    if (!S.locaisMeliOn) break; // usuario desligou no meio da busca
+    const fatia = alvos.slice(i, i+LOTE);
+    await Promise.all(fatia.map(async p => {
+      const { data, error } = await sb.functions.invoke('ml-busca-catalogo', { body: { texto:p.nome } });
+      S.locaisMeliCache[p.produto_id] = error ? { ok:false } : data;
+    }));
+    render();
+  }
+  S.locaisMeliBuscando = false; render();
+}
 async function carregarCategoriasLocais(){
   if (S.locaisCategorias.length) return;
   const { data } = await sb.rpc('categorias_locais_contagem');
@@ -1001,12 +1029,21 @@ function cardsLocais(){
   return `<div class="lgrid">${lista.map(p=>{
     const c = S.contatos[p.fornecedor_id];
     const fav = S.locaisFavoritos.has(p.produto_id);
+    // Sem vinculo direto com o catalogo: se "Encontrado no MeLi" estiver
+    // ligado, usa o achado da busca ao vivo (mesmo nome local, preco real
+    // do match) em vez do "sem base" de sempre.
+    const achado = !p.catalog_product_id && S.locaisMeliOn ? S.locaisMeliCache[p.produto_id] : null;
+    const matchId = p.catalog_product_id || (achado?.encontrado ? achado.catalog_product_id : null);
+    const precoMl = p.preco_medio_ml ?? (achado?.encontrado ? achado.preco_mediano : null);
+    const margemMl = p.margem_bruta ?? ((precoMl && p.custo!=null && precoMl>0) ? (precoMl-p.custo)/precoMl : null);
     return `<div class="lc">
       <div class="lhead">
         <div style="position:relative">
-          ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="">`
+          ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="" ${matchId?`style="cursor:pointer" data-labrir="${esc(matchId)}" data-lprodid="${esc(p.produto_id)}" data-lcusto="${p.custo??''}" data-lforn="${esc(p.fornecedor??'')}" title="Ver dados de varejo"`:''}>`
                      : `<div class="limg">sem foto</div>`}
-          ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No catálogo ML</span>`:''}
+          ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No catálogo ML</span>`
+            : achado?.encontrado?`<span class="chip y" style="position:absolute;bottom:4px;left:4px;font-size:10px">Encontrado no MeLi</span>`
+            : (S.locaisMeliOn && S.locaisMeliBuscando)?`<span class="chip" style="position:absolute;bottom:4px;left:4px;font-size:10px">buscando…</span>`:''}
           <button class="btn g mini" data-lfav="${esc(p.produto_id)}"
             style="position:absolute;top:4px;right:4px;padding:2px 6px;line-height:1">${fav?'♥':'♡'}</button>
         </div>
@@ -1021,10 +1058,10 @@ function cardsLocais(){
           <div class="sb">preço válido desde ${esc(p.preco_desde ?? '—')}</div>
           <div class="lmini">
             <div><div class="k">Preço médio no ML</div>
-              <div class="v">${p.preco_medio_ml!=null?brl(p.preco_medio_ml):'—'}</div></div>
+              <div class="v">${precoMl!=null?brl(precoMl):'—'}</div></div>
             <div><div class="k">Margem bruta</div>
-              <div class="v" style="color:${p.margem_bruta>=0.4?'var(--up)':p.margem_bruta!=null?'var(--warn)':'var(--ink-3)'}">
-                ${p.margem_bruta!=null?'≈'+pct(p.margem_bruta):'sem base'}</div></div>
+              <div class="v" style="color:${margemMl>=0.4?'var(--up)':margemMl!=null?'var(--warn)':'var(--ink-3)'}">
+                ${margemMl!=null?'≈'+pct(margemMl):'sem base'}</div></div>
           </div>
           ${p.posicao_ml!=null?`<div class="sb" style="margin-top:9px">
             ${p.posicao_ml}º no ranking · ${p.concorrentes_ml ?? 0} concorrente(s)</div>`:''}
@@ -1209,6 +1246,14 @@ V.detalhe = () => {
         ${d.produto.permalink?` · <a href="${esc(d.produto.permalink)}" target="_blank" rel="noopener">ver no Mercado Livre</a>`:''}</p>
     </div>
   </div>
+  ${S.detalheLocal?`<div class="card cbox" style="margin:14px 0;background:var(--tint)">
+    <div class="ct">Custo do fornecedor local</div>
+    <div class="v" style="font-size:20px;font-weight:700">${brl(S.detalheLocal.custo)}</div>
+    ${S.detalheLocal.fornecedor?`<div class="sb">${esc(S.detalheLocal.fornecedor)}</div>`:''}
+    ${(S.detalheLocal.custo!=null && d.produto.median_price>0)?`<div class="sb" style="margin-top:4px">
+      Margem bruta estimada: <b>${pct((d.produto.median_price-S.detalheLocal.custo)/d.produto.median_price)}</b>
+      (preço mediano do Mercado Livre − custo do fornecedor)</div>`:''}
+  </div>`:''}
   <div class="g2">
     <div class="card"><div class="cbox">
       <div class="ct">Posição e preço — ${d.historico.length} dia(s). Linha roxa = posição (pra cima = subiu); linha verde = preço mediano.</div>
@@ -1989,6 +2034,7 @@ async function buscarLocais(acumular){
     p_limite: 60, p_offset: S.locaisOffset });
   if (error){ if (el) el.innerHTML = `<div class="card"><div class="none"><b>Erro</b>${esc(error.message)}</div></div>`; return; }
   S.locais = acumular ? [...S.locais, ...(data ?? [])] : (data ?? []); render();
+  if (S.locaisMeliOn) buscarMeliParaLocais();
 }
 
 async function desbloquear(fid){
@@ -2165,7 +2211,19 @@ async function abrirCategoria(id, nome){
   render();
   await buscar();
 }
+async function abrirComLocal(id, achado, local){
+  await abrir(id);
+  // Produto achado via busca ao vivo (Encontrado no MeLi) pode nunca ter
+  // sido coletado pelo nosso ranking -- ficha_produto() volta vazio nesse
+  // caso. Usa o que a propria busca ja trouxe em vez de mostrar em branco.
+  if (achado?.encontrado && S.detalhe && !S.detalhe.produto?.name) {
+    S.detalhe.produto = { ...S.detalhe.produto, product_id:id, name:achado.nome,
+      picture:achado.imagem, permalink:achado.permalink || null, median_price:achado.preco_mediano };
+  }
+  S.detalheLocal = local; render();
+}
 async function abrir(id){
+  S.detalheLocal = null;
   let p = S.produtos.find(x=>x.product_id===id);
   $('#sheet').innerHTML='<div class="load">carregando produto…</div>';
   const chamadas = [
@@ -2362,6 +2420,16 @@ function render(){
     });
     document.querySelectorAll('[data-unl]').forEach(b =>
       b.onclick = () => desbloquear(b.dataset.unl));
+    if ($('#l_meli_tog')) $('#l_meli_tog').onclick = () => {
+      S.locaisMeliOn = !S.locaisMeliOn; render();
+      if (S.locaisMeliOn) buscarMeliParaLocais();
+    };
+    document.querySelectorAll('[data-labrir]').forEach(img => img.onclick = () => {
+      abrirComLocal(img.dataset.labrir, S.locaisMeliCache[img.dataset.lprodid] ?? null, {
+        custo: img.dataset.lcusto ? Number(img.dataset.lcusto) : null,
+        fornecedor: img.dataset.lforn || null,
+      });
+    });
   }
   if (S.view==='monitor'){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
