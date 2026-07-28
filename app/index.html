@@ -1330,11 +1330,13 @@ V.detalhe = () => {
       <div class="ct">Posição e preço — ${d.historico.length} dia(s). Linha roxa = posição (pra cima = subiu); linha verde = preço mediano.</div>
       ${spark2(d.historico)}
       ${pri?`<div class="sb" style="display:flex;justify-content:space-between;margin-top:8px">
-        <span>${pri.dia} · ${pri.posicao}º</span><span>${ult.dia} · ${ult.posicao}º</span></div>`:''}
+        <span>${pri.dia}${pri.posicao!=null?' · '+pri.posicao+'º':''}${pri.preco!=null?' · '+brl(pri.preco):''}</span>
+        <span>${ult.dia}${ult.posicao!=null?' · '+ult.posicao+'º':''}${ult.preco!=null?' · '+brl(ult.preco):''}</span></div>`:''}
+      ${d.produto.position_now==null?`<div class="hint" style="margin-top:8px">Sem posição no ranking público — o Mercado Livre só publica o top 20 da categoria. Preço e concorrentes abaixo vêm da coleta de anúncios do catálogo.</div>`:''}
     </div></div>
     <div class="card">
-      <div class="stat"><div class="k">Posição hoje</div><div class="v">${d.produto.position_now ?? '—'}º</div></div>
-      <div class="stat"><div class="k">Melhor posição</div><div class="v">${d.produto.best_position ?? '—'}º</div></div>
+      <div class="stat"><div class="k">Posição hoje</div><div class="v">${d.produto.position_now!=null?d.produto.position_now+'º':'—'}</div></div>
+      <div class="stat"><div class="k">Melhor posição</div><div class="v">${d.produto.best_position!=null?d.produto.best_position+'º':'—'}</div></div>
       <div class="stat"><div class="k">Dias no top 10</div><div class="v">${d.produto.days_in_top10 ?? 0}/${d.produto.days_observed ?? 0}</div></div>
       <div class="stat"><div class="k">Preço mediano</div><div class="v">${brl(d.produto.median_price)}</div></div>
       <div class="stat"><div class="k">Faixa de preço (${num(d.produto.listings)} anúncio(s))</div>
@@ -1387,32 +1389,39 @@ function spark(v,w=560,h=110){
     ${p.map(q=>`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="#7C3AED"/>`).join('')}</svg>`;
 }
 
-/** Posição + preço juntos, eixos independentes. Ponto com <title> = tooltip nativo (data/valor). */
+/** Posição + preço juntos, eixos independentes. Aceita série só de um dos dois. */
 function spark2(hist,w=560,h=170){
   if (!hist.length) return '<div class="none">sem histórico ainda</div>';
-  const pos = hist.map(x=>x.posicao).filter(v=>v!=null);
-  const preco = hist.map(x=>x.preco).filter(v=>v!=null);
-  const linha = (vals,getY,cor) => {
+  const temPos = hist.some(x=>x.posicao!=null);
+  const temPreco = hist.some(x=>x.preco!=null);
+  if (!temPos && !temPreco) return '<div class="none">sem histórico ainda</div>';
+  const linha = (getY,cor,invertido,label) => {
     const pts = hist.map((x,i)=>{
       const v = getY(x); if (v==null) return null;
       return [(i/Math.max(hist.length-1,1))*w, v, x];
     }).filter(Boolean);
-    if (pts.length<2) return '';
+    if (!pts.length) return '';
     const ys = pts.map(p=>p[1]);
     const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
-    const esInvertido = cor==='#7C3AED'; // posição: menor é melhor -> inverte pra "subiu" ficar visualmente pra cima
-    const py = y => esInvertido ? ((y-mn)/rg)*(h-30)+15 : (h-30) - ((y-mn)/rg)*(h-30) - 15;
+    const py = y => invertido ? ((y-mn)/rg)*(h-30)+15 : (h-30) - ((y-mn)/rg)*(h-30) - 15;
+    const txt = (p) => label==='pos' ? (p[1]+'º') : brl(p[1]);
+    if (pts.length===1) {
+      const p = pts[0];
+      return `<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="4" fill="${cor}">
+        <title>${esc(p[2].dia)} · ${txt(p)}</title></circle>`;
+    }
     const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
     const pontos = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" fill="${cor}">
-      <title>${esc(p[2].dia)} · ${cor==='#7C3AED'?p[1]+'º':brl(p[1])}</title></circle>`).join('');
+      <title>${esc(p[2].dia)} · ${txt(p)}</title></circle>`).join('');
     return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>${pontos}`;
   };
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico">
-    ${linha(pos, x=>x.posicao, '#7C3AED')}
-    ${linha(preco, x=>x.preco, '#16A34A')}
+    ${temPos ? linha(x=>x.posicao, '#7C3AED', true, 'pos') : ''}
+    ${temPreco ? linha(x=>x.preco, '#16A34A', false, 'preco') : ''}
   </svg>
   <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
-    <span>● posição</span><span style="color:var(--up)">● preço mediano</span>
+    ${temPos?'<span>● posição</span>':''}
+    ${temPreco?'<span style="color:var(--up)">● preço mediano</span>':''}
     <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
   </div>`;
 }
@@ -2328,31 +2337,54 @@ async function abrirComLocal(id, achado, local){
   }
   S.detalheLocal = local; render();
 }
+/** Traduz ficha_produto (PT) pro formato que a tela de detalhe usa. */
+function fromFicha(fp, id){
+  const r = fp?.ranking ?? {};
+  const k = fp?.concorrencia ?? {};
+  const pr = fp?.preco ?? {};
+  const prod = fp?.produto ?? {};
+  return {
+    product_id: id,
+    name: prod.nome ?? null,
+    picture: prod.imagem ?? null,
+    permalink: prod.link || null,
+    category_name: prod.categoria ?? null,
+    brand: prod.marca ?? null,
+    category_id: prod.categoria_id ?? null,
+    // produto_ranking_analise usa nomes em PT — NÃO position_now
+    position_now: r.posicao_atual ?? r.position_now ?? null,
+    best_position: r.melhor_posicao ?? r.best_position ?? null,
+    days_in_top10: r.dias_top10 ?? r.days_in_top10 ?? 0,
+    days_observed: r.dias_no_ranking ?? r.days_observed ?? 0,
+    median_price: k.preco_mediano ?? pr.preco_atual ?? null,
+    min_price: k.preco_minimo ?? pr.preco_minimo ?? null,
+    max_price: k.preco_maximo ?? pr.preco_maximo ?? null,
+    listings: k.anuncios ?? null,
+    sellers: k.vendedores ?? null,
+  };
+}
+
 async function abrir(id){
   S.detalheLocal = null;
-  let p = S.produtos.find(x=>x.product_id===id);
+  const daBusca = S.produtos.find(x=>x.product_id===id);
   $('#sheet').innerHTML='<div class="load">carregando produto…</div>';
-  const chamadas = [
+  // Sempre busca ficha: abrir pelo Monitor não passa pela Busca, e a ficha
+  // é a fonte dos cards de posição/preço. Antes o mapeamento lia
+  // position_now (nome da matview) em vez de posicao_atual (da ficha) —
+  // por isso os cards ficavam "—" mesmo com dado no banco.
+  const [h, c, f] = await Promise.all([
     sb.rpc('historico_produto',{p_produto:id}),
     sb.rpc('concorrentes_produto',{p_produto:id}),
-  ];
-  // Aberto direto do Monitor (sem ter passado pela Busca antes): S.produtos
-  // está vazio ou é de outra busca. ficha_produto busca o resumo de verdade
-  // em vez de mostrar a página quase em branco.
-  if (!p) chamadas.push(sb.rpc('ficha_produto', { p_produto: id }));
-  const [h, c, f] = await Promise.all(chamadas);
-  if (!p && f?.data) {
-    const fp = f.data.produto ?? {}; const r = f.data.ranking ?? {}; const k = f.data.concorrencia ?? {};
-    p = {
-      product_id: id, name: fp.nome, picture: fp.imagem, permalink: fp.link,
-      category_name: fp.categoria, brand: fp.marca,
-      position_now: r.position_now, best_position: r.best_position,
-      days_in_top10: r.days_in_top10, days_observed: r.days_observed,
-      median_price: k.preco_mediano, min_price: k.preco_minimo, max_price: k.preco_maximo,
-      listings: k.anuncios, category_id: fp.categoria_id,
-    };
-  }
-  S.detalhe = { produto:p ?? {product_id:id}, historico:h.data ?? [], concorrentes:c.data ?? [] };
+    sb.rpc('ficha_produto', { p_produto: id }),
+  ]);
+  let p = f?.data ? fromFicha(f.data, id) : null;
+  if (!p?.name && daBusca) p = { ...fromFicha({}, id), ...daBusca };
+  if (!p) p = { product_id: id };
+
+  const concorrentes = Array.isArray(c?.data) ? c.data : [];
+  const historico = Array.isArray(h?.data) ? h.data : [];
+
+  S.detalhe = { produto:p, historico, concorrentes, ficha: f?.data ?? null };
   S.detalheAba = 'catalogo'; S.similares = []; S.similaresCarregado = false;
   S.view='detalhe'; render();
 }
