@@ -448,6 +448,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
                         'sb_publishable_gabCC-2dHNLezVN4VmyCJA_sONtVPg8');
 const $ = s => document.querySelector(s);
+let monitorPollId = null; // atualização automática do Monitor — ver render()
 const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
@@ -2278,6 +2279,17 @@ async function carregarSimilares(){
 }
 
 function render(){
+  // Posição/preço só mudam com a coleta diária, mas alertas e ações em
+  // outra aba/aparelho não. Reconsulta sozinho enquanto o Monitor estiver
+  // aberto, pra não depender de F5 pra ver alerta novo chegar.
+  if (S.view === 'monitor') {
+    if (!monitorPollId) monitorPollId = setInterval(async () => {
+      if (S.view !== 'monitor') { clearInterval(monitorPollId); monitorPollId = null; return; }
+      await carregarMonitor(); render();
+    }, 45000);
+  } else if (monitorPollId) {
+    clearInterval(monitorPollId); monitorPollId = null;
+  }
   document.querySelectorAll('.item,.solo').forEach(b =>
     b.setAttribute('aria-current', String(b.dataset.v===S.view)));
   $('#sheet').innerHTML = (V[S.view] ?? V.home)();
