@@ -1039,7 +1039,7 @@ function cardsLocais(){
     return `<div class="lc">
       <div class="lhead">
         <div style="position:relative">
-          ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="" ${matchId?`style="cursor:pointer" data-labrir="${esc(matchId)}" data-lprodid="${esc(p.produto_id)}" data-lcusto="${p.custo??''}" data-lforn="${esc(p.fornecedor??'')}" title="Ver dados de varejo"`:''}>`
+          ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="" ${matchId?`style="cursor:pointer" data-labrir="${esc(matchId)}" data-lprodid="${esc(p.produto_id)}" data-lcusto="${p.custo??''}" data-lforn="${esc(p.fornecedor??'')}" data-lfornid="${esc(p.fornecedor_id??'')}" title="Ver dados de varejo"`:''}>`
                      : `<div class="limg">sem foto</div>`}
           ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No catálogo ML</span>`
             : achado?.encontrado?`<span class="chip y" style="position:absolute;bottom:4px;left:4px;font-size:10px">Encontrado no MeLi</span>`
@@ -1256,7 +1256,23 @@ V.detalhe = () => {
     ${(S.detalheLocal.custo!=null && d.produto.median_price>0)?`<div class="sb" style="margin-top:4px">
       Margem bruta estimada: <b>${pct((d.produto.median_price-S.detalheLocal.custo)/d.produto.median_price)}</b>
       (preço mediano do Mercado Livre − custo do fornecedor)</div>`:''}
-  </div>`:''}
+  </div>
+  ${S.detalheLocal.fornecedorId?(() => {
+    const cont = S.contatos[S.detalheLocal.fornecedorId];
+    return `<div class="card cbox" style="margin-bottom:14px">
+      <div class="ct">Fornecedor local</div>
+      <div style="font-weight:600;font-size:15px;margin:4px 0 8px">${esc(S.detalheLocal.fornecedor ?? '—')}</div>
+      ${cont ? `<div class="ct2">
+          ${cont.telefone?`<a href="tel:${esc(cont.telefone)}">☎ ${esc(cont.telefone)}</a>`:''}
+          ${cont.email?`<a href="mailto:${esc(cont.email)}">✉ ${esc(cont.email)}</a>`:''}
+          ${cont.site?`<a href="https://${esc(cont.site)}" target="_blank" rel="noopener">🌐 ${esc(cont.site)}</a>`:''}
+          ${cont.instagram?`<span>◎ ${esc(cont.instagram)}</span>`:''}
+        </div>
+        <div class="aviso">Contatos vindos do catálogo do fornecedor. Não verificamos a conduta dele —
+          confira antes de fechar pedido.</div>`
+        : `<button class="lock" data-unl="${esc(S.detalheLocal.fornecedorId)}">🔒 Mostrar contatos</button>`}
+    </div>`;
+  })():''}`:''}
   <div class="g2">
     <div class="card"><div class="cbox">
       <div class="ct">Posição e preço — ${d.historico.length} dia(s). Linha roxa = posição (pra cima = subiu); linha verde = preço mediano.</div>
@@ -2431,6 +2447,7 @@ function render(){
       abrirComLocal(img.dataset.labrir, S.locaisMeliCache[img.dataset.lprodid] ?? null, {
         custo: img.dataset.lcusto ? Number(img.dataset.lcusto) : null,
         fornecedor: img.dataset.lforn || null,
+        fornecedorId: img.dataset.lfornid || null,
       });
     });
   }
@@ -2465,6 +2482,7 @@ function render(){
     });
     document.querySelectorAll('tr[data-open]').forEach(tr => tr.onclick = () => window.open(tr.dataset.open, '_blank'));
     document.querySelectorAll('#sheet tr.k[data-p]').forEach(tr => tr.onclick = () => abrir(tr.dataset.p));
+    document.querySelectorAll('[data-unl]').forEach(b => b.onclick = () => desbloquear(b.dataset.unl));
   }
   if (S.view==='calc'){
     ['pc_venda','pc_compra','pc_vendas','pc_comissao','pc_taxafixa','pc_taxafixa_v',
