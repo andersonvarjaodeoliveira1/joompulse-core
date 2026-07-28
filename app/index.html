@@ -1105,7 +1105,8 @@ function tfila(){
 function tmon(){
   if (!S.monitorados.length) return `<div class="none"><b>Nada sendo acompanhado</b>
     Abra um produto na busca e clique em Monitorar.</div>`;
-  return `<table><thead><tr><th>Produto</th><th>Tendência (21d)</th><th class="n">Posição</th>
+  return `<table><thead><tr><th>Produto</th>
+    <th title="Roxo = posição no ranking · Verde = preço mediano, ambos nos últimos 21 dias">Tendência (21d)</th><th class="n">Posição</th>
     <th class="n">Desde que entrou</th><th class="n">Preço</th><th class="n">Variação</th>
     <th class="n">Receita acumulada</th><th class="n">Vendas/mes</th><th class="n">Total vendas</th>
     <th class="n">Concorrentes</th><th class="n">Alertas</th><th></th></tr></thead><tbody>${
@@ -1115,9 +1116,7 @@ function tmon(){
           style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
         <div style="min-width:0"><div class="nm">${esc(m.nome ?? m.product_id)}</div>
         <div class="sb">${esc(m.categoria ?? '')}</div></div></div></td>
-      <td style="width:110px">${(S.histMon[m.product_id]||[]).length>1
-        ? spark(S.histMon[m.product_id],100,32)
-        : '<span class="sb">sem dado</span>'}</td>
+      <td style="width:140px">${sparkMini(S.histMon[m.product_id]||[])}</td>
       <td class="n"><span class="pos">${m.pos_atual ?? '—'}</span></td>
       <td class="n">${m.delta_desde_inicio!=null
         ? `<span class="mv ${m.delta_desde_inicio>0?'u':m.delta_desde_inicio<0?'d':'f'}">${
@@ -1285,6 +1284,32 @@ function spark2(hist,w=560,h=170){
     <span>● posição</span><span style="color:var(--up)">● preço mediano</span>
     <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
   </div>`;
+}
+
+/** Versão compacta do spark2 pra caber numa célula de tabela: sem legenda, só as duas linhas + tooltip nativo. */
+function sparkMini(hist,w=130,h=36){
+  const pos = hist.map(x=>x.posicao).filter(v=>v!=null);
+  const preco = hist.map(x=>x.preco).filter(v=>v!=null);
+  if (pos.length<2 && preco.length<2) return '<span class="sb">sem dado</span>';
+  const linha = (getY,cor) => {
+    const pts = hist.map((x,i)=>{
+      const v = getY(x); if (v==null) return null;
+      return [(i/Math.max(hist.length-1,1))*w, v, x];
+    }).filter(Boolean);
+    if (pts.length<2) return '';
+    const ys = pts.map(p=>p[1]);
+    const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
+    const esInvertido = cor==='#7C3AED';
+    const py = y => esInvertido ? ((y-mn)/rg)*(h-6)+3 : (h-6) - ((y-mn)/rg)*(h-6) - 3;
+    const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
+    const ult = pts[pts.length-1];
+    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="1.8" stroke-linejoin="round"/>
+      <circle cx="${ult[0].toFixed(1)}" cy="${py(ult[1]).toFixed(1)}" r="2.4" fill="${cor}"/>`;
+  };
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" role="img" aria-label="Tendência">
+    ${linha(x=>x.posicao, '#7C3AED')}
+    ${linha(x=>x.preco, '#16A34A')}
+  </svg>`;
 }
 
 /** Mesmo desenho do spark2, mas pra série de categoria: produtos no top + preço mediano do dia. */
@@ -1900,7 +1925,7 @@ async function carregarMonitor(){
   S.monitorados = m.data ?? []; S.alertas = a.data ?? []; S.pedidos = f.data ?? [];
   S.vendedores = v.data ?? [];
   S.histMon = {};
-  (hm.data ?? []).forEach(r => { (S.histMon[r.product_id] ??= []).push(r.posicao); });
+  (hm.data ?? []).forEach(r => { (S.histMon[r.product_id] ??= []).push({ dia:r.dia, posicao:r.posicao, preco:r.preco }); });
 }
 async function buscarVendedores(){
   const t = S.vendBusca.trim();
