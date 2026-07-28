@@ -608,7 +608,7 @@ function desenharPastas(painel, pastas, d, botao) {
       pastaId = nv ? nv.id : null;
     }
 
-    const r = await rpc('monitorar_produto', { p_produto: d.produto });
+    const r = await rpc('monitorar_produto', { p_produto: d.produto, p_snapshot: fotoDaPagina() });
     if (!(r && r.dados && r.dados.ok)) {
       ok.disabled = false;
       ok.textContent = (r && r.dados && r.dados.motivo === 'limite_do_plano')

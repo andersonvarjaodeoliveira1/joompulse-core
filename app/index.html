@@ -2022,8 +2022,8 @@ async function largarVendedor(id){
   await sb.from('tracked_sellers').delete().eq('seller_id', id);
   await carregarMonitor(); render();
 }
-async function seguir(id){
-  const { data, error } = await sb.rpc('monitorar_produto',{ p_produto:id });
+async function seguir(id, snapshot){
+  const { data, error } = await sb.rpc('monitorar_produto',{ p_produto:id, p_snapshot:snapshot ?? null });
   if (error) return alert(error.message);
   if (!data?.ok){
     alert(`Seu plano permite acompanhar ${data.limite} produtos e você já tem ${data.usados}. Remova um ou faça upgrade.`);
@@ -2465,7 +2465,13 @@ function render(){
   }
   if (S.view==='monitor'){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
-    document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async (ev) => { ev.stopPropagation(); b.disabled=true; b.textContent='...'; await seguir(b.dataset.seg); await carregarMonitor(); S.aba='lista'; render(); });
+    document.querySelectorAll('[data-seg]').forEach(b => b.onclick = async (ev) => {
+      ev.stopPropagation(); b.disabled=true; b.textContent='...';
+      // A leitura da extensao (vendidos/preco/dias no ar) ja esta no pedido
+      // em memoria -- sem isso ir junto, Receita/Vendas ficam sempre "-".
+      const pedido = S.pedidos.find(x=>x.produto===b.dataset.seg);
+      await seguir(b.dataset.seg, pedido?.snapshot);
+      await carregarMonitor(); S.aba='lista'; render(); });
     document.querySelectorAll('[data-rm]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); largar(b.dataset.rm); });
     document.querySelectorAll('tr.k[data-p]').forEach(tr => tr.onclick = () => {
       if (tr.dataset.p) abrir(tr.dataset.p);
