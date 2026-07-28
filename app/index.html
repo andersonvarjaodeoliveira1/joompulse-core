@@ -448,7 +448,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
                         'sb_publishable_gabCC-2dHNLezVN4VmyCJA_sONtVPg8');
 const $ = s => document.querySelector(s);
-const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], detalhe:null, quota:null, buscou:false,
+const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista',
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
@@ -501,7 +501,8 @@ sb.auth.onAuthStateChange((_e,s) => {
   else { $('#app').classList.add('hide'); $('#gate').classList.remove('hide'); }
 });
 const boot = async () => {
-  await Promise.all([quota(), carregarMonitor()]);
+  const [,,d] = await Promise.all([quota(), carregarMonitor(), sb.rpc('categoria_destaque')]);
+  S.categoriaDestaque = d.data?.[0] ?? null;
   lerUrl();
   render();
 };
@@ -550,9 +551,19 @@ const I = {
 
 const V = {};
 
-V.home = () => `<div class="cols"><div>
+V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const cd = S.categoriaDestaque;
+  return `<div class="cols"><div>
   <h1 class="pg">Bem-vindo ao Gringa Radar</h1>
   <p class="sub">Acompanhe o ranking, analise a concorrência e ache o produto certo antes dos outros.</p>
+  <div class="qa" style="margin-bottom:18px">
+    <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
+      ${sq('#DCFCE7','#16A34A',I.mon)}<span><b style="font-size:20px;display:block">${num(S.monitorados.length)}</b>produto(s) monitorado(s)</span></button>
+    <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
+      ${sq(alertasNovos?'#FEE2E2':'#F3F4F6', alertasNovos?'#DC2626':'#6B7280',I.rad)}<span><b style="font-size:20px;display:block">${num(alertasNovos)}</b>alerta(s) novo(s)</span></button>
+    ${cd?`<button class="qc" data-cd-go="${esc(cd.category_id)}" data-cd-nome="${esc(cd.categoria)}" style="align-items:flex-start;text-align:left">
+      ${sq('#FFEDD5','#EA580C',I.cat)}<span><b style="font-size:14px;display:block">${esc(cd.categoria)}</b>
+      categoria em destaque hoje · <span class="chip ${cd.oportunidade==='alta'?'g':'y'}" style="font-size:10px">${esc(cd.oportunidade)}</span></span></button>`:''}
+  </div>
   <div class="hero">
     <svg class="art" width="190" height="190" viewBox="0 0 56 56" aria-hidden="true">
       <circle cx="28" cy="28" r="24" fill="none" stroke="#fff" stroke-width="2"/>
@@ -581,7 +592,7 @@ V.home = () => `<div class="cols"><div>
       <p>Todos os vendedores do mesmo produto, com o preço de cada um.</p></div></div>
     <div class="rcard">${sq('#FEF9C3','#CA8A04',I.mon)}<div><b>Estimativa de vendas</b>
       <p>Chega quando houver contas conectadas para calibrar a curva.</p></div></div>
-  </aside></div>`;
+  </aside></div>`; };
 
 const PREDEF = [
   { k:'subindo',  t:'Subindo rápido',       f:{ p_momentum:'subindo', p_delta_min:5 } },
@@ -2195,6 +2206,7 @@ function render(){
   $('#sheet').innerHTML = (V[S.view] ?? V.home)();
   pintaQuota();
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.view=b.dataset.go; render(); });
+  document.querySelectorAll('[data-cd-go]').forEach(b => b.onclick = () => abrirCategoria(b.dataset.cdGo, b.dataset.cdNome));
   if (S.view==='produtos' || S.view==='catdetalhe'){
     if ($('#b_go')) $('#b_go').onclick = buscar;
     if ($('#b_ref')) $('#b_ref').onclick = localizar;
