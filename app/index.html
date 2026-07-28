@@ -128,6 +128,15 @@
   .chip{display:inline-block;font-size:11.5px;font-weight:500;border-radius:6px;padding:2px 8px;background:var(--bg-2);color:var(--ink-2);white-space:nowrap}
   .chip.g{background:#F0FDF4;color:var(--up)} .chip.y{background:#FFFBEB;color:var(--warn)}
   .chip.p{background:var(--tint);color:var(--brand-2)}
+  .chip.r{background:#FEF2F2;color:var(--dn)}
+
+  .spark-wrap{display:flex;flex-direction:column;gap:4px;min-width:160px}
+  .spark-leg{display:flex;gap:10px;font-size:10.5px;color:var(--ink-3);line-height:1}
+  .spark-leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .spark-empty{font-size:12px;color:var(--ink-3);padding:6px 0}
+  .mon-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:4px}
+  .mon-meta span{font-size:11.5px;color:var(--ink-3)}
+  .mon-meta b{font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
 
   .wall{padding:44px 26px;text-align:center;background:var(--bg-2)}
   .wall h3{font-size:17px;font-weight:600;margin:0 0 7px}
@@ -468,6 +477,28 @@ const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFr
 const num = n => n==null?'—':Number(n).toLocaleString('pt-BR');
 const pct = n => n==null?'—':(Number(n)*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
 const esc = s => String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+/** Rótulos reais do /users/{id} do ML — level_id e power_seller_status. */
+const REP_LABEL = {
+  '5_green':'Verde', '4_light_green':'Verde-claro', '3_yellow':'Amarelo',
+  '2_orange':'Laranja', '1_red':'Vermelho',
+};
+const MED_LABEL = { platinum:'MercadoLíder Platinum', gold:'MercadoLíder Gold', silver:'MercadoLíder Silver' };
+const repChip = level => {
+  if (!level) return '<span class="chip">Sem reputação ainda</span>';
+  const cor = level.startsWith('5')||level.startsWith('4') ? 'g' : level.startsWith('3') ? 'y' : 'r';
+  return `<span class="chip ${cor}">${esc(REP_LABEL[level] ?? level)}</span>`;
+};
+const medChip = m => m ? `<span class="chip p">${esc(MED_LABEL[m] ?? m)}</span>` : '';
+/** Bloco compacto: reputação + medalha + vendas históricas (API). Sem seguidores — o ML não publica na API. */
+const sellerBits = (c) => {
+  const bits = [repChip(c.reputacao ?? c.reputation_level)];
+  const med = medChip(c.medalha ?? c.power_seller_status);
+  if (med) bits.push(med);
+  const tx = c.transacoes ?? c.transactions_total;
+  if (tx != null) bits.push(`<span class="sb">${num(tx)} venda(s) no histórico do ML</span>`);
+  return bits.join(' ');
+};
 
 const gmsg = (t,ok) => $('#gmsg').innerHTML = `<div class="msg ${ok?'ok':'err'}">${esc(t)}</div>`;
 $('#go').onclick = async () => {
@@ -1146,47 +1177,64 @@ function tfila(){
     <b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
     gente pediu. Categoria sem ranking publico do Mercado Livre fica marcada como tal e nao e
     tentada de novo — cerca de 63% das categorias estao nessa situacao.<br><br>
-    <b>"Fora do alcance da coleta"</b> significa que tentamos buscar esse anuncio especifico
-    direto no Mercado Livre e ele nao voltou — hoje o ML bloqueia esse tipo de consulta pra
-    anuncio de terceiro. So aparece na busca de novo se ele entrar no top 20 de alguma
-    categoria por conta propria.</div>`;
+    <b>"Fora do alcance da coleta"</b> só aparece quando a busca no catálogo do Mercado Livre
+    também não achou o produto (pelo título da página). Antes esse rótulo saía cedo demais —
+    a API de anúncio (<code>/items</code>) é bloqueada pra terceiro, mas a de catálogo funciona
+    e a coleta agora usa ela. Pedidos antigos foram recolocados na fila pra reprocessar.</div>`;
 }
 function tmon(){
   if (!S.monitorados.length) return `<div class="none"><b>Nada sendo acompanhado</b>
     Abra um produto na busca e clique em Monitorar.</div>`;
-  return `<table><thead><tr><th>Produto</th>
-    <th title="Roxo = posição no ranking · Verde = preço mediano, ambos nos últimos 21 dias">Tendência (21d)</th><th class="n">Posição</th>
-    <th class="n">Desde que entrou</th><th class="n">Preço</th><th class="n">Variação</th>
-    <th class="n">Receita acumulada</th><th class="n">Vendas/mes</th><th class="n">Total vendas</th>
-    <th class="n">Concorrentes</th><th class="n">Alertas</th><th></th></tr></thead><tbody>${
-    S.monitorados.map(m=>`<tr class="k" data-p="${esc(m.product_id)}">
-      <td style="width:260px;max-width:260px"><div style="display:flex;gap:10px;align-items:center">
-        ${(m.imagem||(m.snapshot&&m.snapshot.imagem))?`<img src="${esc(m.imagem||m.snapshot.imagem)}" alt="" width="40" height="40"
-          style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
+  return `<table><thead><tr>
+    <th>Produto</th>
+    <th>Tendência (21d)</th>
+    <th class="n">Posição</th>
+    <th class="n">Preço</th>
+    <th class="n">Concorrentes</th>
+    <th class="n">Alertas</th>
+    <th></th>
+  </tr></thead><tbody>${
+    S.monitorados.map(m=>{
+      const f = m.snapshot || {};
+      const receita = (f.vendidos != null && f.preco != null) ? f.vendidos * f.preco : null;
+      const delta = m.delta_desde_inicio;
+      const deltaHtml = delta == null ? '<span class="mv f">—</span>'
+        : `<span class="mv ${delta>0?'u':delta<0?'d':'f'}">${
+            delta>0?'▲ +':delta<0?'▼ ':''}${delta===0?'—':Math.abs(delta)}</span>`;
+      const varP = m.variacao_preco;
+      const varHtml = varP == null ? '—'
+        : `<span class="mv ${varP<0?'u':varP>0?'d':'f'}">${varP>0?'+':''}${pct(varP)}</span>`;
+      return `<tr class="k" data-p="${esc(m.product_id)}">
+      <td style="width:280px;max-width:300px"><div style="display:flex;gap:10px;align-items:center">
+        ${(m.imagem||f.imagem)?`<img src="${esc(m.imagem||f.imagem)}" alt="" width="40" height="40"
+          style="border-radius:6px;object-fit:cover;flex:none;background:var(--bg-2)">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
         <div style="min-width:0;flex:1">
           <div class="nm" title="${esc(m.nome ?? m.product_id)}"
             style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px">${esc(m.nome ?? m.product_id)}</div>
           <div class="sb" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.categoria ?? '')}</div>
+          <div class="mon-meta">
+            ${f.vendidos!=null?`<span>Vendidos <b>${f.aprox?'~':''}${num(f.vendidos)}</b></span>`:''}
+            ${receita!=null?`<span>Receita acum. <b>${brl(receita)}</b></span>`:''}
+          </div>
         </div></div></td>
-      <td style="width:140px">${sparkMini(S.histMon[m.product_id]||[])}</td>
-      <td class="n"><span class="pos">${m.pos_atual ?? '—'}</span></td>
-      <td class="n">${m.delta_desde_inicio!=null
-        ? `<span class="mv ${m.delta_desde_inicio>0?'u':m.delta_desde_inicio<0?'d':'f'}">${
-            m.delta_desde_inicio>0?'▲ +':m.delta_desde_inicio<0?'▼ ':''}${
-            m.delta_desde_inicio===0?'—':Math.abs(m.delta_desde_inicio)}</span>`
-        : '<span class="mv f">—</span>'}
-        <div class="sb">entrou em ${m.pos_inicial ?? '—'}º</div></td>
-      <td class="n">${brl(m.preco_atual)}</td>
-      <td class="n">${m.variacao_preco!=null
-        ? `<span class="mv ${m.variacao_preco<0?'u':m.variacao_preco>0?'d':'f'}">${
-            m.variacao_preco>0?'+':''}${pct(m.variacao_preco)}</span>` : '—'}</td>
-      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;const mes=(f.vendidos!=null&&d)?f.vendidos/(d/30):null;return (mes!=null&&f.preco!=null)?brl(mes*f.preco):'—';})()}</td>
-      <td class="n">${(()=>{const f=m.snapshot||{};const d=f.dias_no_ar;return (f.vendidos!=null&&d)?num(Math.round(f.vendidos/(d/30))):'—';})()}</td>
-      <td class="n">${m.snapshot&&m.snapshot.vendidos!=null?(m.snapshot.aprox?'~':'')+num(m.snapshot.vendidos):'—'}</td>
+      <td>${sparkMini(S.histMon[m.product_id]||[])}</td>
+      <td class="n">
+        <span class="pos">${m.pos_atual ?? '—'}</span>
+        <div class="sb" style="margin-top:4px">${deltaHtml} · entrou em ${m.pos_inicial ?? '—'}º</div>
+      </td>
+      <td class="n">
+        <div style="font-weight:500">${brl(m.preco_atual)}</div>
+        <div class="sb" style="margin-top:4px">${varHtml}</div>
+      </td>
       <td class="n">${num(m.concorrentes)}</td>
       <td class="n">${m.alertas_novos>0?`<span class="chip p">${m.alertas_novos}</span>`:'—'}</td>
       <td class="n"><button class="btn g mini" data-rm="${esc(m.product_id)}">Remover</button></td>
-    </tr>`).join('')}</tbody></table>`;
+    </tr>`;}).join('')}</tbody></table>
+  <div class="tip"><b>Como ler a tendência.</b>
+    Linha roxa = posição no ranking (sobe no gráfico = melhorou de posição).
+    Linha verde = preço mediano dos anúncios naquele dia.
+    Se o produto ainda não entrou no top 20, só a linha de preço aparece — é dado real da coleta, não inventado.
+    Vendidos e receita acumulada vêm da leitura da página no dia em que você pediu o monitoramento.</div>`;
 }
 
 function tvend(){
@@ -1197,9 +1245,10 @@ function tvend(){
     </div>
     ${S.vendResultado.length ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
       ${S.vendResultado.map(r => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">
-        <div style="flex:1;min-width:0"><div class="nm" style="font-size:13.5px">${esc(r.nickname ?? r.id)}</div>
-          <div class="sb">${esc([r.city,r.state].filter(Boolean).join(' · ') || '—')} · ${num(r.anuncios_vistos)} anúncio(s) na nossa base
-          ${r.is_official_store?' · <span class="chip p">Loja oficial</span>':''}</div></div>
+        <div style="flex:1;min-width:0"><div class="nm" style="font-size:13.5px">${esc(r.nickname ?? r.id)}
+          ${r.is_official_store?' <span class="chip p">Loja oficial</span>':''}</div>
+          <div class="sb" style="margin:3px 0">${esc([r.city,r.state].filter(Boolean).join(' · ') || '—')} · ${num(r.anuncios_vistos)} anúncio(s) na nossa base</div>
+          <div>${sellerBits(r)}</div></div>
         <button class="btn mini" data-vadd="${r.id}">Acompanhar</button>
       </div>`).join('')}
     </div>` : (S.vendBusca.trim().length>=2 && !S.vendBuscando ? '<div class="sb" style="margin-top:8px">Nada encontrado com esse nome.</div>' : '')}
@@ -1214,7 +1263,9 @@ function tvend(){
         ${s.permalink?`<div class="sb"><a href="${esc(s.permalink)}" target="_blank" rel="noopener">ver perfil no ML</a></div>`:''}</td>
       <td>${esc([s.city,s.state].filter(Boolean).join(' · ') || '—')}</td>
       <td class="n"><button class="btn g mini" data-vrm="${v.seller_id}">Remover</button></td>
-    </tr>`; }).join('')}</tbody></table>`;
+    </tr>`; }).join('')}</tbody></table>
+    <div class="hint" style="margin-top:10px">Ao buscar, a reputação e a medalha vêm do último snapshot coletado via API do ML.
+      Seguidores o Mercado Livre não publica na API — não inventamos esse número.</div>`;
 }
 
 function talert(){
@@ -1295,18 +1346,22 @@ V.detalhe = () => {
     <button class="tb ${S.detalheAba==='similares'?'on':''}" data-dab="similares">Produtos similares</button>
   </div>
   <div class="card">${S.detalheAba==='catalogo' ? (d.concorrentes.length?`<table><thead><tr>
-    <th>Anúncio</th><th class="n">Preço</th><th>Vendedor</th><th>Detalhes do vendedor</th><th>Detalhes da listagem</th><th>Categoria</th>
+    <th>Anúncio</th><th class="n">Preço</th><th>Vendedor</th><th>Reputação</th><th>Detalhes da listagem</th>
     </tr></thead><tbody>${d.concorrentes.map(c=>{
-      const link = c.nickname ? `https://perfil.mercadolivre.com.br/${encodeURIComponent(c.nickname)}` : null;
+      const link = c.permalink || (c.nickname ? `https://perfil.mercadolivre.com.br/${encodeURIComponent(c.nickname)}` : null);
+      const onde = [c.cidade, c.estado].filter(Boolean).join(' · ') || '—';
       return `<tr class="${link?'k':''}" ${link?`data-open="${esc(link)}"`:''}>
       <td class="sb">${esc(c.item_id)}</td>
       <td class="n" style="font-weight:500">${brl(c.preco)}</td>
-      <td>${link?`<a href="${esc(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(c.nickname)}</a>`:esc(c.seller_id ?? '—')}</td>
-      <td>${esc(c.estado ?? '—')}${c.oficial?' · <span class="chip g">Oficial</span>':''}</td>
+      <td><div class="nm" style="font-size:13.5px">${link?`<a href="${esc(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(c.nickname ?? c.seller_id)}</a>`:esc(c.nickname ?? c.seller_id ?? '—')}
+        ${c.oficial?' <span class="chip g">Oficial</span>':''}</div>
+        <div class="sb">${esc(onde)}</div></td>
+      <td>${sellerBits(c)}</td>
       <td>${c.full?'<span class="chip y">Full</span>':'<span class="chip">Comum</span>'}
           ${c.frete_gratis?' <span class="chip">Frete grátis</span>':''}</td>
-      <td class="sb">${esc(d.produto.category_name ?? '—')}</td>
-    </tr>`;}).join('')}</tbody></table>`
+    </tr>`;}).join('')}</tbody></table>
+    <div class="hint" style="margin-top:10px">Reputação, medalha e vendas históricas vêm do perfil público do vendedor no Mercado Livre
+      (<code>/users/{id}</code>). Seguidores o ML não publica na API — por isso não aparecem aqui.</div>`
     :'<div class="none"><b>Sem concorrentes coletados</b>Rode <code>npm run collect produtos</code>.</div>')
   : (!S.similaresCarregado ? '<div class="load">carregando…</div>' : S.similares.length ? `<table><thead><tr>
     <th>Produto</th><th class="n">Posição</th><th class="n">Preço mediano</th><th class="n">Anúncios</th></tr></thead><tbody>${
@@ -1362,30 +1417,58 @@ function spark2(hist,w=560,h=170){
   </div>`;
 }
 
-/** Versão compacta do spark2 pra caber numa célula de tabela: sem legenda, só as duas linhas + tooltip nativo. */
-function sparkMini(hist,w=130,h=36){
-  const pos = hist.map(x=>x.posicao).filter(v=>v!=null);
-  const preco = hist.map(x=>x.preco).filter(v=>v!=null);
-  if (pos.length<2 && preco.length<2) return '<span class="sb">sem dado</span>';
-  const linha = (getY,cor) => {
-    const pts = hist.map((x,i)=>{
-      const v = getY(x); if (v==null) return null;
-      return [(i/Math.max(hist.length-1,1))*w, v, x];
+/** Mini-gráfico do Monitor: posição (roxa) + preço (verde). Aceita série só de preço. */
+function sparkMini(hist,w=168,h=44){
+  if (!hist.length) {
+    return `<div class="spark-wrap"><div class="spark-empty">sem série ainda</div>
+      <div class="spark-leg"><span><i style="background:var(--brand)"></i>posição</span>
+      <span><i style="background:var(--up)"></i>preço</span></div></div>`;
+  }
+  const temPos = hist.some(x => x.posicao != null);
+  const temPreco = hist.some(x => x.preco != null);
+  if (!temPos && !temPreco) {
+    return `<div class="spark-wrap"><div class="spark-empty">sem série ainda</div></div>`;
+  }
+
+  const linha = (getY, cor, invertido, label) => {
+    const pts = hist.map((x, i) => {
+      const v = getY(x); if (v == null) return null;
+      return [(i / Math.max(hist.length - 1, 1)) * w, v, x];
     }).filter(Boolean);
-    if (pts.length<2) return '';
-    const ys = pts.map(p=>p[1]);
-    const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
-    const esInvertido = cor==='#7C3AED';
-    const py = y => esInvertido ? ((y-mn)/rg)*(h-6)+3 : (h-6) - ((y-mn)/rg)*(h-6) - 3;
-    const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
-    const ult = pts[pts.length-1];
-    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="1.8" stroke-linejoin="round"/>
-      <circle cx="${ult[0].toFixed(1)}" cy="${py(ult[1]).toFixed(1)}" r="2.4" fill="${cor}"/>`;
+    if (!pts.length) return '';
+    const ys = pts.map(p => p[1]);
+    const mx = Math.max(...ys), mn = Math.min(...ys), rg = (mx - mn) || 1;
+    const py = y => invertido ? ((y - mn) / rg) * (h - 8) + 4
+                              : (h - 4) - ((y - mn) / rg) * (h - 8);
+    if (pts.length === 1) {
+      const p = pts[0];
+      const txt = label === 'pos' ? `${p[1]}º` : brl(p[1]);
+      return `<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" style="fill:${cor}">
+        <title>${esc(p[2].dia)} · ${txt}</title></circle>`;
+    }
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + py(p[1]).toFixed(1)).join(' ');
+    const ult = pts[pts.length - 1];
+    const pontos = pts.map(p => {
+      const txt = label === 'pos' ? `${p[1]}º` : brl(p[1]);
+      return `<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="2" style="fill:${cor}">
+        <title>${esc(p[2].dia)} · ${txt}</title></circle>`;
+    }).join('');
+    return `<path d="${d}" fill="none" style="stroke:${cor}" stroke-width="1.8" stroke-linejoin="round"/>
+      ${pontos}
+      <circle cx="${ult[0].toFixed(1)}" cy="${py(ult[1]).toFixed(1)}" r="2.8" style="fill:${cor}"/>`;
   };
-  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" role="img" aria-label="Tendência">
-    ${linha(x=>x.posicao, '#7C3AED')}
-    ${linha(x=>x.preco, '#16A34A')}
-  </svg>`;
+
+  return `<div class="spark-wrap">
+    <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" role="img" aria-label="Tendência 21 dias">
+      ${temPos ? linha(x => x.posicao, 'var(--brand)', true, 'pos') : ''}
+      ${temPreco ? linha(x => x.preco, 'var(--up)', false, 'preco') : ''}
+    </svg>
+    <div class="spark-leg">
+      ${temPos ? '<span><i style="background:var(--brand)"></i>posição</span>' : ''}
+      ${temPreco ? '<span><i style="background:var(--up)"></i>preço</span>' : ''}
+      ${!temPos && temPreco ? '<span>fora do top 20</span>' : ''}
+    </div>
+  </div>`;
 }
 
 /** Mesmo desenho do spark2, mas pra série de categoria: produtos no top + preço mediano do dia. */
@@ -2001,7 +2084,10 @@ async function carregarMonitor(){
   S.monitorados = m.data ?? []; S.alertas = a.data ?? []; S.pedidos = f.data ?? [];
   S.vendedores = v.data ?? [];
   S.histMon = {};
-  (hm.data ?? []).forEach(r => { (S.histMon[r.product_id] ??= []).push({ dia:r.dia, posicao:r.posicao, preco:r.preco }); });
+  if (hm.error) console.warn('historico_monitorados', hm.error.message);
+  (hm.data ?? []).forEach(r => {
+    (S.histMon[r.product_id] ??= []).push({ dia: r.dia, posicao: r.posicao, preco: r.preco });
+  });
 }
 async function buscarVendedores(){
   const t = S.vendBusca.trim();

@@ -6,13 +6,21 @@
  * a categoria que leu do rastro de navegação da página.
  *
  * Este job fecha o ciclo: lê a fila, coleta o ranking daquelas
- * categorias e marca o resultado.
+ * categorias e resolve cada anúncio.
  *
- * A ordem da fila é por número de pedidos — o produto que mais gente
- * procurou entra primeiro. É a lacuna de cobertura sendo priorizada
- * por demanda real em vez de palpite.
+ * Caminho de resolução (28/07/2026):
+ *   1. Ranking da categoria (top 20) — pode trazer o produto por sorte
+ *   2. /items?ids= — quase sempre 403 pra terceiro; mantido barato
+ *   3. /products/{mlb} — se o id for de catálogo (URL /p/...)
+ *   4. /products/search?q=titulo — achado ao vivo: funciona pra terceiro
+ *      + /products/{id}/items pra gravar concorrentes
+ *
+ * "sem_item" só quando a busca de catálogo também falha.
+ * "sem_destaque" só quando falha o catálogo E a categoria não tem
+ * ranking público — antes, categoria sem highlights marcava o pedido
+ * cedo demais e impedia o passo 4.
  */
-import { MlClient, NotFoundError } from './ml-client.js';
+import { MlClient, NotFoundError, type MlProductItem } from './ml-client.js';
 import { sql } from './db.js';
 import * as db from './db.js';
 import * as rank from './db-rank.js';
@@ -24,13 +32,127 @@ interface Pedido {
   mlb: string;
   category_id: string | null;
   pedidos: number;
+  snapshot: { titulo?: string; imagem?: string; preco?: number } | null;
+}
+
+/** Sincroniza ficha + concorrentes de um produto de catálogo. */
+async function sincronizarCatalogo(
+  ml: MlClient,
+  productId: string,
+  categoryId: string | null,
+): Promise<MlProductItem[]> {
+  if (categoryId) {
+    await rank.upsertCatalogProducts([{ id: productId, categoryId }]);
+  } else {
+    // Sem categoria no pedido: cria o produto sem inventar categoria.
+    await sql`
+      insert into catalog_products (id) values (${productId})
+      on conflict (id) do update set last_seen_at = now()
+    `;
+  }
+  try {
+    const ficha = await ml.product(productId);
+    if (ficha) await rank.enrichProduct(ficha);
+  } catch { /* ficha opcional */ }
+
+  try {
+    const r = await ml.productItems(productId, 100);
+    const itens = r?.results ?? [];
+    if (itens.length) {
+      const cat = categoryId ?? itens[0]?.category_id ?? null;
+      await rank.upsertProductItems(productId, cat, itens);
+    }
+    return itens;
+  } catch (e) {
+    if (!(e instanceof NotFoundError)) {
+      log(`  productItems ${productId}: ${e instanceof Error ? e.message : e}`);
+    }
+    return [];
+  }
+}
+
+async function marcarAtendido(id: number, productId: string) {
+  await sql`
+    update collect_requests
+       set status = 'atendido', atendido_em = now(), product_id = ${productId}
+     where id = ${id}
+  `;
+}
+
+/**
+ * Resolve um pedido sem depender de /items (403).
+ * Retorna o catalog_product_id se achou, null se não.
+ */
+async function resolverViaCatalogo(ml: MlClient, p: Pedido): Promise<string | null> {
+  // 1) O id já é de catálogo? (página /p/MLB...)
+  try {
+    const ficha = await ml.product(p.mlb);
+    if (ficha?.id) {
+      await sincronizarCatalogo(ml, ficha.id, p.category_id);
+      return ficha.id;
+    }
+  } catch {
+    // Não é catálogo (404/400) — segue pra busca por texto
+  }
+
+  // 2) Busca por título capturado na página pela extensão
+  const titulo = p.snapshot?.titulo?.trim();
+  if (!titulo || titulo.length < 3) return null;
+
+  try {
+    const busca = await ml.searchProducts(titulo, 5);
+    const candidatos = busca?.results ?? [];
+    if (!candidatos.length) return null;
+
+    // Preferir candidato cuja lista de anúncios contenha o MLB pedido.
+    for (const cand of candidatos) {
+      const itens = await sincronizarCatalogo(ml, cand.id, p.category_id);
+      if (itens.some((i) => i.item_id === p.mlb)) return cand.id;
+    }
+
+    // Nenhum candidato listou o MLB (limite da API). O 1º resultado da
+    // busca por título é o produto de catálogo mais próximo — é o que o
+    // ranking cobre e o que dá pra monitorar. Sem inventar que o anúncio
+    // específico entrou em items: o vínculo fica em product_id do pedido
+    // + stub mínimo em items pro join de meus_pedidos.
+    const top = candidatos[0];
+    await sincronizarCatalogo(ml, top.id, p.category_id);
+
+    if (p.category_id) {
+      await sql`
+        insert into categories (id, name) values (${p.category_id}, '(pendente)')
+        on conflict (id) do nothing
+      `;
+    }
+    await sql`
+      insert into items (id, title, category_id, catalog_product_id, is_catalog_listing, status, collect_priority)
+      values (
+        ${p.mlb},
+        ${titulo},
+        ${p.category_id},
+        ${top.id},
+        true,
+        'active',
+        2
+      )
+      on conflict (id) do update set
+        catalog_product_id = coalesce(items.catalog_product_id, excluded.catalog_product_id),
+        title = case when items.title like '(catálogo)%' then excluded.title else items.title end,
+        collect_priority = greatest(items.collect_priority, excluded.collect_priority),
+        last_seen_at = now()
+    `;
+    return top.id;
+  } catch (e) {
+    log(`  busca catálogo "${titulo.slice(0, 40)}": ${e instanceof Error ? e.message : e}`);
+    return null;
+  }
 }
 
 export async function atenderPedidos(ml: MlClient, limite = 200) {
   const inicio = Date.now();
 
   const fila = await sql<Pedido[]>`
-    select id, mlb, category_id, pedidos
+    select id, mlb, category_id, pedidos, snapshot
       from collect_requests
      where status = 'pendente'
      order by pedidos desc, criado_em asc
@@ -44,8 +166,6 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
 
   log(`${fila.length} pedido(s) na fila`);
 
-  // Vários pedidos podem apontar para a mesma categoria. Coletar uma vez
-  // e resolver todos de uma vez economiza chamadas à API.
   const porCategoria = new Map<string, Pedido[]>();
   const semCategoria: Pedido[] = [];
 
@@ -58,28 +178,18 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
 
   log(`  ${porCategoria.size} categoria(s) distintas, ${semCategoria.length} pedido(s) sem categoria`);
 
-  let semDestaque = 0;
+  // Categorias sem ranking público — NÃO marca o pedido ainda.
+  // O passo 3 (busca de catálogo) ainda pode resolver e liberar Monitorar.
+  const semRanking = new Set<string>();
   let produtosNovos = 0;
 
-  // Passo 1: atualiza o ranking da categoria. Isso alimenta
-  // product_rank_snapshots e descobre produtos de catálogo novos, mas
-  // NÃO é garantia de que o anúncio pedido específico entrou na base —
-  // highlights só traz o top 20, e o anúncio pedido pode estar fora
-  // dele. Quem decide o status de cada pedido é o passo 2.
-  for (const [cat, pedidos] of porCategoria) {
+  for (const [cat, _pedidos] of porCategoria) {
     try {
       const d = await ml.highlights(cat);
       const conteudo = d?.content ?? [];
 
       if (!conteudo.length) {
-        // A categoria existe mas não tem ranking público. Marcar assim
-        // evita tentar de novo toda rodada — e é informação útil: diz
-        // que aquele nicho é invisível para todo mundo, não só para nós.
-        await sql`
-          update collect_requests set status = 'sem_destaque', atendido_em = now()
-           where id = any(${pedidos.map((p) => p.id)}::bigint[])
-        `;
-        semDestaque += pedidos.length;
+        semRanking.add(cat);
         continue;
       }
 
@@ -91,82 +201,87 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
       }
       await rank.insertRankSnapshots(cat, conteudo);
 
-      // Os produtos entram com prioridade alta: alguém pediu, então
-      // vale sincronizar os concorrentes deles na próxima rodada.
       await sql`
         update catalog_products set last_synced_at = null
          where category_id = ${cat} and last_synced_at is not null
       `;
     } catch (e) {
       if (e instanceof NotFoundError) {
-        await sql`
-          update collect_requests set status = 'sem_destaque', atendido_em = now()
-           where id = any(${pedidos.map((p) => p.id)}::bigint[])
-        `;
-        semDestaque += pedidos.length;
+        semRanking.add(cat);
       } else {
         log(`  categoria ${cat}: ${e instanceof Error ? e.message : e}`);
       }
     }
   }
 
+  if (semRanking.size) {
+    log(`  ${semRanking.size} categoria(s) sem ranking — pedidos seguem pro catálogo`);
+  }
   if (semCategoria.length) {
-    log(`  ${semCategoria.length} pedido(s) sem categoria tentam direto no passo 2 —`);
-    log('  a extensão não conseguiu ler o rastro de navegação da página');
+    log(`  ${semCategoria.length} pedido(s) sem categoria — resolvem via título`);
   }
 
-  // Passo 2: tenta buscar o(s) anúncio(s) pedido(s) diretamente por
-  // /items?ids= (multiget). TESTADO AO VIVO em 25/07/2026: multiget dá
-  // 403 access_denied pra anúncio de terceiro, igual /items/{id}
-  // sozinho — a suposição de que multiget escapava da restrição (README
-  // antigo, e um doc de repasse) estava errada. Mantido mesmo assim:
-  // é barato (poucas dezenas de chamadas) e sem custo se o ML reabrir
-  // isso sem aviso, o que já aconteceu outras vezes neste projeto. Na
-  // prática, hoje, quase todo pedido de terceiro cai em 'sem_item' — o
-  // que é honesto, não um bug: não dá pra confirmar coleta de um
-  // anúncio específico de terceiro por nenhum caminho conhecido agora.
   let atendidos = 0;
   let semItem = 0;
+  let semDestaque = 0;
 
   const restantes = await sql<Pedido[]>`
-    select id, mlb, category_id, pedidos from collect_requests
+    select id, mlb, category_id, pedidos, snapshot from collect_requests
      where id = any(${fila.map((p) => p.id)}::bigint[]) and status = 'pendente'
   `;
 
+  // Passo 2: /items?ids= — barato, quase sempre vazio pra terceiro.
   if (restantes.length) {
     try {
       const encontrados = await ml.itemsMulti(restantes.map((p) => p.mlb));
-      const idsEncontrados = new Set(encontrados.map((i) => i.id));
-
       if (encontrados.length) {
         produtosNovos += await rank.upsertItensDiretos(encontrados);
-      }
-
-      const idsAtendidos = restantes.filter((p) => idsEncontrados.has(p.mlb)).map((p) => p.id);
-      const idsSemItem = restantes.filter((p) => !idsEncontrados.has(p.mlb)).map((p) => p.id);
-
-      if (idsAtendidos.length) {
-        await sql`
-          update collect_requests set status = 'atendido', atendido_em = now()
-           where id = any(${idsAtendidos}::bigint[])
-        `;
-        atendidos = idsAtendidos.length;
-      }
-      if (idsSemItem.length) {
-        // Na prática hoje isso é quase sempre 403 access_denied — o ML
-        // bloqueia detalhe de anúncio de terceiro por completo, não só
-        // pra alguns formatos. Ver comentário do passo 2 acima.
-        await sql`
-          update collect_requests set status = 'sem_item', atendido_em = now()
-           where id = any(${idsSemItem}::bigint[])
-        `;
-        semItem = idsSemItem.length;
+        const idsEncontrados = new Set(encontrados.map((i) => i.id));
+        for (const p of restantes.filter((x) => idsEncontrados.has(x.mlb))) {
+          const prod = encontrados.find((i) => i.id === p.mlb)?.catalog_product_id;
+          if (prod) await marcarAtendido(p.id, prod);
+          else {
+            await sql`
+              update collect_requests set status = 'atendido', atendido_em = now()
+               where id = ${p.id}
+            `;
+          }
+          atendidos++;
+        }
       }
     } catch (e) {
-      // Fica pendente para a próxima rodada — melhor do que marcar
-      // "atendido" errado por causa de um erro de rede pontual.
-      log(`  busca direta dos anúncios: ${e instanceof Error ? e.message : e}`);
+      log(`  multiget: ${e instanceof Error ? e.message : e}`);
     }
+  }
+
+  // Passo 3: catálogo — o caminho que funciona de verdade (28/07).
+  const ainda = await sql<Pedido[]>`
+    select id, mlb, category_id, pedidos, snapshot from collect_requests
+     where id = any(${fila.map((p) => p.id)}::bigint[]) and status = 'pendente'
+  `;
+
+  for (const p of ainda) {
+    const productId = await resolverViaCatalogo(ml, p);
+    if (productId) {
+      await marcarAtendido(p.id, productId);
+      atendidos++;
+      produtosNovos++;
+      log(`  ✓ ${p.mlb} → ${productId}`);
+      continue;
+    }
+
+    // Catálogo falhou: distingue "categoria sem ranking" de "anúncio
+    // inacessível" — ambos honestos, ações diferentes pra quem lê.
+    const statusFinal = (p.category_id && semRanking.has(p.category_id))
+      ? 'sem_destaque'
+      : 'sem_item';
+    await sql`
+      update collect_requests set status = ${statusFinal}, atendido_em = now()
+       where id = ${p.id}
+    `;
+    if (statusFinal === 'sem_destaque') semDestaque++;
+    else semItem++;
+    log(`  ✗ ${p.mlb} → ${statusFinal} (título: ${p.snapshot?.titulo?.slice(0, 40) ?? '—'})`);
   }
 
   await db.logRun({
@@ -177,8 +292,8 @@ export async function atenderPedidos(ml: MlClient, limite = 200) {
     durationMs: Date.now() - inicio,
   });
 
-  log(`pedidos: ${atendidos} atendido(s), ${semItem} sem retorno no anúncio, ` +
-      `${semDestaque} sem ranking público, ${produtosNovos} produto(s) novos`);
+  log(`pedidos: ${atendidos} atendido(s), ${semItem} sem catálogo, ` +
+      `${semDestaque} sem ranking+catálogo, ${produtosNovos} produto(s) tocados`);
   return atendidos;
 }
 

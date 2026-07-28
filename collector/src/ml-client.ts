@@ -179,6 +179,18 @@ export class MlClient {
     );
   }
 
+  /**
+   * Busca de PRODUTO DE CATÁLOGO por texto.
+   * Achado ao vivo 28/07/2026: /sites/{site}/search (anúncio) dá 403;
+   * /products/search funciona pra terceiro. Usado pra atender pedidos
+   * da extensão quando /items?ids= também dá 403.
+   */
+  searchProducts(q: string, limit = 5) {
+    return this.get<{ results: Array<{ id: string; name?: string }> }>(
+      '/products/search', { status: 'active', site_id: this.siteId, q, limit },
+    );
+  }
+
   /** Anúncios da própria conta. Único caminho para sold_quantity real. */
   myItems(userId: number, offset = 0, limit = 50) {
     return this.get<{ results: string[]; paging: { total: number } }>(
