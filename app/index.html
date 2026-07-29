@@ -145,6 +145,15 @@
   .spark-leg{display:flex;gap:10px;font-size:10.5px;color:var(--ink-3);line-height:1}
   .spark-leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   .spark-empty{font-size:12px;color:var(--ink-3);padding:6px 0}
+  .cht{position:relative}
+  .cht svg path,.cht svg .cht-dot{pointer-events:none}
+  .cht svg .cht-hit{pointer-events:all;cursor:crosshair}
+  .cht-tip{position:absolute;z-index:5;pointer-events:none;min-width:140px;max-width:240px;
+    padding:8px 10px;border-radius:8px;background:var(--ink);color:#fff;font-size:12px;line-height:1.45;
+    box-shadow:0 6px 18px rgba(0,0,0,.18);transform:translate(-10%,-110%);white-space:nowrap}
+  .cht-tip b{display:block;font-size:12.5px;margin-bottom:3px;font-weight:600}
+  .cht-tip span{display:block;opacity:.92}
+  .cht-tip[hidden]{display:none!important}
   .mon-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:4px}
   .mon-meta span{font-size:11.5px;color:var(--ink-3)}
   .mon-meta b{font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
@@ -1629,39 +1638,50 @@ function spark(v,w=560,h=110){
 }
 
 /** Posição + preço juntos, eixos independentes. Aceita série só de um dos dois. */
+function fmtDiaChart(d){
+  if (d == null) return '—';
+  const s = String(d).slice(0, 10);
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return String(d); }
+}
 function spark2(hist,w=560,h=170){
   if (!hist.length) return '<div class="none">sem histórico ainda</div>';
   const temPos = hist.some(x=>x.posicao!=null);
   const temPreco = hist.some(x=>x.preco!=null);
   if (!temPos && !temPreco) return '<div class="none">sem histórico ainda</div>';
-  const linha = (getY,cor,invertido,label) => {
+  const linha = (getY,cor,invertido,serie) => {
     const pts = hist.map((x,i)=>{
       const v = getY(x); if (v==null) return null;
       return [(i/Math.max(hist.length-1,1))*w, v, x];
     }).filter(Boolean);
-    if (!pts.length) return '';
+    if (!pts.length) return { path:'', dots:'', hits:'' };
     const ys = pts.map(p=>p[1]);
     const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
     const py = y => invertido ? ((y-mn)/rg)*(h-30)+15 : (h-30) - ((y-mn)/rg)*(h-30) - 15;
-    const txt = (p) => label==='pos' ? (p[1]+'º') : brl(p[1]);
-    if (pts.length===1) {
-      const p = pts[0];
-      return `<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="4" fill="${cor}">
-        <title>${esc(p[2].dia)} · ${txt(p)}</title></circle>`;
-    }
-    const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
-    const pontos = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" fill="${cor}">
-      <title>${esc(p[2].dia)} · ${txt(p)}</title></circle>`).join('');
-    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>${pontos}`;
+    const path = pts.length===1 ? ''
+      : `<path d="${pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ')}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    const dots = pts.map(p=>`<circle class="cht-dot" cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="4" fill="${cor}" stroke="var(--card)" stroke-width="1.5"/>`).join('');
+    const hits = pts.map(p=>{
+      const x = p[2];
+      return `<circle class="cht-hit" cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="14" fill="transparent"
+        data-dia="${esc(fmtDiaChart(x.dia))}" data-serie="${serie}"
+        data-pos="${x.posicao!=null?x.posicao:''}" data-preco="${x.preco!=null?x.preco:''}"/>`;
+    }).join('');
+    return { path, dots, hits };
   };
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico">
-    ${temPos ? linha(x=>x.posicao, '#7C3AED', true, 'pos') : ''}
-    ${temPreco ? linha(x=>x.preco, '#16A34A', false, 'preco') : ''}
-  </svg>
+  const Lpos = temPos ? linha(x=>x.posicao, '#7C3AED', true, 'pos') : { path:'', dots:'', hits:'' };
+  const Lpre = temPreco ? linha(x=>x.preco, '#16A34A', false, 'preco') : { path:'', dots:'', hits:'' };
+  return `<div class="cht">
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico">
+      ${Lpos.path}${Lpre.path}${Lpos.dots}${Lpre.dots}${Lpos.hits}${Lpre.hits}
+    </svg>
+    <div class="cht-tip" hidden></div>
+  </div>
   <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
     ${temPos?'<span>● posição</span>':''}
     ${temPreco?'<span style="color:var(--up)">● preço mediano</span>':''}
-    <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
+    <span style="margin-left:auto">passe o mouse nas bolinhas pra ver dia e valor</span>
   </div>`;
 }
 
@@ -1722,28 +1742,74 @@ function sparkMini(hist,w=168,h=44){
 /** Mesmo desenho do spark2, mas pra série de categoria: produtos no top + preço mediano do dia. */
 function sparkCategoria(hist,w=560,h=170){
   if (hist.length<2) return '<div class="none">sem histórico ainda — volte depois de alguns dias de coleta</div>';
-  const linha = (getY,cor) => {
+  const linha = (getY,cor,serie) => {
     const pts = hist.map((x,i)=>{
       const v = getY(x); if (v==null) return null;
       return [(i/Math.max(hist.length-1,1))*w, v, x];
     }).filter(Boolean);
-    if (pts.length<2) return '';
+    if (pts.length<2) return { path:'', dots:'', hits:'' };
     const ys = pts.map(p=>p[1]);
     const mx=Math.max(...ys), mn=Math.min(...ys), rg=(mx-mn)||1;
     const py = y => (h-30) - ((y-mn)/rg)*(h-30) - 15;
-    const d = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ');
-    const pontos = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" fill="${cor}">
-      <title>${new Date(p[2].dia).toLocaleDateString('pt-BR')} · ${cor==='#7C3AED'?p[1]+' produtos':brl(p[1])}</title></circle>`).join('');
-    return `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>${pontos}`;
+    const path = `<path d="${pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+py(p[1]).toFixed(1)).join(' ')}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    const dots = pts.map(p=>`<circle class="cht-dot" cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="4" fill="${cor}" stroke="var(--card)" stroke-width="1.5"/>`).join('');
+    const hits = pts.map(p=>{
+      const x = p[2];
+      return `<circle class="cht-hit" cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="14" fill="transparent"
+        data-dia="${esc(fmtDiaChart(x.dia))}" data-serie="${serie}"
+        data-produtos="${x.produtos_no_top!=null?x.produtos_no_top:''}"
+        data-preco="${x.preco_mediano!=null?x.preco_mediano:''}"/>`;
+    }).join('');
+    return { path, dots, hits };
   };
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico da categoria">
-    ${linha(x=>x.produtos_no_top, '#7C3AED')}
-    ${linha(x=>x.preco_mediano, '#16A34A')}
-  </svg>
+  const La = linha(x=>x.produtos_no_top, '#7C3AED', 'prod');
+  const Lb = linha(x=>x.preco_mediano, '#16A34A', 'preco');
+  return `<div class="cht">
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico da categoria">
+      ${La.path}${Lb.path}${La.dots}${Lb.dots}${La.hits}${Lb.hits}
+    </svg>
+    <div class="cht-tip" hidden></div>
+  </div>
   <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
     <span>● produtos no top 20</span><span style="color:var(--up)">● preço mediano</span>
-    <span style="margin-left:auto">passe o mouse nos pontos pra ver dia e valor</span>
+    <span style="margin-left:auto">passe o mouse nas bolinhas pra ver dia e valor</span>
   </div>`;
+}
+
+function wireChartTips(){
+  document.querySelectorAll('.cht').forEach(wrap => {
+    const tip = wrap.querySelector('.cht-tip');
+    if (!tip) return;
+    const move = (e) => {
+      const r = wrap.getBoundingClientRect();
+      let left = e.clientX - r.left + 14;
+      let top = e.clientY - r.top - 8;
+      tip.hidden = false;
+      // Evita sair pela direita / cima
+      const tw = tip.offsetWidth || 160, th = tip.offsetHeight || 50;
+      if (left + tw > r.width - 4) left = Math.max(4, r.width - tw - 4);
+      if (top - th < 4) top = e.clientY - r.top + th + 16;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    };
+    wrap.querySelectorAll('.cht-hit').forEach(el => {
+      el.onmouseenter = (e) => {
+        const dia = el.dataset.dia || '—';
+        const lines = [`<b>${esc(dia)}</b>`];
+        if (el.dataset.pos !== undefined && el.dataset.pos !== '')
+          lines.push(`<span>Posição: <b style="display:inline">${esc(el.dataset.pos)}º</b></span>`);
+        if (el.dataset.produtos !== undefined && el.dataset.produtos !== '')
+          lines.push(`<span>Produtos no top: <b style="display:inline">${esc(el.dataset.produtos)}</b></span>`);
+        if (el.dataset.preco !== undefined && el.dataset.preco !== '')
+          lines.push(`<span>Preço mediano: <b style="display:inline">${brl(Number(el.dataset.preco))}</b></span>`);
+        if (lines.length === 1) lines.push('<span>Sem valor neste ponto</span>');
+        tip.innerHTML = lines.join('');
+        move(e);
+      };
+      el.onmousemove = move;
+      el.onmouseleave = () => { tip.hidden = true; };
+    });
+  });
 }
 
 // Anexo I do Simples Nacional (comércio) — faixas oficiais, estáveis desde a
@@ -2799,6 +2865,7 @@ function render(){
     S.view = 'categorias'; S.catDetalhe = null; S.catDetalheHist = [];
     S.catSel = null; S.F = {}; S.buscou = false; S.produtos = []; render();
   };
+  if (S.view==='catdetalhe') wireChartTips();
   if (S.view==='locais'){
     if (!S.locaisCategorias.length) carregarCategoriasLocais().then(render);
     if ($('#l_go')) $('#l_go').onclick = () => { S.locaisOffset = 0; buscarLocais(); };
@@ -2872,6 +2939,7 @@ function render(){
     if ($('#mon')) $('#mon').onclick = () => {
       const id = S.detalhe.produto.product_id;
       S.monitorados.some(m=>m.product_id===id) ? largar(id) : seguir(id); };
+    wireChartTips();
     document.querySelectorAll('[data-dab]').forEach(b => b.onclick = async () => {
       S.detalheAba = b.dataset.dab;
       if (S.detalheAba === 'similares' && !S.similaresCarregado) { await carregarSimilares(); }
