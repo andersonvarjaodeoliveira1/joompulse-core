@@ -84,6 +84,17 @@
   .cols{display:grid;grid-template-columns:1fr 300px;gap:26px;align-items:start}
   h1.pg{font-size:26px;font-weight:700;letter-spacing:-.025em;margin:0 0 6px}
   .sub{color:var(--ink-2);margin:0 0 22px;font-size:14.5px}
+  .beta{display:inline-block;background:#FFEDD5;color:#C2410C;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;vertical-align:middle;margin-left:8px;letter-spacing:.02em}
+  .dropz{border:2px dashed var(--line);border-radius:16px;background:var(--bg-2);padding:44px 24px;text-align:center;transition:border-color .15s,background .15s}
+  .dropz.on{border-color:var(--brand);background:var(--tint)}
+  .dropz .dz-ico{font-size:40px;line-height:1;margin-bottom:4px}
+  .dropz .dz-t{font-size:18px;font-weight:600;margin:10px 0 6px;letter-spacing:-.02em}
+  .dropz .dz-d{color:var(--ink-2);font-size:13.5px;max-width:44ch;margin:0 auto 18px}
+  .feat2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+  @media(max-width:860px){.feat2{grid-template-columns:1fr}}
+  .feat2 .fcard{border:1px solid var(--line);border-radius:14px;padding:20px 22px;background:var(--bg-2)}
+  .feat2 .fcard h3{margin:0 0 8px;font-size:16px;font-weight:600}
+  .feat2 .fcard p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.5}
   h2.sc{font-size:19px;font-weight:600;letter-spacing:-.015em;margin:28px 0 4px}
   .sc2{color:var(--ink-2);font-size:14px;margin:0 0 14px}
 
@@ -406,6 +417,7 @@
           Produtos<span class="ch">▾</span></button>
         <div id="g1">
           <button class="item" data-v="produtos">Busca de produtos</button>
+          <button class="item" data-v="fornecedores">Produtos dos fornecedores</button>
           <button class="item" data-v="locais">Produtos locais</button>
           <button class="item" data-v="monitor">Monitor</button>
         </div>
@@ -477,6 +489,7 @@ const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catD
             locaisFavoritos:new Set(JSON.parse(localStorage.getItem('gr_locais_fav')||'[]')),
             locaisCriado:null, locaisCaixaMin:null, locaisCaixaMax:null, locaisOffset:0, histMon:{},
             locaisMeliOn:false, locaisMeliCache:{}, locaisMeliBuscando:false,
+            catalogos:[], catalogosBusy:false, catalogosMsg:null, catalogosLoaded:false,
             detalheAba:'catalogo', similares:[], similaresCarregado:false, detalheLocal:null,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
 
@@ -620,6 +633,7 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
     <button class="qc" data-go="categorias">${sq('#FFEDD5','#EA580C',I.cat)}<span>Análise de categoria</span></button>
     <button class="qc" data-go="produtos">${sq('#DBEAFE','#2563EB',I.conc)}<span>Análise da concorrência</span></button>
     <button class="qc" data-go="monitor">${sq('#DCFCE7','#16A34A',I.mon)}<span>Monitor de produtos</span></button>
+    <button class="qc" data-go="fornecedores">${sq('#DBEAFE','#2563EB',I.loja)}<span>Produtos dos fornecedores</span></button>
     <button class="qc" data-go="locais">${sq('#FEF3C7','#D97706',I.loja)}<span>Produtos locais</span></button>
     <button class="qc" data-go="calc">${sq('#FCE7F3','#DB2777',I.calc)}<span>Calculadora de margem</span></button>
   </div></div>
@@ -1209,6 +1223,139 @@ function cardsLocais(){
   }).join('')}</div>
   ${S.locaisAba==='todos' && S.locais.length > 0 && S.locais.length % 60 === 0
     ? `<div style="text-align:center;margin-top:16px"><button class="btn" id="l_mais">Carregar mais</button></div>` : ''}`;
+}
+
+V.fornecedores = () => {
+  const msg = S.catalogosMsg;
+  const lista = S.catalogos;
+  const stChip = s => s==='email_enviado' ? '<span class="chip g">e-mail enviado</span>'
+    : s==='erro_email' ? '<span class="chip r">salvo · e-mail pendente</span>'
+    : '<span class="chip y">recebido</span>';
+  return `
+  <h1 class="pg">Produtos dos fornecedores <span class="beta">Beta</span></h1>
+  <p class="sub">Carregue catálogos de fornecedores em PDF. Guardamos o arquivo no banco (Storage) e
+    enviamos automaticamente para análise. Depois do processamento, os itens entram em
+    <button class="lnk" data-go="locais" style="padding:0;font-size:inherit;color:var(--brand)">Produtos locais</button>.</p>
+  <div class="tip" style="margin-bottom:16px"><b>O que esta aba faz de verdade.</b>
+    Sobe o PDF, registra metadados e dispara o e-mail com o anexo.
+    A conversão automática do PDF em tabela (SKU, preço, EAN, fotos) ainda não roda sozinha —
+    não inventamos produtos a partir do arquivo.</div>
+  <div class="dropz" id="cat_drop" ${S.catalogosBusy?'style="opacity:.6;pointer-events:none"':''}>
+    <div class="dz-ico" aria-hidden="true">📄</div>
+    <div class="dz-t">${S.catalogosBusy?'Enviando catálogo…':'Carregue ou solte catálogos aqui'}</div>
+    <p class="dz-d">Vários PDFs dos seus fornecedores. Máximo 20&nbsp;MB por arquivo.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
+      <input id="cat_forn" placeholder="Nome do fornecedor (opcional)" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;min-width:220px;background:var(--card)">
+      <input id="cat_notas" placeholder="Notas (opcional)" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;min-width:220px;background:var(--card)">
+    </div>
+    <button class="btn" id="cat_pick" ${S.catalogosBusy?'disabled':''}>⬆ Escolha os catálogos</button>
+    <input type="file" id="cat_file" accept="application/pdf,.pdf" multiple hidden>
+  </div>
+  ${msg?`<div class="msg ${msg.ok?'ok':'err'}" style="margin-top:14px">${esc(msg.t)}</div>`:''}
+  <h2 class="sc">Seus envios</h2>
+  <p class="sc2">Histórico dos PDFs que você mandou nesta conta.</p>
+  <div class="card">${!S.catalogosLoaded
+    ? '<div class="load">carregando…</div>'
+    : !lista.length
+      ? `<div class="none"><b>Nenhum catálogo ainda</b>Escolha um PDF acima pra começar.</div>`
+      : `<table><thead><tr><th>Arquivo</th><th>Fornecedor</th><th class="n">Tamanho</th><th>Status</th><th class="n">Enviado em</th></tr></thead><tbody>${
+        lista.map(c=>`<tr>
+          <td><div class="nm">${esc(c.nome_arquivo)}</div>
+            ${c.email_erro?`<div class="sb" style="color:var(--dn)">${esc(c.email_erro)}</div>`:''}</td>
+          <td>${esc(c.fornecedor_nome||'—')}</td>
+          <td class="n">${c.tamanho_bytes!=null?(c.tamanho_bytes/1024/1024).toFixed(2)+' MB':'—'}</td>
+          <td>${stChip(c.status)}</td>
+          <td class="n">${c.criado_em?new Date(c.criado_em).toLocaleString('pt-BR'):'—'}</td>
+        </tr>`).join('')
+      }</tbody></table>`}</div>
+  <div class="feat2">
+    <div class="fcard">
+      <h3>Carregue qualquer catálogo</h3>
+      <p>O PDF fica no Storage com o seu usuário e o e-mail vai com o anexo pra análise.
+        Quando o catálogo for importado (CSV / produtos locais), você compara custo com o MeLi.</p>
+    </div>
+    <div class="fcard">
+      <h3>Depois: dados de mercado</h3>
+      <p>Com o produto já em Produtos locais (e vínculo de catálogo MeLi quando houver),
+        você vê preço e concorrência reais — sem inventar receita ou vendas do PDF.</p>
+    </div>
+  </div>`;
+};
+
+async function carregarCatalogos(){
+  const { data, error } = await sb.rpc('listar_meus_catalogos', { p_limite: 50 });
+  if (error) { S.catalogosMsg = { ok:false, t: error.message }; S.catalogos = []; }
+  else S.catalogos = data ?? [];
+  S.catalogosLoaded = true;
+}
+
+async function enviarCatalogos(files){
+  const pdfs = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (!pdfs.length) {
+    S.catalogosMsg = { ok:false, t:'Só aceitamos PDF.' }; render(); return;
+  }
+  const big = pdfs.find(f => f.size > 20 * 1024 * 1024);
+  if (big) {
+    S.catalogosMsg = { ok:false, t:`${big.name} passa de 20 MB.` }; render(); return;
+  }
+  const { data: sess } = await sb.auth.getSession();
+  const user = sess?.session?.user;
+  if (!user) { S.catalogosMsg = { ok:false, t:'Faça login de novo.' }; render(); return; }
+
+  const forn = ($('#cat_forn')?.value || '').trim() || null;
+  const notas = ($('#cat_notas')?.value || '').trim() || null;
+  S.catalogosBusy = true; S.catalogosMsg = null; render();
+  let okN = 0, failN = 0, emailOk = 0;
+
+  for (const file of pdfs) {
+    const path = `${user.id}/${crypto.randomUUID()}.pdf`;
+    const { error: upErr } = await sb.storage.from('catalogos').upload(path, file, {
+      contentType: 'application/pdf', upsert: false,
+    });
+    if (upErr) { failN++; continue; }
+
+    const { data: row, error: insErr } = await sb.from('supplier_catalogs').insert({
+      user_id: user.id,
+      nome_arquivo: file.name,
+      storage_path: path,
+      tamanho_bytes: file.size,
+      mime: 'application/pdf',
+      fornecedor_nome: forn,
+      notas,
+    }).select('id').single();
+    if (insErr || !row) { failN++; continue; }
+
+    const { data: mail, error: mailErr } = await sb.functions.invoke('enviar-catalogo', {
+      body: { catalog_id: row.id },
+    });
+    okN++;
+    if (!mailErr && mail?.email_enviado) emailOk++;
+  }
+
+  S.catalogosBusy = false;
+  await carregarCatalogos();
+  if (failN && !okN) S.catalogosMsg = { ok:false, t:`Falha ao enviar ${failN} arquivo(s).` };
+  else if (okN) S.catalogosMsg = {
+    ok: true,
+    t: emailOk === okN
+      ? `${okN} catálogo(s) salvos e enviados por e-mail.`
+      : `${okN} catálogo(s) salvos.${emailOk?` ${emailOk} com e-mail.`:' E-mail ainda não disparou — o arquivo ficou guardado.'}${failN?` ${failN} falhou(aram).`:''}`,
+  };
+  render();
+}
+
+function wireCatalogos(){
+  const drop = $('#cat_drop');
+  const file = $('#cat_file');
+  if (!drop || !file) return;
+  if ($('#cat_pick')) $('#cat_pick').onclick = () => file.click();
+  file.onchange = () => { if (file.files?.length) enviarCatalogos(file.files); file.value = ''; };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+  drop.ondragleave = () => drop.classList.remove('on');
+  drop.ondrop = e => {
+    e.preventDefault(); drop.classList.remove('on');
+    if (e.dataTransfer?.files?.length) enviarCatalogos(e.dataTransfer.files);
+  };
 }
 
 V.monitor = () => {
@@ -2690,6 +2837,10 @@ function render(){
         fornecedorId: img.dataset.lfornid || null,
       });
     });
+  }
+  if (S.view==='fornecedores'){
+    if (!S.catalogosLoaded && !S.catalogosBusy) carregarCatalogos().then(render);
+    wireCatalogos();
   }
   if (S.view==='monitor'){
     document.querySelectorAll('.tb').forEach(b => b.onclick = () => { S.aba=b.dataset.ab; render(); });
