@@ -371,11 +371,18 @@
   .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:99px;background:var(--brand);color:#fff;font-size:11px;font-weight:600;padding:0 5px}
   .btn.mini{padding:5px 11px;font-size:12.5px}
   .feed{padding:4px 0}
-  .al{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .al{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;text-align:left;width:100%;background:none;border-left:0;border-right:0;border-top:0;font:inherit;color:inherit}
+  .al:hover{background:var(--bg-2)}
   .al:last-child{border-bottom:0}
   .al.novo{background:var(--tint)}
+  .al.novo:hover{background:var(--soft)}
   .dt{width:9px;height:9px;border-radius:50%;flex:none;background:var(--ink-3)}
   .dt.g{background:var(--up)} .dt.r{background:var(--dn)} .dt.p{background:var(--brand)}
+  .al-delta{display:flex;align-items:center;justify-content:center;gap:18px;padding:22px 16px;margin:14px 0;border-radius:12px;background:var(--bg-2);border:1px solid var(--line)}
+  .al-delta .lado{text-align:center}
+  .al-delta .lado .k{font-size:12px;color:var(--ink-3);font-weight:500}
+  .al-delta .lado .v{font-size:28px;font-weight:700;letter-spacing:-.03em;margin-top:4px;font-variant-numeric:tabular-nums}
+  .al-delta .seta{font-size:22px;color:var(--ink-3);font-weight:600}
   @media (max-width:1100px){ .cols{grid-template-columns:1fr} }
   @media (max-width:900px){
     .shell{grid-template-columns:1fr}
@@ -491,7 +498,7 @@ const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
 const $ = s => document.querySelector(s);
 let monitorPollId = null; // atualização automática do Monitor — ver render()
 const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
-            monitorados:[], alertas:[], pedidos:[], aba:'lista',
+            monitorados:[], alertas:[], pedidos:[], aba:'lista', alertaFoco:null,
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
@@ -1528,14 +1535,88 @@ function talert(){
   const cor = t => t==='entrou_top10'||t==='subiu'||t==='preco_caiu' ? 'g'
                  : t==='saiu_top10'||t==='caiu'||t==='preco_subiu' ? 'r' : 'p';
   return `<div class="feed">${S.alertas.map(a=>`
-    <div class="al ${a.lido?'':'novo'}">
+    <button type="button" class="al ${a.lido?'':'novo'}" data-aid="${a.id}">
       <span class="dt ${cor(a.tipo)}"></span>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div class="nm">${esc(a.titulo)}</div>
         <div class="sb">${esc(a.nome ?? a.product_id)}${a.detalhe?' · '+esc(a.detalhe):''}</div>
       </div>
-      <span class="sb">${esc(a.dia)}</span>
-    </div>`).join('')}</div>`;
+      <span class="sb" style="flex:none">${esc(fmtDiaChart(a.dia))}</span>
+    </button>`).join('')}</div>`;
+}
+
+const TIPO_ALERTA = {
+  subiu: 'Subiu no ranking',
+  caiu: 'Caiu no ranking',
+  entrou_top10: 'Entrou no top 10',
+  saiu_top10: 'Saiu do top 10',
+  preco_subiu: 'Preço mediano subiu',
+  preco_caiu: 'Preço mediano caiu',
+  concorrencia: 'Mudança de concorrência',
+};
+
+function fmtValorAlerta(tipo, v){
+  if (v == null || v === '') return '—';
+  if (tipo === 'preco_subiu' || tipo === 'preco_caiu') return brl(v);
+  if (tipo === 'concorrencia') return num(v) + ' anúncio(s)';
+  return num(v) + 'º';
+}
+
+V.alerta = () => {
+  const a = S.alertaFoco;
+  if (!a) return `<div class="none"><b>Alerta não encontrado</b>
+    <button class="btn g" data-go="monitor" style="margin-top:12px">Voltar ao Monitor</button></div>`;
+  const cor = a.tipo==='entrou_top10'||a.tipo==='subiu'||a.tipo==='preco_caiu' ? 'g'
+            : a.tipo==='saiu_top10'||a.tipo==='caiu'||a.tipo==='preco_subiu' ? 'r' : 'p';
+  const tipoRot = TIPO_ALERTA[a.tipo] || a.tipo;
+  return `
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn g" id="al_volta">← Voltar aos alertas</button>
+    ${a.product_id?`<button class="btn" id="al_ficha">Ver ficha do produto</button>`:''}
+  </div>
+  <h1 class="pg">${esc(a.titulo)}</h1>
+  <p class="sub" style="margin-bottom:8px">${esc(a.nome ?? a.product_id ?? '—')}
+    ${a.product_id?` · <span class="sb">${esc(a.product_id)}</span>`:''}</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <span class="chip ${cor}">${esc(tipoRot)}</span>
+    <span class="chip">${a.lido?'Lido':'Novo'}</span>
+    <span class="chip">${esc(fmtDiaChart(a.dia))}</span>
+  </div>
+  ${a.detalhe?`<p style="color:var(--ink-2);margin:10px 0 0;font-size:14.5px">${esc(a.detalhe)}</p>`:''}
+  <div class="al-delta">
+    <div class="lado">
+      <div class="k">Antes</div>
+      <div class="v">${fmtValorAlerta(a.tipo, a.antes)}</div>
+    </div>
+    <div class="seta" aria-hidden="true">→</div>
+    <div class="lado">
+      <div class="k">Depois</div>
+      <div class="v" style="color:${cor==='g'?'var(--up)':cor==='r'?'var(--dn)':'var(--brand)'}">${fmtValorAlerta(a.tipo, a.depois)}</div>
+    </div>
+  </div>
+  <div class="card cbox">
+    <div class="ct">O que isso significa</div>
+    <p style="margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.5">
+      Comparação entre a coleta do dia <b>${esc(fmtDiaChart(a.dia))}</b> e a leitura anterior
+      do mesmo produto no Monitor. Esse aviso foi gravado depois da coleta — não some se você
+      fechar o app.
+    </p>
+  </div>
+  <div class="tip" style="margin-top:16px"><b>Próximo passo.</b> Abra a ficha do produto para ver
+    o gráfico de posição/preço e a lista de concorrentes.</div>`;
+};
+
+async function abrirAlerta(id){
+  const a = S.alertas.find(x => String(x.id) === String(id));
+  if (!a) return;
+  S.alertaFoco = a;
+  S.view = 'alerta';
+  S.aba = 'alertas';
+  if (!a.lido) {
+    a.lido = true;
+    sb.from('product_alerts').update({ lido: true }).eq('id', a.id).then(() => {});
+  }
+  render();
 }
 
 V.detalhe = () => {
@@ -2975,6 +3056,7 @@ function render(){
     document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); removerPedido(b.dataset.rmped); });
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
+    document.querySelectorAll('[data-aid]').forEach(b => b.onclick = () => abrirAlerta(b.dataset.aid));
     if ($('#v_busca')){
       $('#v_busca').oninput = (e) => { S.vendBusca = e.target.value; };
       $('#v_busca').addEventListener('keydown', (e) => { if (e.key==='Enter') buscarVendedores(); });
@@ -2983,8 +3065,23 @@ function render(){
     document.querySelectorAll('[data-vadd]').forEach(b => b.onclick = () => acompanharVendedor(Number(b.dataset.vadd)));
     document.querySelectorAll('[data-vrm]').forEach(b => b.onclick = () => largarVendedor(Number(b.dataset.vrm)));
   }
+  if (S.view==='alerta'){
+    if ($('#al_volta')) $('#al_volta').onclick = () => {
+      S.alertaFoco = null; S.view = 'monitor'; S.aba = 'alertas'; render();
+    };
+    if ($('#al_ficha') && S.alertaFoco?.product_id) {
+      $('#al_ficha').onclick = () => {
+        S.voltaPara = 'alerta';
+        abrir(S.alertaFoco.product_id);
+      };
+    }
+  }
   if (S.view==='detalhe'){
-    if ($('#volta')) $('#volta').onclick = () => { S.view='produtos'; render(); };
+    if ($('#volta')) $('#volta').onclick = () => {
+      if (S.voltaPara === 'alerta' && S.alertaFoco) { S.view = 'alerta'; S.voltaPara = null; render(); return; }
+      if (S.voltaPara === 'monitor') { S.view = 'monitor'; S.voltaPara = null; render(); return; }
+      S.view='produtos'; render();
+    };
     if ($('#mon')) $('#mon').onclick = () => {
       const id = S.detalhe.produto.product_id;
       S.monitorados.some(m=>m.product_id===id) ? largar(id) : seguir(id); };
