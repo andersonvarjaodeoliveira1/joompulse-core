@@ -1535,14 +1535,18 @@ function talert(){
   const cor = t => t==='entrou_top10'||t==='subiu'||t==='preco_caiu' ? 'g'
                  : t==='saiu_top10'||t==='caiu'||t==='preco_subiu' ? 'r' : 'p';
   return `<div class="feed">${S.alertas.map(a=>`
-    <button type="button" class="al ${a.lido?'':'novo'}" data-aid="${a.id}">
+    <div class="al ${a.lido?'':'novo'}" style="cursor:default;flex-wrap:wrap">
       <span class="dt ${cor(a.tipo)}"></span>
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:180px">
         <div class="nm">${esc(a.titulo)}</div>
         <div class="sb">${esc(a.nome ?? a.product_id)}${a.detalhe?' · '+esc(a.detalhe):''}</div>
+        <div class="sb" style="margin-top:2px">${esc(fmtDiaChart(a.dia))}</div>
       </div>
-      <span class="sb" style="flex:none">${esc(fmtDiaChart(a.dia))}</span>
-    </button>`).join('')}</div>`;
+      <div style="display:flex;gap:8px;flex:none;flex-wrap:wrap">
+        <button type="button" class="btn g mini" data-aid="${a.id}">Detalhes do alerta</button>
+        ${a.product_id?`<button type="button" class="btn mini" data-aficha="${esc(a.product_id)}" data-aid2="${a.id}">Ver ficha</button>`:''}
+      </div>
+    </div>`).join('')}</div>`;
 }
 
 const TIPO_ALERTA = {
@@ -3056,7 +3060,28 @@ function render(){
     document.querySelectorAll('[data-rmped]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); removerPedido(b.dataset.rmped); });
     if ($('#lidos')) $('#lidos').onclick = async () => {
       await sb.rpc('marcar_alertas_lidos'); await carregarMonitor(); render(); };
-    document.querySelectorAll('[data-aid]').forEach(b => b.onclick = () => abrirAlerta(b.dataset.aid));
+    document.querySelectorAll('[data-aid]').forEach(b => b.onclick = (ev) => {
+      ev.stopPropagation();
+      abrirAlerta(b.dataset.aid);
+    });
+    document.querySelectorAll('[data-aficha]').forEach(b => b.onclick = (ev) => {
+      ev.stopPropagation();
+      const id = b.dataset.aficha;
+      const aid = b.dataset.aid2;
+      if (aid) {
+        const a = S.alertas.find(x => String(x.id) === String(aid));
+        if (a) {
+          S.alertaFoco = a;
+          if (!a.lido) {
+            a.lido = true;
+            sb.from('product_alerts').update({ lido: true }).eq('id', a.id).then(() => {});
+          }
+        }
+      }
+      S.voltaPara = 'monitor';
+      S.aba = 'alertas';
+      abrir(id);
+    });
     if ($('#v_busca')){
       $('#v_busca').oninput = (e) => { S.vendBusca = e.target.value; };
       $('#v_busca').addEventListener('keydown', (e) => { if (e.key==='Enter') buscarVendedores(); });
