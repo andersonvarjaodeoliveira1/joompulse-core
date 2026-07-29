@@ -77,7 +77,8 @@ begin
   raise notice 'OK  P_PRECO: % (%)', a.titulo, a.detalhe;
 
   select titulo into a from listar_alertas() where product_id='P_PRECO' and tipo='concorrencia';
-  raise notice 'OK  concorrência: %', coalesce(a.titulo,'sem mudança relevante');
+  if a.titulo is null then raise exception 'faltou alerta de concorrência'; end if;
+  raise notice 'OK  concorrência: %', a.titulo;
 end $$;
 
 -- rodar de novo não pode duplicar
@@ -89,7 +90,8 @@ do $$
 declare n int;
 begin
   select count(*) into n from listar_alertas();
-  if n <> 3 then raise exception 'após rodar duas vezes deveria haver 3, veio %', n; end if;
+  -- P_SOBE entrou_top10, P_CAI saiu_top10, P_PRECO preco_caiu + concorrencia
+  if n <> 4 then raise exception 'após rodar duas vezes deveria haver 4, veio %', n; end if;
   raise notice 'OK  rodar gerar_alertas duas vezes mantém % — sem duplicata', n;
 end $$;
 

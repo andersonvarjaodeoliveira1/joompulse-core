@@ -1384,9 +1384,10 @@ V.monitor = () => {
     ${S.aba==='alertas'&&novos?'<button class="btn g" id="lidos" style="margin-left:auto">Marcar como lidos</button>':''}
   </div>
   <div class="card" id="mres">${S.aba==='lista'?tmon():S.aba==='fila'?tfila():S.aba==='vendedores'?tvend():talert()}</div>
-  <div class="tip"><b>O que dispara alerta.</b> Mudança de 3 ou mais posições, entrada ou saída do
-    top 10, variação de preço acima de 5%, e 2 ou mais concorrentes entrando ou saindo. Os limiares
-    existem para o alerta não virar ruído — o que dispara todo dia deixa de ser lido.</div>`;
+  <div class="tip"><b>O que dispara alerta.</b> Qualquer mudança no produto monitorado:
+    posição no ranking, entrada/saída do top 10, preço mediano ou número de concorrentes.
+    No máximo um aviso por tipo por dia — a coleta diária grava o histórico mesmo se você
+    não abrir o app.</div>`;
 };
 
 function tfila(){
