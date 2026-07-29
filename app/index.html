@@ -432,6 +432,10 @@
         </div>
       </div>
       <div class="grp">
+        <button class="solo" data-v="extensao">
+          <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 3h6v3H7zM4 8h12v9H4z"/><path d="M8 12h4"/></svg>Extensão Chrome</button>
+      </div>
+      <div class="grp">
         <button class="gh" data-g="g2">
           <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16V9m5 7V4m5 12v-5m5 5V7"/></svg>
           Concorrência<span class="ch">▾</span></button>
@@ -644,6 +648,7 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
     <button class="qc" data-go="monitor">${sq('#DCFCE7','#16A34A',I.mon)}<span>Monitor de produtos</span></button>
     <button class="qc" data-go="fornecedores">${sq('#DBEAFE','#2563EB',I.loja)}<span>Produtos dos fornecedores</span></button>
     <button class="qc" data-go="locais">${sq('#FEF3C7','#D97706',I.loja)}<span>Produtos locais</span></button>
+    <button class="qc" data-go="extensao">${sq('#EDE9FE','#7C3AED',I.rad)}<span>Extensão Chrome</span></button>
     <button class="qc" data-go="calc">${sq('#FCE7F3','#DB2777',I.calc)}<span>Calculadora de margem</span></button>
   </div></div>
   <aside>
@@ -2302,6 +2307,47 @@ async function carregarPlanos(){
   S.planos = data ?? [];
 }
 
+V.extensao = () => {
+  const zip = 'extensao-gringa-radar.zip';
+  return `
+  <h1 class="pg">Extensão Chrome</h1>
+  <p class="sub">Baixe, instale no Chrome e entre com a mesma conta deste painel.
+    Só libera dados no Mercado Livre se a assinatura estiver ativa no banco.</p>
+  <div class="hero" style="margin-bottom:22px">
+    <h3>Gringa Radar na página do produto</h3>
+    <p>Posição, concorrência e preços sem sair do anúncio. Login na extensão
+      verifica se você tem assinatura ativa (ou trial).</p>
+    <a class="b" href="${zip}" download style="display:inline-block;text-decoration:none">⬇ Baixar extensão (.zip)</a>
+  </div>
+  <div class="g2">
+    <div class="card cbox">
+      <div class="ct">1. Instalar</div>
+      <ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.55">
+        <li>Baixe o ZIP e extraia a pasta</li>
+        <li>Abra <code>chrome://extensions</code></li>
+        <li>Ligue o <b>Modo do desenvolvedor</b></li>
+        <li>Clique em <b>Carregar sem compactação</b> e escolha a pasta extraída</li>
+      </ol>
+    </div>
+    <div class="card cbox">
+      <div class="ct">2. Entrar</div>
+      <p style="margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.55">
+        Clique no ícone roxo na barra do Chrome. Use o <b>mesmo e-mail e senha</b>
+        desta conta. Se a assinatura estiver inativa, o login é recusado e o painel
+        pede para assinar aqui.
+      </p>
+      <button class="btn" data-go="assinatura" style="margin-top:14px">Ver planos</button>
+    </div>
+  </div>
+  <div class="tip" style="margin-top:18px"><b>Gateway de pagamento.</b> A cobrança automática ainda
+    não está ligada. Enquanto isso, assinatura ativa = status
+    <code>active</code>/<code>trialing</code> no banco, trial válido, ou plano pago
+    atribuído manualmente. Quando conectar Mercado Pago/Stripe, o webhook só precisa
+    atualizar <code>profiles.subscription_status</code> e <code>plan</code>.</div>
+  <div class="cwarn" style="margin-top:14px">Chrome Web Store (instalação em 1 clique) vem depois —
+    por enquanto o ZIP + “carregar sem compactação” é o caminho público.</div>`;
+};
+
 V.assinatura = () => {
   const anual = S.periodoPlano === 'ano';
   const planoAtual = S.quota?.plan;
@@ -2340,7 +2386,9 @@ V.assinatura = () => {
   </div>`}
   <div class="cwarn" style="margin-top:20px">⚠️ <b>"Assinar" ainda não processa pagamento.</b> Preços mostrados
     são valor de referência — faltam decidir o valor final e conectar um gateway (Mercado Pago, Stripe...) antes
-    de cobrar de verdade. Mudar plano hoje é feito manualmente.</div>`;
+    de cobrar de verdade. Mudar plano hoje é feito manualmente.
+    A <button class="lnk" data-go="extensao" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">extensão Chrome</button>
+    já exige assinatura ativa no banco.</div>`;
 };
 
 // ---------------------------------------------------------------------

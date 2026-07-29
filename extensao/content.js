@@ -343,6 +343,11 @@ async function carregarPrecos() {
 }
 
 function html(d) {
+  if (d.status === 'sem_assinatura') {
+    return `<div class="gr-c-vazio"><b>Assinatura necessária</b>
+      <p>Entre no ícone da extensão com uma conta que tenha assinatura ativa,
+        ou assine no painel do Gringa Radar.</p></div>`;
+  }
   if (d.status === 'sem_quota') {
     return `<div class="gr-c-vazio"><b>Consultas do mês esgotadas</b>
       <p>O contador zera no dia 1º.</p></div>`;

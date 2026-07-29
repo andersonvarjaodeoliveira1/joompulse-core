@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Gringa Radar",
-  "version": "0.3.0",
-  "description": "Posição no ranking, concorrência e preços do produto direto na página do Mercado Livre.",
+  "version": "0.4.0",
+  "description": "Posição no ranking, concorrência e preços do produto direto na página do Mercado Livre. Requer assinatura ativa.",
   "permissions": [
     "storage",
     "activeTab"
