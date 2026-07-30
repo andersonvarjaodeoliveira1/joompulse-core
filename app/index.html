@@ -730,6 +730,14 @@ function chipsAtivos(){
   if (F.p_oficial_max!=null) add(`Loja oficial ≤ ${pct(F.p_oficial_max)}`, 'p_oficial_max');
   if (F.p_maturidade)    add(`Maturidade: ${esc(F.p_maturidade)}`, 'p_maturidade');
   if (F.p_estabilidade)  add(`Preço: ${esc(F.p_estabilidade)}`, 'p_estabilidade');
+  if (F.p_visto_min!=null||F.p_visto_max!=null) add(`Na base ${F.p_visto_min??0}–${F.p_visto_max??'∞'} dias`, 'visto');
+  if (F.p_dias_min!=null||F.p_dias_max!=null) add(`Observado ${F.p_dias_min??0}–${F.p_dias_max??'∞'} dias`, 'obs');
+  if (F.p_top10_min)     add(`Top 10 ≥ ${F.p_top10_min} dias`, 'p_top10_min');
+  if (F.p_top10_rate_min!=null) add(`Taxa top 10 ≥ ${pct(F.p_top10_rate_min)}`, 'p_top10_rate_min');
+  if (F.p_com_foto===true)  add('Com foto', 'p_com_foto');
+  if (F.p_com_foto===false) add('Sem foto', 'p_com_foto');
+  if (F.p_vend_min!=null||F.p_vend_max!=null) add(`Vendedores ${F.p_vend_min??0}–${F.p_vend_max??'∞'}`, 'vend');
+  if (F.p_caiu_min)      add(`Caiu ${F.p_caiu_min}+`, 'p_caiu_min');
   return out;
 }
 
@@ -864,27 +872,70 @@ V.produtos = () => {
         </select></div>
     </div>
 
-    <div class="fcard muted">
-      <h3>Indisponível pela API do ML</h3>
-      <div class="indisp" style="margin-bottom:10px">O Mercado Livre não entrega esses números pra terceiro — por isso não filtramos (nem inventamos).</div>
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Receita mensal</label>
-      <div class="qc2">
-        <button type="button" disabled>R$ 0–1.000</button>
-        <button type="button" disabled>R$ 1.000–5.000</button>
-        <button type="button" disabled>R$ 15.000+</button>
+    <div class="fcard">
+      <h3>Histórico e ficha</h3>
+      <div class="indisp" style="margin-bottom:10px">Dados da nossa coleta — não é receita/vendas do ML (a API não entrega isso pra terceiro).</div>
+
+      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias na nossa base</label>
+      ${qcFaixa('vf', F.p_visto_min, F.p_visto_max, [
+        ['0–7 dias','0','7'],['8–30 dias','8','30'],['31+ dias','31',''],
+      ])}
+      <div class="duo" style="margin-bottom:12px">
+        <input id="f_vmin_visto" type="number" placeholder="De" value="${F.p_visto_min??''}">
+        <input id="f_vmax_visto" type="number" placeholder="Até" value="${F.p_visto_max??''}">
       </div>
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin:10px 0 6px">Vendas mensais</label>
-      <div class="qc2">
-        <button type="button" disabled>0–10</button>
-        <button type="button" disabled>10–50</button>
-        <button type="button" disabled>50+</button>
+      <div class="indisp" style="margin:-6px 0 12px">Desde que o produto entrou no Gringa Radar (<code>first_seen</code>), não a data de criação no ML.</div>
+
+      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias observados no ranking</label>
+      ${qcFaixa('of', F.p_dias_min, F.p_dias_max, [
+        ['Até 7','','7'],['8–21','8','21'],['22+','22',''],
+      ])}
+      <div class="duo" style="margin-bottom:12px">
+        <input id="f_omin" type="number" placeholder="De" value="${F.p_dias_min??''}">
+        <input id="f_omax" type="number" placeholder="Até" value="${F.p_dias_max??''}">
       </div>
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin:10px 0 6px">Tempo no ar · imagens · avaliações</label>
-      <div class="qc2">
-        <button type="button" disabled>0–30 dias</button>
-        <button type="button" disabled>5+ fotos</button>
-        <button type="button" disabled>4,5–5★</button>
+
+      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias no top 10 (mínimo)</label>
+      <div class="qc2" style="margin-bottom:12px">
+        <button type="button" class="${F.p_top10_min==1?'on':''}" data-t10="1">1+</button>
+        <button type="button" class="${F.p_top10_min==3?'on':''}" data-t10="3">3+</button>
+        <button type="button" class="${F.p_top10_min==7?'on':''}" data-t10="7">7+</button>
       </div>
+
+      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Taxa no top 10</label>
+      <div class="qc2" style="margin-bottom:12px">
+        <button type="button" class="${F.p_top10_rate_min==0.3?'on':''}" data-t10r="0.3">≥ 30%</button>
+        <button type="button" class="${F.p_top10_rate_min==0.5?'on':''}" data-t10r="0.5">≥ 50%</button>
+        <button type="button" class="${F.p_top10_rate_min==0.7?'on':''}" data-t10r="0.7">≥ 70%</button>
+      </div>
+
+      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Foto no catálogo</label>
+      <div class="qc2" style="margin-bottom:12px">
+        <button type="button" class="${F.p_com_foto===true?'on':''}" data-foto="1">Com foto</button>
+        <button type="button" class="${F.p_com_foto===false?'on':''}" data-foto="0">Sem foto</button>
+      </div>
+
+      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de vendedores</label>
+      ${qcFaixa('sf', F.p_vend_min, F.p_vend_max, [
+        ['1–3','1','3'],['4–10','4','10'],['11+','11',''],
+      ])}
+      <div class="duo" style="margin-bottom:12px">
+        <input id="f_smin" type="number" placeholder="De" value="${F.p_vend_min??''}">
+        <input id="f_smax" type="number" placeholder="Até" value="${F.p_vend_max??''}">
+      </div>
+
+      <div class="frow"><label>Caiu pelo menos (posições / 7 dias)</label>
+        <input id="f_caiu" type="number" placeholder="ex: 3" value="${F.p_caiu_min??''}"></div>
+      <div class="frow"><label>Dias no top 10 (número exato mín.)</label>
+        <input id="f_top10" type="number" placeholder="ex: 5" value="${F.p_top10_min??''}"></div>
+      <div class="frow"><label>Ordenar por</label>
+        <select id="f_ord">
+          <option value="posicao" ${(!F.p_ordem||F.p_ordem==='posicao')?'selected':''}>Posição</option>
+          <option value="movimento" ${F.p_ordem==='movimento'?'selected':''}>Movimento 7d</option>
+          <option value="concorrencia" ${F.p_ordem==='concorrencia'?'selected':''}>Menos anúncios</option>
+          <option value="preco" ${F.p_ordem==='preco'?'selected':''}>Preço mediano</option>
+          <option value="consistencia" ${F.p_ordem==='consistencia'?'selected':''}>Taxa no top 10</option>
+        </select></div>
     </div>
   </div>
   <div class="rodape" style="margin-bottom:16px">
@@ -2665,11 +2716,18 @@ function lerFiltros(){
     p_preco_max:    vF('f_vmax'),
     p_momentum:     vT('f_mov'),
     p_delta_min:    vI('f_delta'),
+    p_caiu_min:     vI('f_caiu'),
     p_consistencia: vT('f_cons'),
     p_top10_min:    vI('f_top10'),
     p_conc_min:     vI('f_cmin'),
     p_conc_max:     vI('f_cmax'),
     p_dispersao_min:vF('f_disp'),
+    p_visto_min:    vI('f_vmin_visto'),
+    p_visto_max:    vI('f_vmax_visto'),
+    p_dias_min:     vI('f_omin'),
+    p_dias_max:     vI('f_omax'),
+    p_vend_min:     vI('f_smin'),
+    p_vend_max:     vI('f_smax'),
     p_ordem:        vT('f_ord') || S.F.p_ordem || 'posicao',
   };
 
@@ -2693,10 +2751,22 @@ async function contar(){
   const F = { ...S.F };
   const { data } = await sb.rpc('contar_produtos', {
     p_categoria:F.p_categoria??null, p_texto:F.p_texto??null,
-    p_pos_max:F.p_pos_max??null, p_preco_min:F.p_preco_min??null,
-    p_preco_max:F.p_preco_max??null, p_momentum:F.p_momentum??null,
-    p_conc_max:F.p_conc_max??null, p_maturidade:F.p_maturidade??null,
-    p_nivel_conc:F.p_nivel_conc??null, p_estabilidade:F.p_estabilidade??null });
+    p_pos_min:F.p_pos_min??null, p_pos_max:F.p_pos_max??null,
+    p_preco_min:F.p_preco_min??null, p_preco_max:F.p_preco_max??null,
+    p_momentum:F.p_momentum??null,
+    p_conc_min:F.p_conc_min??null, p_conc_max:F.p_conc_max??null,
+    p_maturidade:F.p_maturidade??null,
+    p_nivel_conc:F.p_nivel_conc??null, p_estabilidade:F.p_estabilidade??null,
+    p_visto_min:F.p_visto_min??null, p_visto_max:F.p_visto_max??null,
+    p_dias_min:F.p_dias_min??null, p_dias_max:F.p_dias_max??null,
+    p_com_foto:F.p_com_foto??null,
+    p_vend_min:F.p_vend_min??null, p_vend_max:F.p_vend_max??null,
+    p_top10_min:F.p_top10_min??null, p_top10_rate_min:F.p_top10_rate_min??null,
+    p_caiu_min:F.p_caiu_min??null, p_delta_min:F.p_delta_min??null,
+    p_melhor_pos:F.p_melhor_pos??null, p_dispersao_min:F.p_dispersao_min??null,
+    p_full_min:F.p_full_min??null, p_full_max:F.p_full_max??null,
+    p_oficial_max:F.p_oficial_max??null,
+  });
   S.contagem = data ?? null;
   document.querySelectorAll('.cnt').forEach(el => {
     el.innerHTML = S.contagem==null ? '—'
@@ -2902,6 +2972,27 @@ function render(){
     document.querySelectorAll('[data-pf]').forEach(b => b.onclick = () => aplicarFaixa('p_preco_min','p_preco_max', b.dataset.pf));
     document.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => aplicarFaixa('p_pos_min','p_pos_max', b.dataset.rf));
     document.querySelectorAll('[data-cf]').forEach(b => b.onclick = () => aplicarFaixa('p_conc_min','p_conc_max', b.dataset.cf));
+    document.querySelectorAll('[data-vf]').forEach(b => b.onclick = () => aplicarFaixa('p_visto_min','p_visto_max', b.dataset.vf));
+    document.querySelectorAll('[data-of]').forEach(b => b.onclick = () => aplicarFaixa('p_dias_min','p_dias_max', b.dataset.of));
+    document.querySelectorAll('[data-sf]').forEach(b => b.onclick = () => aplicarFaixa('p_vend_min','p_vend_max', b.dataset.sf));
+    document.querySelectorAll('[data-t10]').forEach(b => b.onclick = () => {
+      S.F = { ...S.F, ...lerFiltros() };
+      const v = Number(b.dataset.t10);
+      if (S.F.p_top10_min === v) delete S.F.p_top10_min; else S.F.p_top10_min = v;
+      render(); contar();
+    });
+    document.querySelectorAll('[data-t10r]').forEach(b => b.onclick = () => {
+      S.F = { ...S.F, ...lerFiltros() };
+      const v = Number(b.dataset.t10r);
+      if (S.F.p_top10_rate_min === v) delete S.F.p_top10_rate_min; else S.F.p_top10_rate_min = v;
+      render(); contar();
+    });
+    document.querySelectorAll('[data-foto]').forEach(b => b.onclick = () => {
+      S.F = { ...S.F, ...lerFiltros() };
+      const v = b.dataset.foto === '1';
+      if (S.F.p_com_foto === v) delete S.F.p_com_foto; else S.F.p_com_foto = v;
+      render(); contar();
+    });
 
     // seletores semânticos da pesquisa simples
     document.querySelectorAll('[data-sem]').forEach(b => b.onclick = (e) => {
@@ -2973,6 +3064,9 @@ function render(){
       if (k==='pos'){ delete S.F.p_pos_min; delete S.F.p_pos_max; }
       else if (k==='preco'){ delete S.F.p_preco_min; delete S.F.p_preco_max; }
       else if (k==='conc'){ delete S.F.p_conc_min; delete S.F.p_conc_max; }
+      else if (k==='visto'){ delete S.F.p_visto_min; delete S.F.p_visto_max; }
+      else if (k==='obs'){ delete S.F.p_dias_min; delete S.F.p_dias_max; }
+      else if (k==='vend'){ delete S.F.p_vend_min; delete S.F.p_vend_max; }
       else if (k==='p_categoria'){ S.catSel=null; delete S.F.p_categoria; }
       else if (k==='p_full_max'||k==='p_full_min'){ delete S.F.p_full_max; delete S.F.p_full_min; }
       else delete S.F[k];
