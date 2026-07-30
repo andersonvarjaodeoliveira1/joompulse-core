@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de Privacidade — Gringa Radar</title>
+  <meta name="description" content="Política de Privacidade do Gringa Radar (painel web e extensão de navegador), em conformidade com a LGPD.">
+  <style>
+    :root {
+      --ink: #1a1a1e;
+      --ink-2: #4b5563;
+      --ink-3: #6b7280;
+      --line: #e5e7eb;
+      --bg: #fafafa;
+      --card: #ffffff;
+      --brand: #5b21b6;
+      --brand-soft: #f5f3ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, var(--brand-soft) 0%, var(--bg) 220px);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 22px 72px;
+    }
+    header {
+      margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+    .brand svg { flex: none; }
+    .brand em { color: var(--brand); font-style: normal; }
+    h1 {
+      font-size: clamp(1.75rem, 4vw, 2.1rem);
+      font-weight: 750;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin: 0 0 10px;
+    }
+    .meta {
+      color: var(--ink-3);
+      font-size: 14px;
+      margin: 0;
+    }
+    .intro {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin: 0 0 32px;
+      color: var(--ink-2);
+      font-size: 15px;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 32px 0 10px;
+      color: var(--ink);
+    }
+    p, li { color: var(--ink-2); }
+    p { margin: 0 0 12px; }
+    ul {
+      margin: 0 0 12px;
+      padding-left: 1.25rem;
+    }
+    li { margin-bottom: 8px; }
+    a { color: var(--brand); }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--ink); font-weight: 650; }
+    .box {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 16px 0;
+    }
+    .box p:last-child { margin-bottom: 0; }
+    footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      font-size: 13.5px;
+      color: var(--ink-3);
+    }
+    footer a { color: var(--ink-2); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="https://andersonvarjaodeoliveira1.github.io/joompulse-core/app/">
+        <svg width="28" height="28" viewBox="0 0 56 56" aria-hidden="true">
+          <circle cx="28" cy="28" r="23" fill="none" stroke="#7C3AED" stroke-width="4"/>
+          <path d="M28 28 L46 12" stroke="#7C3AED" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="28" cy="28" r="4" fill="#7C3AED"/>
+        </svg>
+        Gringa <em>Radar</em>
+      </a>
+      <h1>Política de Privacidade</h1>
+      <p class="meta">Última atualização: 29 de julho de 2026</p>
+    </header>
+
+    <p class="intro">
+      Esta Política de Privacidade descreve como o <strong>Gringa Radar</strong>
+      (painel web e extensão de navegador) trata dados pessoais e informações
+      técnicas, em conformidade com a Lei Geral de Proteção de Dados
+      (Lei nº 13.709/2018 — LGPD). Ao usar o serviço, você declara ter lido
+      e compreendido este documento.
+    </p>
+
+    <h2>1. Quem somos</h2>
+    <p>
+      O Gringa Radar é uma ferramenta de análise de mercado voltada a
+      vendedores, com painel web e extensão para Chrome. O controlador
+      dos dados pessoais tratados neste contexto pode ser contatado pelo
+      e-mail indicado na seção 9.
+    </p>
+
+    <h2>2. Quais dados coletamos</h2>
+    <p>Coletamos e/ou processamos apenas o necessário para operar o produto:</p>
+    <ul>
+      <li>
+        <strong>E-mail da conta</strong> — informado no cadastro/login do
+        painel e da extensão. Usado para autenticar o usuário e
+        <strong>validar se a assinatura está ativa</strong> no momento do login
+        na extensão e no uso do serviço.
+      </li>
+      <li>
+        <strong>Dados de conta e assinatura</strong> — plano, status de
+        assinatura/trial e registros de uso vinculados à conta (por exemplo,
+        cotas e produtos monitorados), armazenados no nosso banco de dados.
+      </li>
+      <li>
+        <strong>Configurações e preferências locais</strong> — salvas no
+        próprio navegador (por exemplo, sessão de login da extensão e
+        preferências da interface), por meio de armazenamento local do
+        Chrome (<code>chrome.storage</code> / armazenamento local do site).
+      </li>
+      <li>
+        <strong>Informações públicas de produtos</strong> — a extensão lê
+        dados já exibidos publicamente nas páginas de produtos do
+        <strong>Mercado Livre</strong> e da <strong>Shopee</strong> (como
+        título, preço e demais informações visíveis na página), para
+        apresentar análises ao próprio usuário. Não coletamos dados de
+        login dessas plataformas em nome do usuário.
+      </li>
+      <li>
+        <strong>Conteúdos enviados pelo usuário</strong> — por exemplo,
+        catálogos em PDF enviados pela função de fornecedores, quando
+        utilizada.
+      </li>
+    </ul>
+    <div class="box">
+      <p>
+        <strong>Não solicitamos</strong> senha do Mercado Livre ou da Shopee
+        para a extensão. A autenticação do Gringa Radar usa a conta do
+        próprio serviço (e-mail e senha do painel).
+      </p>
+    </div>
+
+    <h2>3. Como usamos os dados</h2>
+    <p>Utilizamos os dados para:</p>
+    <ul>
+      <li>autenticar o acesso e verificar assinatura/trial;</li>
+      <li>prestar as funcionalidades do painel e da extensão;</li>
+      <li>guardar preferências e sessão no navegador;</li>
+      <li>melhorar estabilidade, segurança e suporte;</li>
+      <li>cumprir obrigações legais, quando aplicável.</li>
+    </ul>
+    <p>
+      <strong>Não vendemos</strong> seus dados pessoais e
+      <strong>não os compartilhamos com terceiros</strong> para fins de
+      marketing ou finalidades não relacionadas à operação do Gringa Radar.
+      Poderemos usar provedores de infraestrutura (hospedagem, autenticação,
+      envio de e-mail operacional) estritamente para fazer o serviço
+      funcionar, sob obrigações de confidencialidade e segurança adequadas.
+    </p>
+
+    <h2>4. Base legal (LGPD)</h2>
+    <p>O tratamento ocorre, conforme o caso, com base em:</p>
+    <ul>
+      <li><strong>execução de contrato</strong> — prestar o serviço contratado;</li>
+      <li><strong>legítimo interesse</strong> — segurança, prevenção a abuso e melhoria do produto, com respeito aos seus direitos;</li>
+      <li><strong>consentimento</strong> — quando exigido para finalidades específicas;</li>
+      <li><strong>cumprimento de obrigação legal</strong> — quando a lei exigir.</li>
+    </ul>
+
+    <h2>5. Onde e por quanto tempo armazenamos</h2>
+    <ul>
+      <li>
+        <strong>No navegador (local)</strong> — sessão da extensão,
+        tokens de acesso e preferências ficam no dispositivo do usuário.
+        Permanecem enquanto a extensão/site estiver instalado/em uso ou
+        até você limpar os dados do navegador ou sair da conta.
+      </li>
+      <li>
+        <strong>Nos nossos servidores (banco de dados)</strong> — conta,
+        assinatura, monitoramentos e conteúdos enviados. Mantidos enquanto
+        a conta estiver ativa e pelo tempo necessário às finalidades
+        descritas, ou conforme exigência legal. Após exclusão da conta,
+        eliminamos ou anonimizamos os dados pessoais, salvo retenção
+        legal obrigatória.
+      </li>
+    </ul>
+
+    <h2>6. Compartilhamento</h2>
+    <p>
+      Não comercializamos listas de usuários. O compartilhamento, se houver,
+      limita-se a prestadores essenciais à operação (por exemplo, provedor
+      de nuvem/banco de dados e serviço de e-mail transacional), ou a
+      autoridades quando houver ordem legal válida.
+    </p>
+
+    <h2>7. Segurança</h2>
+    <p>
+      Adotamos medidas técnicas e organizacionais razoáveis para proteger
+      os dados (controle de acesso, comunicação criptografada quando
+      aplicável e isolamento do token da extensão fora da página do
+      marketplace). Nenhum sistema é 100% seguro; pedimos que você também
+      proteja sua senha e o acesso ao dispositivo.
+    </p>
+
+    <h2>8. Seus direitos (LGPD)</h2>
+    <p>Você pode solicitar, nos termos da LGPD:</p>
+    <ul>
+      <li>confirmação da existência de tratamento;</li>
+      <li>acesso aos dados;</li>
+      <li>correção de dados incompletos, inexatos ou desatualizados;</li>
+      <li>anonimização, bloqueio ou eliminação de dados desnecessários ou excessivos;</li>
+      <li>portabilidade, quando aplicável;</li>
+      <li>informação sobre compartilhamentos;</li>
+      <li>revogação de consentimento, quando o tratamento se basear nele;</li>
+      <li>oposição a tratamentos realizados com base em legítimo interesse, nos casos previstos em lei.</li>
+    </ul>
+    <p>
+      Para exercer esses direitos, use o e-mail da seção 9. Responderemos
+      no prazo legal aplicável.
+    </p>
+
+    <h2>9. Contato para privacidade</h2>
+    <div class="box">
+      <p>
+        Dúvidas, solicitações LGPD ou reclamações sobre privacidade:<br>
+        <strong>E-mail:</strong>
+        <a href="mailto:andersonvarjaodeoliveira1@gmail.com">andersonvarjaodeoliveira1@gmail.com</a>
+      </p>
+    </div>
+
+    <h2>10. Alterações nesta política</h2>
+    <p>
+      Podemos atualizar este documento periodicamente. A data de
+      “Última atualização” no topo indica a versão vigente. Mudanças
+      relevantes poderão ser comunicadas no painel ou por e-mail, quando
+      fizer sentido.
+    </p>
+
+    <h2>11. Extensão Chrome e marketplaces</h2>
+    <p>
+      A extensão Gringa Radar solicita permissões mínimas para funcionar
+      (armazenamento local e acesso aos hosts necessários). Ela processa
+      informações <strong>públicas</strong> das páginas de produto do
+      Mercado Livre e da Shopee no contexto do seu navegador, para
+      exibir insights a você. Não usamos esses dados para vender a
+      terceiros nem para fins alheios ao produto.
+    </p>
+
+    <footer>
+      <p>
+        Gringa Radar ·
+        <a href="https://andersonvarjaodeoliveira1.github.io/joompulse-core/app/">Abrir o painel</a>
+        ·
+        <a href="mailto:andersonvarjaodeoliveira1@gmail.com">Contato</a>
+      </p>
+      <p>© 2026 Gringa Radar. Todos os direitos reservados.</p>
+    </footer>
+  </div>
+</body>
+</html>
