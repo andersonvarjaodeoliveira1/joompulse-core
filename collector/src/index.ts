@@ -16,6 +16,7 @@
  *   npm run collect fornecedor <csv>  # importa catálogo de fornecedor
  *   npm run collect pedidos     # atende os pedidos vindos da extensão
  *   npm run collect pedidos-status    # resumo da fila
+ *   npm run collect digest            # conta produtos novos + e-mail + aviso no app
  *
  * Comandos do caminho antigo (seed/worker/daily) continuam no código mas
  * dependem de /sites/MLB/search, que devolve 403 desde 07/2026.
@@ -29,6 +30,7 @@ import { coletarRanking, sincronizarProdutos, sincronizarItens, colherCalibracao
 import * as rank from './db-rank.js';
 import { importarFornecedor, modeloCsv } from './fornecedores.js';
 import { atenderPedidos, statusPedidos } from './pedidos.js';
+import { fecharDigestDoDia } from './digest.js';
 
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a);
 
@@ -303,6 +305,22 @@ async function main() {
           break;
         }
         console.log('  Coleta saudável.\n');
+        break;
+      }
+
+      case 'digest': {
+        // Conta produtos novos do dia, grava aviso no app e manda e-mail
+        // (se RESEND_API_KEY estiver no ambiente do Actions/local).
+        const d = await fecharDigestDoDia();
+        console.log('\n  Digest da coleta');
+        console.log('  ─────────────────────────────────────');
+        console.log(`  ${d.titulo}`);
+        console.log(`  ${d.detalhe}`);
+        console.log(`  novos no ranking     ${d.novos_ranking}`);
+        console.log(`  novos no catálogo    ${d.novos_catalogo}`);
+        console.log(`  posições hoje        ${Number(d.posicoes).toLocaleString('pt-BR')}`);
+        console.log(`  e-mail               ${d.email_enviado ? 'enviado' : `não (${d.email_erro ?? 'ok'})`}`);
+        console.log();
         break;
       }
 

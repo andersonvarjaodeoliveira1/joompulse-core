@@ -74,6 +74,14 @@ jobs:
         working-directory: collector
         run: npm run collect rank-metrics full
 
+      - name: Digest — produtos novos + e-mail + aviso no app
+        working-directory: collector
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          DIGEST_EMAIL_TO: ${{ secrets.DIGEST_EMAIL_TO }}
+        run: npm run collect digest
+        continue-on-error: true
+
       - name: Manutenção semanal
         if: success()
         working-directory: collector

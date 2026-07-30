@@ -416,8 +416,8 @@
 </div>
 
 <div id="app" class="hide">
-  <div class="strip" id="strip">Coletando o ranking do Mercado Livre todos os dias.
-    <b>O movimento aparece a partir da segunda leitura.</b>
+  <div class="strip" id="strip">Coletando o ranking do Mercado Livre todos os dias (~03:10).
+    <b>Você recebe aviso no app e por e-mail com quantos produtos novos entraram.</b>
     <button id="stripx">Entendi</button></div>
   <div class="shell">
     <nav class="side" aria-label="Navegação">
@@ -504,6 +504,7 @@ const $ = s => document.querySelector(s);
 let monitorPollId = null; // atualização automática do Monitor — ver render()
 const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista', alertaFoco:null, alertaAberto:null,
+            digest:null, avisos:[],
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
@@ -579,8 +580,14 @@ sb.auth.onAuthStateChange((_e,s) => {
   else { $('#app').classList.add('hide'); $('#gate').classList.remove('hide'); }
 });
 const boot = async () => {
-  const [,,d] = await Promise.all([quota(), carregarMonitor(), sb.rpc('categoria_destaque')]);
-  S.categoriaDestaque = d.data?.[0] ?? null;
+  const [,,d, dig, av] = await Promise.all([
+    quota(), carregarMonitor(), sb.rpc('categoria_destaque'),
+    sb.rpc('digest_hoje'), sb.rpc('listar_avisos_sistema', { p_limite: 10 }),
+  ]);
+  S.categoriaDestaque = d.data?.[0] ?? d.data ?? null;
+  S.digest = dig?.data && typeof dig.data === 'object' && Object.keys(dig.data).length
+    ? dig.data : null;
+  S.avisos = av?.data ?? [];
   lerUrl();
   render();
 };
@@ -630,14 +637,32 @@ const I = {
 const V = {};
 
 V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const cd = S.categoriaDestaque;
+  const dig = S.digest;
+  const avisosNovos = (S.avisos || []).filter(a => !a.lido).length;
   return `<div class="cols"><div>
   <h1 class="pg">Bem-vindo ao Gringa Radar</h1>
   <p class="sub">Acompanhe o ranking, analise a concorrência e ache o produto certo antes dos outros.</p>
+  ${dig && (dig.novos_ranking!=null || dig.posicoes!=null) ? `
+  <div class="tip" style="margin:0 0 16px">
+    <b>Coleta de ${esc(fmtDiaChart(dig.dia))}.</b>
+    ${num(dig.novos_ranking)} produto(s) novo(s) no ranking ·
+    ${num(dig.novos_catalogo)} novo(s) no catálogo ·
+    ${num(dig.posicoes)} posições lidas.
+    ${avisosNovos?` · <button class="lnk" id="avisos_lidos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">${avisosNovos} aviso(s) não lido(s)</button>`:''}
+  </div>` : ''}
+  ${(S.avisos||[]).filter(a=>!a.lido).slice(0,3).map(a => `
+    <div class="card cbox" style="margin-bottom:10px;background:var(--tint)">
+      <div class="ct">${esc(a.tipo==='coleta_diaria'?'Coleta diária':a.tipo)}</div>
+      <div style="font-weight:600;margin:4px 0">${esc(a.titulo)}</div>
+      <div class="sb">${esc(a.detalhe||'')}</div>
+    </div>`).join('')}
   <div class="qa" style="margin-bottom:18px">
     <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
       ${sq('#DCFCE7','#16A34A',I.mon)}<span><b style="font-size:20px;display:block">${num(S.monitorados.length)}</b>produto(s) monitorado(s)</span></button>
     <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
       ${sq(alertasNovos?'#FEE2E2':'#F3F4F6', alertasNovos?'#DC2626':'#6B7280',I.rad)}<span><b style="font-size:20px;display:block">${num(alertasNovos)}</b>alerta(s) novo(s)</span></button>
+    <button class="qc" data-go="produtos" style="align-items:flex-start;text-align:left">
+      ${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'—'}</b>novo(s) no ranking hoje</span></button>
     ${cd?`<button class="qc" data-cd-go="${esc(cd.category_id)}" data-cd-nome="${esc(cd.categoria)}" style="align-items:flex-start;text-align:left">
       ${sq('#FFEDD5','#EA580C',I.cat)}<span><b style="font-size:14px;display:block">${esc(cd.categoria)}</b>
       categoria em destaque hoje · <span class="chip ${cd.oportunidade==='alta'?'g':'y'}" style="font-size:10px">${esc(cd.oportunidade)}</span></span></button>`:''}
@@ -2938,6 +2963,11 @@ function render(){
   pintaQuota();
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.view=b.dataset.go; render(); });
   document.querySelectorAll('[data-cd-go]').forEach(b => b.onclick = () => abrirCategoria(b.dataset.cdGo, b.dataset.cdNome));
+  if ($('#avisos_lidos')) $('#avisos_lidos').onclick = async () => {
+    await sb.rpc('marcar_avisos_lidos');
+    S.avisos = (S.avisos || []).map(a => ({ ...a, lido: true }));
+    render();
+  };
   if (S.view==='produtos' || S.view==='catdetalhe'){
     if ($('#b_go')) $('#b_go').onclick = buscar;
     if ($('#b_ref')) $('#b_ref').onclick = localizar;
