@@ -1377,7 +1377,8 @@ V.diario = () => {
           ? `<div style="text-align:center;margin-top:14px"><button class="btn" id="d_mais">Carregar mais</button></div>` : ''}`}
   <div class="tip" style="margin-top:16px"><b>O que é “novo”.</b> Produto que apareceu no ranking público
     (top 20 da categoria) nesta coleta e nunca tinha entrado nas coletas anteriores.
-    Posição = melhor colocação do produto no dia entre as categorias lidas.</div>`;
+    Posição = melhor colocação do produto no dia entre as categorias lidas.
+    Itens sem foto e sem nome ficam de fora da lista.</div>`;
 };
 
 async function carregarDiario(acumular = false){
