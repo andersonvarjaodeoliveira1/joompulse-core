@@ -319,12 +319,37 @@
   .indisp{font-size:11.5px;color:var(--ink-3);font-style:italic;margin-top:3px}
   .rodape{display:flex;align-items:center;gap:12px;padding:14px 0 0;border-top:1px solid var(--line);margin-top:4px}
   .rodape .obs{font-size:12.5px;color:var(--ink-3);flex:1}
+  .rodape.fix{position:sticky;bottom:0;z-index:8;background:var(--card);padding:12px 16px;margin:0 0 16px;border:1px solid var(--line);border-radius:12px;box-shadow:0 -6px 20px rgba(0,0,0,.04)}
   .rhead{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
   .chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:16px}
   .chips .lb{font-size:13px;color:var(--ink-3)}
   .fchip{display:inline-flex;align-items:center;gap:6px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:500}
   .fchip button{background:none;border:0;color:var(--ink-3);font-size:14px;line-height:1;padding:0}
   .fchip button:hover{color:var(--dn)}
+  .busca-panel{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:18px 18px 8px;margin-bottom:16px}
+  .busca-bar{display:grid;grid-template-columns:1.4fr 1fr auto;gap:10px;align-items:end;margin-bottom:14px}
+  @media (max-width:820px){.busca-bar{grid-template-columns:1fr}}
+  .busca-bar .frow{margin-bottom:0}
+  .busca-bar .btn{padding:10px 20px;white-space:nowrap}
+  .busca-ref{display:flex;gap:8px;align-items:end;margin-bottom:14px;padding-top:2px}
+  .busca-ref .frow{flex:1;margin-bottom:0;max-width:420px}
+  .atalhos{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .atalhos .lb{font-size:12.5px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px}
+  .fsecs{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+  .fsec{border:1px solid var(--line);border-radius:11px;background:var(--bg-2);overflow:hidden}
+  .fsec>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:13.5px;user-select:none}
+  .fsec>summary::-webkit-details-marker{display:none}
+  .fsec>summary::before{content:'▸';color:var(--ink-3);font-size:11px;transition:transform .15s}
+  .fsec[open]>summary::before{transform:rotate(90deg)}
+  .fsec>summary .hint{margin-left:auto;font-weight:400;font-size:12px;color:var(--ink-3)}
+  .fsec .fsec-body{padding:4px 14px 14px;background:var(--card);border-top:1px solid var(--line)}
+  .fsec .fgrid2{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+  @media (max-width:720px){.fsec .fgrid2{grid-template-columns:1fr}}
+  .modo-mini{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
+  .modo-mini .mb{border-bottom:0;margin:0;padding:7px 12px;font-size:12.5px}
+  .modo-mini .mb.on{background:var(--tint);border-bottom:0}
+  .prod-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .prod-meta .chip{font-size:10.5px}
   .rbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
   .rcount{font-size:14px;color:var(--ink-2)} .rcount b{color:var(--ink);font-weight:600}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
@@ -507,7 +532,8 @@ const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catD
             monitorados:[], alertas:[], pedidos:[], aba:'lista', alertaFoco:null, alertaAberto:null,
             digest:null, avisos:[],
             diario:[], diarioMeta:null, diarioAba:'todos', diarioOffset:0, diarioLoaded:false,
-            modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
+            modo:'avancada', F:{ p_com_foto:true }, catSel:null, catLista:[], contagem:null,
+            buscaOpen:new Set(['essencial']),
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
             planos:[], periodoPlano:'mes',
@@ -798,10 +824,11 @@ function catArvoreHtml(parentId, depth){
 V.produtos = () => {
   const F = S.F, av = S.modo==='avancada', chips = chipsAtivos();
   const painel = S.filtrosAbertos || !S.buscou;
+  const open = (k) => (S.buscaOpen?.has(k) ? 'open' : '');
 
   const catBlock = S.catSel
     ? `<span class="chosen">${esc(S.catSel.nome)} <button id="catx">×</button></span>`
-    : `<div class="catwrap"><input id="f_cat" placeholder="digite ou navegue pela árvore" autocomplete="off">
+    : `<div class="catwrap"><input id="f_cat" placeholder="Ex.: suplementos, panelas…" autocomplete="off">
        ${S.catAberto?`<div class="catdrop">${
          S.catLista.length?S.catLista.map(c=>
            `<button class="catop" data-cid="${esc(c.id)}" data-cn="${esc(c.nome)}">
@@ -813,208 +840,247 @@ V.produtos = () => {
   const fullVal = F.p_full_min!=null ? 'alto' : F.p_full_max!=null ? 'baixo' : 'ambos';
   const ofiVal = F.p_oficial_max===0 ? 'sem' : F.p_oficial_max!=null ? 'pouca' : 'ambos';
 
-  const filtros = av ? `<div class="fgrid3">
-    <div class="fcard">
-      <h3>Produto</h3>
-      <div class="frow"><label>Categoria</label>${catBlock}</div>
-      <div class="frow"><label>Texto no nome</label>
-        <input id="f_txt" value="${esc(F.p_texto??'')}" placeholder="ex: creatina"></div>
-      ${semSelect('p_maturidade')}
-      ${semSelect('p_estabilidade')}
-    </div>
-
-    <div class="fcard">
-      <h3>Envio e listagem</h3>
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Share de Full</label>
-      <div class="radios">
-        <label><input type="radio" name="full" value="ambos" ${fullVal==='ambos'?'checked':''}>Ambos</label>
-        <label><input type="radio" name="full" value="baixo" ${fullVal==='baixo'?'checked':''}>Até 30% Full</label>
-        <label><input type="radio" name="full" value="alto" ${fullVal==='alto'?'checked':''}>70%+ Full</label>
+  const filtrosAvancados = `
+  <div class="fsecs">
+    <details class="fsec" data-sec="essencial" ${open('essencial')}>
+      <summary>Essenciais <span class="hint">maturidade, preço estável, foto</span></summary>
+      <div class="fsec-body">
+        <div class="fgrid2">
+          <div>
+            ${semSelect('p_maturidade')}
+            ${semSelect('p_estabilidade')}
+          </div>
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Foto no catálogo</label>
+            <div class="qc2">
+              <button type="button" class="${F.p_com_foto===true?'on':''}" data-foto="1">Com foto</button>
+              <button type="button" class="${F.p_com_foto===false?'on':''}" data-foto="0">Sem foto</button>
+            </div>
+            <div class="indisp" style="margin-top:8px">Sem foto e sem nome ficam de fora por padrão.</div>
+          </div>
+        </div>
       </div>
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin:10px 0 6px">Loja oficial</label>
-      <div class="radios">
-        <label><input type="radio" name="ofi" value="" ${ofiVal==='ambos'?'checked':''}>Ambos</label>
-        <label><input type="radio" name="ofi" value="0" ${ofiVal==='sem'?'checked':''}>Sem loja oficial</label>
-        <label><input type="radio" name="ofi" value="0.3" ${ofiVal==='pouca'?'checked':''}>Até 30% oficial</label>
+    </details>
+
+    <details class="fsec" data-sec="ranking" ${open('ranking')}>
+      <summary>Posição e movimento <span class="hint">top 20, tendência</span></summary>
+      <div class="fsec-body">
+        <div class="fgrid2">
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Posição hoje</label>
+            ${qcFaixa('rf', F.p_pos_min, F.p_pos_max, [
+              ['Top 5','1','5'],['Top 10','1','10'],['11–20','11','20'],
+            ])}
+            <div class="duo" style="margin-bottom:12px">
+              <input id="f_pmin" type="number" placeholder="De" value="${F.p_pos_min??''}">
+              <input id="f_pmax" type="number" placeholder="Até" value="${F.p_pos_max??''}">
+            </div>
+            <div class="frow"><label>Já esteve pelo menos em</label>
+              <input id="f_best" type="number" placeholder="ex: 3" value="${F.p_melhor_pos??''}"></div>
+          </div>
+          <div>
+            <div class="frow"><label>Movimento em 7 dias</label>
+              <select id="f_mov"><option value="">Qualquer</option>
+                <option value="subindo" ${F.p_momentum==='subindo'?'selected':''}>Subindo</option>
+                <option value="estavel" ${F.p_momentum==='estavel'?'selected':''}>Estável</option>
+                <option value="caindo" ${F.p_momentum==='caindo'?'selected':''}>Caindo</option>
+                <option value="novo" ${F.p_momentum==='novo'?'selected':''}>Novo no ranking</option>
+              </select></div>
+            <div class="frow"><label>Subiu pelo menos</label>
+              <input id="f_delta" type="number" placeholder="ex: 5 posições" value="${F.p_delta_min??''}"></div>
+            <div class="frow"><label>Caiu pelo menos (7 dias)</label>
+              <input id="f_caiu" type="number" placeholder="ex: 3" value="${F.p_caiu_min??''}"></div>
+            <div class="frow"><label>Consistência</label>
+              <select id="f_cons"><option value="">Qualquer</option>
+                <option value="consolidado" ${F.p_consistencia==='consolidado'?'selected':''}>Consolidado</option>
+                <option value="recorrente" ${F.p_consistencia==='recorrente'?'selected':''}>Recorrente</option>
+                <option value="passageiro" ${F.p_consistencia==='passageiro'?'selected':''}>Passageiro</option>
+              </select></div>
+          </div>
+        </div>
       </div>
-      <div class="indisp">Baseado na fatia de anúncios Full / oficiais do produto de catálogo — dado real da coleta.</div>
-    </div>
+    </details>
 
-    <div class="fcard">
-      <h3>Preço mediano</h3>
-      ${qcFaixa('pf', F.p_preco_min, F.p_preco_max, [
-        ['R$ 0–100','0','100'],['R$ 100–250','100','250'],['R$ 250+','250',''],
-      ])}
-      <div class="duo">
-        <input id="f_vmin" type="number" placeholder="De R$" value="${F.p_preco_min??''}">
-        <input id="f_vmax" type="number" placeholder="Até R$" value="${F.p_preco_max??''}">
+    <details class="fsec" data-sec="preco" ${open('preco')}>
+      <summary>Preço e envio <span class="hint">faixa, Full, loja oficial</span></summary>
+      <div class="fsec-body">
+        <div class="fgrid2">
+          <div>
+            <h3 style="font-size:13px;margin:0 0 8px">Preço mediano</h3>
+            ${qcFaixa('pf', F.p_preco_min, F.p_preco_max, [
+              ['R$ 0–100','0','100'],['R$ 100–250','100','250'],['R$ 250+','250',''],
+            ])}
+            <div class="duo">
+              <input id="f_vmin" type="number" placeholder="De R$" value="${F.p_preco_min??''}">
+              <input id="f_vmax" type="number" placeholder="Até R$" value="${F.p_preco_max??''}">
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Share de Full</label>
+            <div class="radios">
+              <label><input type="radio" name="full" value="ambos" ${fullVal==='ambos'?'checked':''}>Ambos</label>
+              <label><input type="radio" name="full" value="baixo" ${fullVal==='baixo'?'checked':''}>Até 30% Full</label>
+              <label><input type="radio" name="full" value="alto" ${fullVal==='alto'?'checked':''}>70%+ Full</label>
+            </div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin:10px 0 6px">Loja oficial</label>
+            <div class="radios">
+              <label><input type="radio" name="ofi" value="" ${ofiVal==='ambos'?'checked':''}>Ambos</label>
+              <label><input type="radio" name="ofi" value="0" ${ofiVal==='sem'?'checked':''}>Sem loja oficial</label>
+              <label><input type="radio" name="ofi" value="0.3" ${ofiVal==='pouca'?'checked':''}>Até 30% oficial</label>
+            </div>
+            <div class="indisp">Fatia real de anúncios Full / oficiais na coleta.</div>
+          </div>
+        </div>
       </div>
-    </div>
+    </details>
 
-    <div class="fcard">
-      <h3>Posição e movimento</h3>
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Posição hoje</label>
-      ${qcFaixa('rf', F.p_pos_min, F.p_pos_max, [
-        ['Top 5','1','5'],['Top 10','1','10'],['11–20','11','20'],
-      ])}
-      <div class="duo" style="margin-bottom:12px">
-        <input id="f_pmin" type="number" placeholder="De" value="${F.p_pos_min??''}">
-        <input id="f_pmax" type="number" placeholder="Até" value="${F.p_pos_max??''}">
+    <details class="fsec" data-sec="conc" ${open('conc')}>
+      <summary>Concorrência <span class="hint">anúncios, vendedores, dispersão</span></summary>
+      <div class="fsec-body">
+        <div class="fgrid2">
+          <div>
+            ${semSelect('p_nivel_conc')}
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de anúncios</label>
+            ${qcFaixa('cf', F.p_conc_min, F.p_conc_max, [
+              ['1–5','1','5'],['6–20','6','20'],['21+','21',''],
+            ])}
+            <div class="duo" style="margin-bottom:12px">
+              <input id="f_cmin" type="number" placeholder="De" value="${F.p_conc_min??''}">
+              <input id="f_cmax" type="number" placeholder="Até" value="${F.p_conc_max??''}">
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de vendedores</label>
+            ${qcFaixa('sf', F.p_vend_min, F.p_vend_max, [
+              ['1–3','1','3'],['4–10','4','10'],['11+','11',''],
+            ])}
+            <div class="duo" style="margin-bottom:12px">
+              <input id="f_smin" type="number" placeholder="De" value="${F.p_vend_min??''}">
+              <input id="f_smax" type="number" placeholder="Até" value="${F.p_vend_max??''}">
+            </div>
+            <div class="frow"><label>Dispersão de preço mínima</label>
+              <select id="f_disp"><option value="">Qualquer</option>
+                <option value="0.2" ${F.p_dispersao_min==0.2?'selected':''}>Acima de 20%</option>
+                <option value="0.4" ${F.p_dispersao_min==0.4?'selected':''}>Acima de 40%</option>
+                <option value="0.7" ${F.p_dispersao_min==0.7?'selected':''}>Acima de 70%</option>
+              </select></div>
+          </div>
+        </div>
       </div>
-      <div class="frow"><label>Já esteve pelo menos em</label>
-        <input id="f_best" type="number" placeholder="ex: 3" value="${F.p_melhor_pos??''}"></div>
-      <div class="frow"><label>Movimento em 7 dias</label>
-        <select id="f_mov"><option value="">Qualquer</option>
-          <option value="subindo" ${F.p_momentum==='subindo'?'selected':''}>Subindo</option>
-          <option value="estavel" ${F.p_momentum==='estavel'?'selected':''}>Estável</option>
-          <option value="caindo" ${F.p_momentum==='caindo'?'selected':''}>Caindo</option>
-          <option value="novo" ${F.p_momentum==='novo'?'selected':''}>Novo no ranking</option>
-        </select></div>
-      <div class="frow"><label>Subiu pelo menos</label>
-        <input id="f_delta" type="number" placeholder="ex: 5 posições" value="${F.p_delta_min??''}"></div>
-      <div class="frow"><label>Consistência</label>
-        <select id="f_cons"><option value="">Qualquer</option>
-          <option value="consolidado" ${F.p_consistencia==='consolidado'?'selected':''}>Consolidado</option>
-          <option value="recorrente" ${F.p_consistencia==='recorrente'?'selected':''}>Recorrente</option>
-          <option value="passageiro" ${F.p_consistencia==='passageiro'?'selected':''}>Passageiro</option>
-        </select></div>
-    </div>
+    </details>
 
-    <div class="fcard">
-      <h3>Concorrência</h3>
-      ${semSelect('p_nivel_conc')}
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de anúncios</label>
-      ${qcFaixa('cf', F.p_conc_min, F.p_conc_max, [
-        ['1–5','1','5'],['6–20','6','20'],['21+','21',''],
-      ])}
-      <div class="duo" style="margin-bottom:12px">
-        <input id="f_cmin" type="number" placeholder="De" value="${F.p_conc_min??''}">
-        <input id="f_cmax" type="number" placeholder="Até" value="${F.p_conc_max??''}">
+    <details class="fsec" data-sec="hist" ${open('hist')}>
+      <summary>Histórico na base <span class="hint">dias observados, top 10</span></summary>
+      <div class="fsec-body">
+        <div class="indisp" style="margin-bottom:10px">Dados da nossa coleta — não é receita/vendas do ML.</div>
+        <div class="fgrid2">
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias na nossa base</label>
+            ${qcFaixa('vf', F.p_visto_min, F.p_visto_max, [
+              ['0–7 dias','0','7'],['8–30 dias','8','30'],['31+ dias','31',''],
+            ])}
+            <div class="duo" style="margin-bottom:12px">
+              <input id="f_vmin_visto" type="number" placeholder="De" value="${F.p_visto_min??''}">
+              <input id="f_vmax_visto" type="number" placeholder="Até" value="${F.p_visto_max??''}">
+            </div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias observados no ranking</label>
+            ${qcFaixa('of', F.p_dias_min, F.p_dias_max, [
+              ['Até 7','','7'],['8–21','8','21'],['22+','22',''],
+            ])}
+            <div class="duo">
+              <input id="f_omin" type="number" placeholder="De" value="${F.p_dias_min??''}">
+              <input id="f_omax" type="number" placeholder="Até" value="${F.p_dias_max??''}">
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias no top 10 (mínimo)</label>
+            <div class="qc2" style="margin-bottom:12px">
+              <button type="button" class="${F.p_top10_min==1?'on':''}" data-t10="1">1+</button>
+              <button type="button" class="${F.p_top10_min==3?'on':''}" data-t10="3">3+</button>
+              <button type="button" class="${F.p_top10_min==7?'on':''}" data-t10="7">7+</button>
+            </div>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Taxa no top 10</label>
+            <div class="qc2" style="margin-bottom:12px">
+              <button type="button" class="${F.p_top10_rate_min==0.3?'on':''}" data-t10r="0.3">≥ 30%</button>
+              <button type="button" class="${F.p_top10_rate_min==0.5?'on':''}" data-t10r="0.5">≥ 50%</button>
+              <button type="button" class="${F.p_top10_rate_min==0.7?'on':''}" data-t10r="0.7">≥ 70%</button>
+            </div>
+            <div class="frow"><label>Dias no top 10 (mín. exato)</label>
+              <input id="f_top10" type="number" placeholder="ex: 5" value="${F.p_top10_min??''}"></div>
+          </div>
+        </div>
       </div>
-      <div class="frow"><label>Dispersão de preço mínima</label>
-        <select id="f_disp"><option value="">Qualquer</option>
-          <option value="0.2" ${F.p_dispersao_min==0.2?'selected':''}>Acima de 20%</option>
-          <option value="0.4" ${F.p_dispersao_min==0.4?'selected':''}>Acima de 40%</option>
-          <option value="0.7" ${F.p_dispersao_min==0.7?'selected':''}>Acima de 70%</option>
-        </select></div>
-    </div>
+    </details>
+  </div>`;
 
-    <div class="fcard">
-      <h3>Histórico e ficha</h3>
-      <div class="indisp" style="margin-bottom:10px">Dados da nossa coleta — não é receita/vendas do ML (a API não entrega isso pra terceiro).</div>
-
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias na nossa base</label>
-      ${qcFaixa('vf', F.p_visto_min, F.p_visto_max, [
-        ['0–7 dias','0','7'],['8–30 dias','8','30'],['31+ dias','31',''],
-      ])}
-      <div class="duo" style="margin-bottom:12px">
-        <input id="f_vmin_visto" type="number" placeholder="De" value="${F.p_visto_min??''}">
-        <input id="f_vmax_visto" type="number" placeholder="Até" value="${F.p_visto_max??''}">
+  const filtrosSimples = `<div class="fgrid2" style="margin-bottom:8px">
+      <div>${semSelect('p_maturidade')}${semSelect('p_nivel_conc')}</div>
+      <div>${semSelect('p_estabilidade')}
+        <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Foto</label>
+        <div class="qc2">
+          <button type="button" class="${F.p_com_foto===true?'on':''}" data-foto="1">Com foto</button>
+          <button type="button" class="${F.p_com_foto===false?'on':''}" data-foto="0">Sem foto</button>
+        </div>
       </div>
-      <div class="indisp" style="margin:-6px 0 12px">Desde que o produto entrou no Gringa Radar (<code>first_seen</code>), não a data de criação no ML.</div>
-
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias observados no ranking</label>
-      ${qcFaixa('of', F.p_dias_min, F.p_dias_max, [
-        ['Até 7','','7'],['8–21','8','21'],['22+','22',''],
-      ])}
-      <div class="duo" style="margin-bottom:12px">
-        <input id="f_omin" type="number" placeholder="De" value="${F.p_dias_min??''}">
-        <input id="f_omax" type="number" placeholder="Até" value="${F.p_dias_max??''}">
-      </div>
-
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias no top 10 (mínimo)</label>
-      <div class="qc2" style="margin-bottom:12px">
-        <button type="button" class="${F.p_top10_min==1?'on':''}" data-t10="1">1+</button>
-        <button type="button" class="${F.p_top10_min==3?'on':''}" data-t10="3">3+</button>
-        <button type="button" class="${F.p_top10_min==7?'on':''}" data-t10="7">7+</button>
-      </div>
-
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Taxa no top 10</label>
-      <div class="qc2" style="margin-bottom:12px">
-        <button type="button" class="${F.p_top10_rate_min==0.3?'on':''}" data-t10r="0.3">≥ 30%</button>
-        <button type="button" class="${F.p_top10_rate_min==0.5?'on':''}" data-t10r="0.5">≥ 50%</button>
-        <button type="button" class="${F.p_top10_rate_min==0.7?'on':''}" data-t10r="0.7">≥ 70%</button>
-      </div>
-
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Foto no catálogo</label>
-      <div class="qc2" style="margin-bottom:12px">
-        <button type="button" class="${F.p_com_foto===true?'on':''}" data-foto="1">Com foto</button>
-        <button type="button" class="${F.p_com_foto===false?'on':''}" data-foto="0">Sem foto</button>
-      </div>
-
-      <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de vendedores</label>
-      ${qcFaixa('sf', F.p_vend_min, F.p_vend_max, [
-        ['1–3','1','3'],['4–10','4','10'],['11+','11',''],
-      ])}
-      <div class="duo" style="margin-bottom:12px">
-        <input id="f_smin" type="number" placeholder="De" value="${F.p_vend_min??''}">
-        <input id="f_smax" type="number" placeholder="Até" value="${F.p_vend_max??''}">
-      </div>
-
-      <div class="frow"><label>Caiu pelo menos (posições / 7 dias)</label>
-        <input id="f_caiu" type="number" placeholder="ex: 3" value="${F.p_caiu_min??''}"></div>
-      <div class="frow"><label>Dias no top 10 (número exato mín.)</label>
-        <input id="f_top10" type="number" placeholder="ex: 5" value="${F.p_top10_min??''}"></div>
-      <div class="frow"><label>Ordenar por</label>
-        <select id="f_ord">
-          <option value="posicao" ${(!F.p_ordem||F.p_ordem==='posicao')?'selected':''}>Posição</option>
-          <option value="movimento" ${F.p_ordem==='movimento'?'selected':''}>Movimento 7d</option>
-          <option value="concorrencia" ${F.p_ordem==='concorrencia'?'selected':''}>Menos anúncios</option>
-          <option value="preco" ${F.p_ordem==='preco'?'selected':''}>Preço mediano</option>
-          <option value="consistencia" ${F.p_ordem==='consistencia'?'selected':''}>Taxa no top 10</option>
-        </select></div>
-    </div>
-  </div>
-  <div class="rodape" style="margin-bottom:16px">
-    <span class="obs cnt">${S.contagem==null?'—':`<b>${num(S.contagem)}</b> produto(s) batem com esses filtros`}</span>
-    <button class="btn g" id="b_cl">Limpar filtros</button>
-    <button class="btn" id="b_go" ${seca()?'disabled':''}>Procurar</button>
-  </div>`
-  : `<div class="fbox"><div class="fcol">
-      <div class="frow"><label>O que você procura?</label>
-        <input id="f_txt" value="${esc(F.p_texto??'')}" placeholder="nome do produto, marca ou modelo"></div>
-      ${semSelect('p_maturidade')}
-      ${semSelect('p_nivel_conc')}
-      ${semSelect('p_estabilidade')}
-    </div><div class="fbar">
-      <span class="cnt">${S.contagem==null?'—':`<b>${num(S.contagem)}</b> produto(s)`}</span>
-      <span class="sp"></span><button class="btn g" id="b_cl">Limpar</button>
-      <button class="btn" id="b_go" ${seca()?'disabled':''}>Procurar</button>
-    </div></div>`;
+    </div>`;
 
   return `
   <div class="rhead">
-    <div><h1 class="pg">${S.buscou?'Produtos que correspondem aos seus filtros':'Busca de produtos'}</h1>
-      <p class="sub" style="margin:0">Produtos ranqueados no Mercado Livre, com movimento no top 20 e quem disputa cada um.</p></div>
+    <div><h1 class="pg">${S.buscou?'Resultados da busca':'Busca de produtos'}</h1>
+      <p class="sub" style="margin:0">Rankings do Mercado Livre com movimento, preço e concorrência — só o que a API entrega de verdade.</p></div>
     <span style="flex:1"></span>
-    ${S.buscou?`<button class="btn" id="b_tog">${painel?'Ocultar filtros':'Exibir filtros'}</button>`:''}
+    ${S.buscou?`<button class="btn g" id="b_tog">${painel?'Ocultar filtros':'Ajustar filtros'}</button>`:''}
   </div>
 
-  ${chips.length?`<div class="chips"><span class="lb">Filtros aplicados</span>${chips.join('')}</div>`:''}
+  ${chips.length?`<div class="chips"><span class="lb">Ativos</span>${chips.join('')}</div>`:''}
 
-  ${painel?`<div class="modo">
-    <button class="mb ${av?'on':''}" data-md="avancada">Busca avançada</button>
-    <button class="mb ${av?'':'on'}" data-md="simples">Pesquisa simples</button>
-  </div>
-  <div class="preds">${PREDEF.map(p=>
-    `<button class="pd ${S.pred===p.k?'on':''}" data-pd="${p.k}">${p.t}</button>`).join('')}</div>
-  ${filtros}`:''}
+  ${painel?`<div class="busca-panel">
+    <div class="modo-mini">
+      <button class="mb ${av?'on':''}" data-md="avancada">Filtros avançados</button>
+      <button class="mb ${av?'':'on'}" data-md="simples">Busca rápida</button>
+    </div>
+
+    <div class="busca-bar">
+      <div class="frow"><label>O que você procura</label>
+        <input id="f_txt" value="${esc(F.p_texto??'')}" placeholder="nome, marca ou modelo"></div>
+      <div class="frow"><label>Categoria</label>${catBlock}</div>
+      <button class="btn" id="b_go" ${seca()?'disabled':''}>Procurar</button>
+    </div>
+
+    <div class="busca-ref">
+      <div class="frow"><label>Ou cole um MLB / link do anúncio</label>
+        <input id="f_ref" value="${esc(S.ref??'')}" placeholder="MLB123… ou https://produto.mercadolivre.com.br/…"></div>
+      <button class="btn g" id="b_ref">Localizar</button>
+    </div>
+    ${S.refAviso?`<div class="msg err" style="margin:0 0 12px">${esc(S.refAviso)}</div>`:''}
+
+    <div class="atalhos"><span class="lb">Atalhos</span>${PREDEF.map(p=>
+      `<button class="pd ${S.pred===p.k?'on':''}" data-pd="${p.k}">${p.t}</button>`).join('')}</div>
+
+    ${av ? filtrosAvancados : filtrosSimples}
+
+    <div class="rodape sticky">
+      <span class="obs cnt">${S.contagem==null?'Ajuste os filtros — a contagem não gasta busca':`<b>${num(S.contagem)}</b> produto(s) batem com esses filtros`}</span>
+      <button class="btn g" id="b_cl">Limpar</button>
+      <button class="btn" id="b_go2" ${seca()?'disabled':''}>Procurar</button>
+    </div>
+  </div>`:''}
 
   ${S.buscou||seca()?`<div class="rbar">
-    <span class="rcount"><b>${num(S.produtos.length)}</b> produto(s) encontrados</span>
+    <span class="rcount"><b>${num(S.produtos.length)}</b> produto(s)</span>
     <span style="flex:1"></span>
     <span class="seg">
       <button class="${S.periodo==='7'?'on':''}" data-per="7">7 dias</button>
       <button class="${S.periodo==='30'?'on':''}" data-per="30">30 dias</button>
     </span>
     <select id="f_ord" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px">
-      <option value="posicao">Posição</option>
+      <option value="posicao" ${(!F.p_ordem||F.p_ordem==='posicao')?'selected':''}>Posição</option>
       <option value="movimento" ${F.p_ordem==='movimento'?'selected':''}>Quem mais subiu</option>
       <option value="concorrencia" ${F.p_ordem==='concorrencia'?'selected':''}>Menos concorrência</option>
       <option value="consistencia" ${F.p_ordem==='consistencia'?'selected':''}>Mais consistente</option>
       <option value="preco" ${F.p_ordem==='preco'?'selected':''}>Maior preço</option>
     </select>
-    <button class="exp" id="b_exp">⤓ Baixar CSV</button>
+    <button class="exp" id="b_exp">⤓ CSV</button>
   </div>`:''}
 
   ${S.selecao.size?`<div class="selbar"><b>${S.selecao.size}</b> selecionado(s)
@@ -1023,10 +1089,9 @@ V.produtos = () => {
     <button class="btn g" id="b_nada">Limpar seleção</button></div>`:''}
 
   <div class="card" id="res">${seca()?wall():S.buscou?tprod():
-    `<div class="none"><b>Nenhuma busca ainda</b>Escolha um filtro rápido acima ou monte o seu, e clique em Procurar.</div>`}</div>
-  <div class="tip"><b>O contador não gasta busca.</b> O número de produtos que batem com os filtros
-    é calculado sem consumir sua quota — ajuste à vontade antes de clicar em Procurar.
-    Receita, vendas e avaliações não entram nos filtros: a API do Mercado Livre não entrega isso pra terceiro.</div>`;
+    `<div class="none"><b>Comece por um atalho ou digite o que procura</b>A contagem ao lado de Procurar não consome sua quota.</div>`}</div>
+  <div class="tip"><b>Lista limpa.</b> Por padrão só entram produtos com foto. Receita, vendas e avaliações
+    não aparecem nos filtros: a API do Mercado Livre não entrega isso pra terceiro.</div>`;
 };
 
 function tprod(){
@@ -1034,42 +1099,48 @@ function tprod(){
   const lim = S.quota?.features?.rows_full;
   const livres = (lim?.unlimited || lim?.limit === -1) ? Infinity : (lim?.limit ?? 5);
   const per = S.periodo === '30' ? 'delta_30d' : 'delta_7d';
+  const visiveis = S.produtos.filter(p => {
+    const nomeOk = p.name && String(p.name).trim() && String(p.name).trim() !== p.product_id;
+    const fotoOk = !!p.picture;
+    return nomeOk || fotoOk;
+  });
+  if (!visiveis.length) return '<div class="none"><b>Nada com foto ou nome</b>Afrouxe o filtro de foto ou amplie a busca.</div>';
 
-  const linhas = S.produtos.map((p,i)=>{
+  const linhas = visiveis.map((p,i)=>{
     const b = i >= livres ? 'blur' : '';
     const tr = i >= livres ? 'locked' : '';
+    const meta = [];
+    if (p.momentum) meta.push(`<span class="chip">${esc(p.momentum)}</span>`);
+    if (p.full_share!=null) meta.push(`<span class="chip ${p.full_share>=.5?'g':''}">Full ${pct(p.full_share)}</span>`);
+    if (p.days_in_top10!=null) meta.push(`<span class="chip">Top10 ${p.days_in_top10}/${p.days_observed??'—'}</span>`);
     return `<tr class="k ${tr}" data-p="${esc(p.product_id)}">
       <td style="width:34px"><input type="checkbox" data-ck="${esc(p.product_id)}"
         ${S.selecao.has(p.product_id)?'checked':''} ${i>=livres?'disabled':''}></td>
-      <td style="max-width:300px"><div class="prow">
+      <td style="max-width:340px"><div class="prow">
         ${p.picture?`<img class="thumb" src="${esc(p.picture)}" alt="" loading="lazy">`:`<span class="thumb"></span>`}
         <div><div class="nm">${esc(p.name ?? (p.tipo!=='PRODUCT'
           ? 'Sem ficha pública — Mercado Livre bloqueia esse dado para terceiros'
           : p.product_id))}</div>
-          <div class="sb">${esc(p.product_id)} · ${esc(p.category_name ?? '')}</div></div>
+          <div class="sb">${esc(p.category_name ?? '')} · ${esc(p.product_id)}</div>
+          ${meta.length?`<div class="prod-meta">${meta.join('')}</div>`:''}
+        </div>
       </div></td>
       <td class="n">${p.position_now!=null?`<span class="pos" title="${esc(String(p.position_now))}° em ${esc(p.category_name??'—')}">${p.position_now}</span>`:'<span class="pos">—</span>'}</td>
       <td class="n ${b}"><span>${mov(p[per])}</span></td>
-      <td class="n ${b}"><span>${p.days_in_top10 ?? '—'}/${p.days_observed ?? '—'}</span></td>
       <td class="n ${b}"><span>${num(p.listings)}</span></td>
       <td class="n ${b}"><span>${brl(p.median_price)}</span></td>
       <td class="n ${b}" style="font-size:13px;color:var(--ink-3)"><span>${
         p.min_price!=null?brl(p.min_price)+' – '+brl(p.max_price):'—'}</span></td>
-      <td class="n ${b}"><span>${p.full_share!=null
-        ?`<span class="chip ${p.full_share>=.5?'g':''}">${pct(p.full_share)}</span>`:'—'}</span></td>
-      <td class="n ${b}" title="Ha quanto tempo monitoramos, nao a data real de criacao do anuncio (ML nao publica isso)">${
-        p.first_seen_at?num(Math.max(0,Math.floor((Date.now()-new Date(p.first_seen_at))/86400000)))+'d':'—'}</td>
     </tr>`;
   }).join('');
 
-  const travadas = Math.max(0, S.produtos.length - livres);
+  const travadas = Math.max(0, visiveis.length - livres);
   return `<table><thead><tr>
       <th style="width:34px"><input type="checkbox" id="ck_all"></th>
       <th>Produto</th><th class="n">Posição</th>
       <th class="n">Mov. ${S.periodo==='30'?'30d':'7d'}</th>
-      <th class="n">Top 10</th><th class="n">Concorrentes</th>
-      <th class="n">Preço mediano</th><th class="n">Faixa</th><th class="n">Full</th>
-      <th class="n" title="Ha quanto tempo monitoramos, nao data real de criacao (ML nao publica)">Tempo no ar</th>
+      <th class="n">Anúncios</th>
+      <th class="n">Preço med.</th><th class="n">Faixa</th>
     </tr></thead><tbody>${linhas}</tbody></table>
     ${travadas>0?`<div class="upsell"><b>${travadas} produto(s) com dados ocultos</b>
       <p>O plano gratuito mostra os ${livres} primeiros por completo. Os outros aparecem borrados
@@ -3059,18 +3130,29 @@ function render(){
   };
   if (S.view==='produtos' || S.view==='catdetalhe'){
     if ($('#b_go')) $('#b_go').onclick = buscar;
+    if ($('#b_go2')) $('#b_go2').onclick = () => { S.F = lerFiltros(); buscar(); };
     if ($('#b_ref')) $('#b_ref').onclick = localizar;
     if ($('#f_ref')) $('#f_ref').onkeydown = (e) => { if (e.key==='Enter') localizar(); };
+    if ($('#f_txt')) $('#f_txt').onkeydown = (e) => { if (e.key==='Enter') { S.F = lerFiltros(); buscar(); } };
     if ($('#b_cl')) $('#b_cl').onclick = () => {
-      S.F={}; S.pred=null; S.catSel=null; S.catLista=[]; S.ref=''; S.refAviso=null;
+      S.F={ p_com_foto:true }; S.pred=null; S.catSel=null; S.catLista=[]; S.ref=''; S.refAviso=null;
       S.buscou=false; S.produtos=[]; S.contagem=null; S.sel=null; render(); };
 
     document.querySelectorAll('.mb').forEach(b => b.onclick = () => { S.modo=b.dataset.md; S.sel=null; render(); });
 
     document.querySelectorAll('.pd').forEach(b => b.onclick = () => {
       const p = PREDEF.find(x=>x.k===b.dataset.pd);
-      if (S.pred===p.k){ S.pred=null; S.F={}; } else { S.pred=p.k; S.F={ ...p.f }; }
+      if (S.pred===p.k){ S.pred=null; S.F={ p_com_foto:true }; }
+      else { S.pred=p.k; S.F={ p_com_foto:true, ...p.f }; }
       render(); contar(); });
+
+    document.querySelectorAll('details.fsec').forEach(d => {
+      d.addEventListener('toggle', () => {
+        if (!S.buscaOpen) S.buscaOpen = new Set();
+        if (d.open) S.buscaOpen.add(d.dataset.sec);
+        else S.buscaOpen.delete(d.dataset.sec);
+      });
+    });
 
     // faixas rápidas de preço, posição e concorrentes
     const aplicarFaixa = (minKey, maxKey, raw) => {
@@ -3160,7 +3242,8 @@ function render(){
       S.catSel=null; delete S.F.p_categoria; render(); contar(); };
 
     ['f_txt','f_pmin','f_pmax','f_best','f_vmin','f_vmax','f_mov','f_delta','f_top10',
-     'f_cmin','f_cmax','f_disp','f_cons'].forEach(id => {
+     'f_cmin','f_cmax','f_disp','f_cons','f_caiu','f_vmin_visto','f_vmax_visto','f_omin','f_omax',
+     'f_smin','f_smax'].forEach(id => {
       const e = document.getElementById(id); if (!e) return;
       e.addEventListener('change', () => { S.F = lerFiltros(); contar(); });
       e.addEventListener('input', () => { S.F = lerFiltros(); }); });
