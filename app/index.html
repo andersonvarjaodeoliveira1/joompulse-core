@@ -647,7 +647,7 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
   ${dig && (dig.novos_ranking!=null || dig.posicoes!=null) ? `
   <div class="tip" style="margin:0 0 16px">
     <b>Coleta de ${esc(fmtDiaChart(dig.dia))}.</b>
-    ${num(dig.novos_ranking)} produto(s) novo(s) no ranking ·
+    ${num(dig.novos_ranking)} <button class="lnk" data-go-diario="novos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline;font-weight:600">produto(s) novo(s) no ranking</button> ·
     ${num(dig.novos_catalogo)} novo(s) no catálogo ·
     ${num(dig.posicoes)} posições lidas.
     ${avisosNovos?` · <button class="lnk" id="avisos_lidos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">${avisosNovos} aviso(s) não lido(s)</button>`:''}
@@ -663,7 +663,7 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
       ${sq('#DCFCE7','#16A34A',I.mon)}<span><b style="font-size:20px;display:block">${num(S.monitorados.length)}</b>produto(s) monitorado(s)</span></button>
     <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
       ${sq(alertasNovos?'#FEE2E2':'#F3F4F6', alertasNovos?'#DC2626':'#6B7280',I.rad)}<span><b style="font-size:20px;display:block">${num(alertasNovos)}</b>alerta(s) novo(s)</span></button>
-    <button class="qc" data-go="diario" style="align-items:flex-start;text-align:left">${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'—'}</b>novo(s) no ranking hoje</span></button>
+    <button class="qc" data-go-diario="novos" style="align-items:flex-start;text-align:left">${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'—'}</b>novo(s) no ranking hoje</span></button>
     ${cd?`<button class="qc" data-cd-go="${esc(cd.category_id)}" data-cd-nome="${esc(cd.categoria)}" style="align-items:flex-start;text-align:left">
       ${sq('#FFEDD5','#EA580C',I.cat)}<span><b style="font-size:14px;display:block">${esc(cd.categoria)}</b>
       categoria em destaque hoje · <span class="chip ${cd.oportunidade==='alta'?'g':'y'}" style="font-size:10px">${esc(cd.oportunidade)}</span></span></button>`:''}
@@ -3035,6 +3035,14 @@ function render(){
   $('#sheet').innerHTML = (V[S.view] ?? V.home)();
   pintaQuota();
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.view=b.dataset.go; render(); });
+  document.querySelectorAll('[data-go-diario]').forEach(b => b.onclick = () => {
+    S.diarioAba = b.dataset.goDiario || 'novos';
+    S.diarioLoaded = false;
+    S.diario = [];
+    S.diarioOffset = 0;
+    S.view = 'diario';
+    render();
+  });
   document.querySelectorAll('[data-cd-go]').forEach(b => b.onclick = () => abrirCategoria(b.dataset.cdGo, b.dataset.cdNome));
   if ($('#avisos_lidos')) $('#avisos_lidos').onclick = async () => {
     await sb.rpc('marcar_avisos_lidos');
