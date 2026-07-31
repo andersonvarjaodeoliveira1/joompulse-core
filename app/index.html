@@ -69,8 +69,29 @@
 
   .main{min-width:0;display:flex;flex-direction:column}
   .top{display:flex;align-items:center;gap:12px;padding:12px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:9}
-  .mkt{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-weight:500}
-  .mkt .dot{width:18px;height:18px;border-radius:50%;background:#FFE600;display:grid;place-items:center;font-size:10px}
+  .mkt{position:relative;display:inline-flex;align-items:center}
+  .mkt-btn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-weight:500;background:var(--card);font-size:13.5px}
+  .mkt-btn:hover{border-color:var(--brand)}
+  .mkt-btn .ch{color:var(--ink-3);font-size:10px;margin-left:2px}
+  .mkt .dot{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px;flex:none}
+  .mkt .dot.meli{background:#FFE600;color:#111}
+  .mkt .dot.shopee{background:#EE4D2D;color:#fff;font-weight:700;font-size:9px}
+  .mkt-drop{position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:240px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.1);padding:8px;overflow:hidden}
+  .mkt-drop .ttl{font-size:11.5px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px 8px}
+  .mkt-op{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:10px 10px;font-size:13.5px;font-weight:500;color:var(--ink)}
+  .mkt-op:hover{background:var(--bg-2)}
+  .mkt-op.on{background:var(--tint);color:var(--brand-2)}
+  .mkt-op .ck{margin-left:auto;color:var(--brand);font-weight:700;font-size:14px}
+  .mkt-op .sub{display:block;font-size:11.5px;font-weight:400;color:var(--ink-3);margin-top:1px}
+  .shopee-hero{background:linear-gradient(115deg,#EE4D2D 0%,#F1582F 45%,#FF7337 100%);border-radius:14px;padding:28px 26px;color:#fff;position:relative;overflow:hidden;margin-bottom:22px}
+  .shopee-hero h3{margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .shopee-hero p{margin:0 0 0;opacity:.95;max-width:48ch;font-size:14.5px;line-height:1.5}
+  .shopee-hero .art{position:absolute;right:-20px;top:-28px;opacity:.18;pointer-events:none;font-size:140px;font-weight:800;letter-spacing:-.06em;line-height:1}
+  .sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:8px}
+  .sp-card{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--card)}
+  .sp-card b{display:block;font-size:14px;font-weight:600;margin:8px 0 4px}
+  .sp-card p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+  .sp-badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:#FFF1ED;color:#C2410C}
   .sp{flex:1}
   .lnk{background:none;border:0;color:var(--ink-2);font-size:13.5px;font-weight:500}
   .lnk:hover{color:var(--ink)}
@@ -451,7 +472,7 @@
           <circle cx="28" cy="28" r="24" fill="none" stroke="#7C3AED" stroke-width="4"/>
           <path d="M28 28 L46 12" stroke="#7C3AED" stroke-width="4" stroke-linecap="round"/>
           <circle cx="28" cy="28" r="4" fill="#7C3AED"/></svg>
-        <div><span class="nm">Gringa <em>Radar</em></span><span class="tg">MERCADO LIVRE</span></div>
+        <div><span class="nm">Gringa <em>Radar</em></span><span class="tg" id="brand-mkt">MERCADO LIVRE</span></div>
       </div>
       <div class="grp">
         <button class="solo" data-v="home">
@@ -495,7 +516,26 @@
 
     <div class="main">
       <header class="top">
-        <div class="mkt"><span class="dot">🤝</span> MeLi</div>
+        <div class="mkt" id="mkt">
+          <button type="button" class="mkt-btn" id="mkt_btn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="dot meli" id="mkt_dot">🤝</span>
+            <span id="mkt_label">Mercado Livre</span>
+            <span class="ch">▾</span>
+          </button>
+          <div class="mkt-drop hide" id="mkt_drop" role="listbox">
+            <div class="ttl">Mudar de marketplace</div>
+            <button type="button" class="mkt-op on" data-mkt="meli" role="option" aria-selected="true">
+              <span class="dot meli">🤝</span>
+              <span>Mercado Livre<span class="sub">Ranking · coleta diária</span></span>
+              <span class="ck">✓</span>
+            </button>
+            <button type="button" class="mkt-op" data-mkt="shopee" role="option" aria-selected="false">
+              <span class="dot shopee">S</span>
+              <span>Shopee<span class="sub">Em preparação</span></span>
+              <span class="ck hide">✓</span>
+            </button>
+          </div>
+        </div>
         <div class="sp"></div>
         <div class="qbar" id="q"></div>
         <button class="lnk" id="pl">—</button>
@@ -528,7 +568,8 @@ const sb = createClient('https://blnupzfgfhvykrgmvwhw.supabase.co',
                         'sb_publishable_gabCC-2dHNLezVN4VmyCJA_sONtVPg8');
 const $ = s => document.querySelector(s);
 let monitorPollId = null; // atualização automática do Monitor — ver render()
-const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
+const S = { view:'home', marketplace: localStorage.getItem('gr_mkt') || 'meli', mktAberto:false,
+            produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista', alertaFoco:null, alertaAberto:null,
             digest:null, avisos:[],
             diario:[], diarioMeta:null, diarioAba:'todos', diarioOffset:0, diarioLoaded:false,
@@ -663,6 +704,63 @@ const I = {
 };
 
 const V = {};
+
+function pintaMarketplace(){
+  const shopee = S.marketplace === 'shopee';
+  const brand = $('#brand-mkt');
+  if (brand) brand.textContent = shopee ? 'SHOPEE' : 'MERCADO LIVRE';
+  const label = $('#mkt_label');
+  if (label) label.textContent = shopee ? 'Shopee' : 'Mercado Livre';
+  const dot = $('#mkt_dot');
+  if (dot) {
+    dot.className = 'dot ' + (shopee ? 'shopee' : 'meli');
+    dot.textContent = shopee ? 'S' : '🤝';
+  }
+  const drop = $('#mkt_drop');
+  if (drop) drop.classList.toggle('hide', !S.mktAberto);
+  const btn = $('#mkt_btn');
+  if (btn) btn.setAttribute('aria-expanded', String(!!S.mktAberto));
+  document.querySelectorAll('[data-mkt]').forEach(b => {
+    const on = b.dataset.mkt === S.marketplace;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+    const ck = b.querySelector('.ck');
+    if (ck) ck.classList.toggle('hide', !on);
+  });
+}
+
+function setMarketplace(mkt){
+  if (mkt !== 'meli' && mkt !== 'shopee') return;
+  S.marketplace = mkt;
+  S.mktAberto = false;
+  localStorage.setItem('gr_mkt', mkt);
+  if (mkt === 'shopee') S.view = 'shopee';
+  else if (S.view === 'shopee') S.view = 'home';
+  render();
+}
+
+V.shopee = () => `
+  <h1 class="pg">Shopee</h1>
+  <p class="sub">Mesmo formato do Mercado Livre — ranking, concorrência e oportunidades — quando a coleta estiver no ar.</p>
+  <div class="shopee-hero">
+    <div class="art" aria-hidden="true">S</div>
+    <span class="sp-badge" style="background:rgba(255,255,255,.2);color:#fff;margin-bottom:10px">Em preparação</span>
+    <h3>Radar da Shopee a caminho</h3>
+    <p>Ainda não coletamos ranking nem anúncios da Shopee. Esta aba já está pronta no app; os dados entram quando a integração e a coleta diária forem ligadas — sem inventar número.</p>
+  </div>
+  <h2 class="sc">O que vai aparecer aqui</h2>
+  <p class="sc2">O mesmo jeito que você já usa no Mercado Livre, adaptado à Shopee.</p>
+  <div class="sp-grid">
+    <div class="sp-card">${sq('#FFF1ED','#EE4D2D',I.busca)}<b>Busca de produtos</b><p>Produtos em alta na Shopee, com posição e preço quando a API permitir.</p></div>
+    <div class="sp-card">${sq('#FFEDD5','#EA580C',I.cat)}<b>Categorias</b><p>Onde entrar: rotatividade e estrutura de mercado por categoria.</p></div>
+    <div class="sp-card">${sq('#DCFCE7','#16A34A',I.mon)}<b>Monitor</b><p>Acompanhar produtos e alertas de mudança, no mesmo fluxo do MeLi.</p></div>
+    <div class="sp-card">${sq('#EDE9FE','#7C3AED',I.calc)}<b>Margem e custo</b><p>Cruzar preço da Shopee com fornecedor local quando houver dado.</p></div>
+  </div>
+  <div class="tip" style="margin-top:18px"><b>Por que ainda está vazio.</b> Hoje a coleta diária e as RPCs do app leem só o Mercado Livre.
+    Assim que a pipeline da Shopee existir, esta aba passa a listar produtos de verdade — sem placeholder inventado.</div>
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn" data-mkt="meli">Voltar ao Mercado Livre</button>
+  </div>`;
 
 V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const cd = S.categoriaDestaque;
   const dig = S.digest;
@@ -3098,6 +3196,11 @@ async function carregarSimilares(){
 
 function render(){
   if (S.view === 'alerta') { S.view = 'monitor'; S.aba = 'alertas'; }
+  // Shopee ainda não tem as mesmas telas — mantém o usuário na aba dedicada
+  if (S.marketplace === 'shopee' && !['shopee','assinatura','extensao','calc','clipes'].includes(S.view)) {
+    S.view = 'shopee';
+  }
+  pintaMarketplace();
   // Posição/preço só mudam com a coleta diária, mas alertas e ações em
   // outra aba/aparelho não. Reconsulta sozinho enquanto o Monitor estiver
   // aberto, pra não depender de F5 pra ver alerta novo chegar.
@@ -3114,6 +3217,7 @@ function render(){
   $('#sheet').innerHTML = (V[S.view] ?? V.home)();
   pintaQuota();
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.view=b.dataset.go; render(); });
+  document.querySelectorAll('#sheet [data-mkt]').forEach(b => b.onclick = () => setMarketplace(b.dataset.mkt));
   document.querySelectorAll('[data-go-diario]').forEach(b => b.onclick = () => {
     S.diarioAba = b.dataset.goDiario || 'novos';
     S.diarioLoaded = false;
@@ -3471,6 +3575,26 @@ document.querySelectorAll('.item,.solo').forEach(b =>
 document.querySelectorAll('.gh').forEach(h => h.onclick = () => {
   document.getElementById(h.dataset.g).classList.toggle('hide');
 });
+
+// Seletor Mercado Livre / Shopee (mesmo formato do JoomPulse, estilo Gringa Radar)
+$('#mkt_btn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  S.mktAberto = !S.mktAberto;
+  pintaMarketplace();
+});
+document.querySelectorAll('#mkt_drop [data-mkt]').forEach(b => {
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setMarketplace(b.dataset.mkt);
+  });
+});
+document.addEventListener('click', () => {
+  if (!S.mktAberto) return;
+  S.mktAberto = false;
+  pintaMarketplace();
+});
+$('#mkt_drop')?.addEventListener('click', (e) => e.stopPropagation());
+pintaMarketplace();
 
 // Cliques dos alertas: delegação no #sheet (não depende de rebind a cada render)
 $('#sheet')?.addEventListener('click', (ev) => {
