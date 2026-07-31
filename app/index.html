@@ -438,6 +438,7 @@
           Produtos<span class="ch">▾</span></button>
         <div id="g1">
           <button class="item" data-v="produtos">Busca de produtos</button>
+          <button class="item" data-v="diario">Conteúdo diário</button>
           <button class="item" data-v="fornecedores">Produtos dos fornecedores</button>
           <button class="item" data-v="locais">Produtos locais</button>
           <button class="item" data-v="monitor">Monitor</button>
@@ -505,6 +506,7 @@ let monitorPollId = null; // atualização automática do Monitor — ver render
 const S = { view:'home', produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista', alertaFoco:null, alertaAberto:null,
             digest:null, avisos:[],
+            diario:[], diarioMeta:null, diarioAba:'todos', diarioOffset:0, diarioLoaded:false,
             modo:'avancada', F:{}, catSel:null, catLista:[], contagem:null,
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
@@ -661,8 +663,7 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
       ${sq('#DCFCE7','#16A34A',I.mon)}<span><b style="font-size:20px;display:block">${num(S.monitorados.length)}</b>produto(s) monitorado(s)</span></button>
     <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
       ${sq(alertasNovos?'#FEE2E2':'#F3F4F6', alertasNovos?'#DC2626':'#6B7280',I.rad)}<span><b style="font-size:20px;display:block">${num(alertasNovos)}</b>alerta(s) novo(s)</span></button>
-    <button class="qc" data-go="produtos" style="align-items:flex-start;text-align:left">
-      ${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'—'}</b>novo(s) no ranking hoje</span></button>
+    <button class="qc" data-go="diario" style="align-items:flex-start;text-align:left">${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'—'}</b>novo(s) no ranking hoje</span></button>
     ${cd?`<button class="qc" data-cd-go="${esc(cd.category_id)}" data-cd-nome="${esc(cd.categoria)}" style="align-items:flex-start;text-align:left">
       ${sq('#FFEDD5','#EA580C',I.cat)}<span><b style="font-size:14px;display:block">${esc(cd.categoria)}</b>
       categoria em destaque hoje · <span class="chip ${cd.oportunidade==='alta'?'g':'y'}" style="font-size:10px">${esc(cd.oportunidade)}</span></span></button>`:''}
@@ -679,6 +680,7 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
   <h2 class="sc">Ações rápidas</h2>
   <p class="sc2">Economize tempo com as ferramentas de análise de produto e mercado.</p>
   <div class="qa">
+    <button class="qc" data-go="diario">${sq('#E0E7FF','#4338CA',I.rad)}<span>Conteúdo diário</span></button>
     <button class="qc" data-go="produtos">${sq('#EDE9FE','#7C3AED',I.busca)}<span>Busca de produtos</span></button>
     <button class="qc" data-go="categorias">${sq('#FFEDD5','#EA580C',I.cat)}<span>Análise de categoria</span></button>
     <button class="qc" data-go="produtos">${sq('#DBEAFE','#2563EB',I.conc)}<span>Análise da concorrência</span></button>
@@ -1325,6 +1327,77 @@ function cardsLocais(){
   }).join('')}</div>
   ${S.locaisAba==='todos' && S.locais.length > 0 && S.locais.length % 60 === 0
     ? `<div style="text-align:center;margin-top:16px"><button class="btn" id="l_mais">Carregar mais</button></div>` : ''}`;
+}
+
+V.diario = () => {
+  const meta = S.diarioMeta || {};
+  const aba = S.diarioAba || 'todos';
+  const lista = S.diario || [];
+  return `
+  <h1 class="pg">Conteúdo diário</h1>
+  <p class="sub">Produtos analisados na coleta de hoje no Mercado Livre
+    ${meta.dia ? `· <b>${esc(fmtDiaChart(meta.dia))}</b>` : ''}.</p>
+  <div class="tabs" style="margin-bottom:14px">
+    <button class="tb ${aba==='todos'?'on':''}" data-daba="todos">Todos (${num(meta.total ?? '—')})</button>
+    <button class="tb ${aba==='novos'?'on':''}" data-daba="novos">Só novos (${num(meta.novos ?? '—')})</button>
+  </div>
+  ${!S.diarioLoaded
+    ? '<div class="card"><div class="load">carregando produtos de hoje…</div></div>'
+    : !lista.length
+      ? `<div class="card"><div class="none"><b>Nada nesta lista ainda</b>
+          A coleta diária (~03:10) preenche esta aba. Se já rodou hoje e continua vazio, rode
+          <code>npm run collect digest</code> no coletor.</div></div>`
+      : `<div class="card"><table><thead><tr>
+          <th>Produto</th><th class="n">Posição</th><th class="n">Preço med.</th>
+          <th class="n">Anúncios</th><th>Movimento</th><th></th>
+        </tr></thead><tbody>${lista.map(p => {
+          const d = p.delta_7d;
+          const mov = d==null ? '—' : d>0 ? `↑ ${d}` : d<0 ? `↓ ${Math.abs(d)}` : '—';
+          const cor = d>0 ? 'var(--up)' : d<0 ? 'var(--dn)' : 'var(--ink-3)';
+          return `<tr class="k" data-p="${esc(p.product_id)}">
+            <td style="max-width:360px"><div style="display:flex;gap:10px;align-items:center">
+              ${p.imagem?`<img src="${esc(p.imagem)}" alt="" width="40" height="40"
+                style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
+              <div style="min-width:0">
+                <div class="nm">${esc(p.nome)}
+                  ${p.novo?' <span class="chip g">novo</span>':''}</div>
+                <div class="sb">${esc(p.categoria||'—')} · ${esc(p.product_id)}</div>
+              </div></div></td>
+            <td class="n"><span class="pos">${p.posicao ?? '—'}</span></td>
+            <td class="n">${brl(p.preco_mediano)}</td>
+            <td class="n">${num(p.concorrentes)}</td>
+            <td style="color:${cor};font-weight:600">${mov}
+              ${p.momentum?`<div class="sb">${esc(p.momentum)}</div>`:''}</td>
+            <td class="n"><button class="btn mini g" data-p="${esc(p.product_id)}">Ver</button></td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+        ${lista.length >= 60 && lista.length % 60 === 0
+          ? `<div style="text-align:center;margin-top:14px"><button class="btn" id="d_mais">Carregar mais</button></div>` : ''}`}
+  <div class="tip" style="margin-top:16px"><b>O que é “novo”.</b> Produto que apareceu no ranking público
+    (top 20 da categoria) nesta coleta e nunca tinha entrado nas coletas anteriores.
+    Posição = melhor colocação do produto no dia entre as categorias lidas.</div>`;
+};
+
+async function carregarDiario(acumular = false){
+  const soNovos = S.diarioAba === 'novos';
+  if (!acumular) S.diarioOffset = 0;
+  const [lista, meta] = await Promise.all([
+    sb.rpc('conteudo_diario', {
+      p_dia: null,
+      p_so_novos: soNovos,
+      p_limite: 60,
+      p_offset: S.diarioOffset,
+    }),
+    sb.rpc('contar_conteudo_diario', { p_dia: null, p_so_novos: soNovos }),
+  ]);
+  if (lista.error) {
+    S.diario = [];
+    S.diarioMeta = { erro: lista.error.message };
+  } else {
+    S.diario = acumular ? [...S.diario, ...(lista.data ?? [])] : (lista.data ?? []);
+  }
+  S.diarioMeta = meta.data ?? S.diarioMeta;
+  S.diarioLoaded = true;
 }
 
 V.fornecedores = () => {
@@ -3170,6 +3243,27 @@ function render(){
       });
     });
   }
+  if (S.view==='diario'){
+    if (!S.diarioLoaded) carregarDiario().then(render);
+    document.querySelectorAll('[data-daba]').forEach(b => b.onclick = () => {
+      S.diarioAba = b.dataset.daba;
+      S.diarioLoaded = false;
+      S.diario = [];
+      render();
+      carregarDiario().then(render);
+    });
+    if ($('#d_mais')) $('#d_mais').onclick = () => {
+      S.diarioOffset = S.diario.length;
+      carregarDiario(true).then(render);
+    };
+    document.querySelectorAll('#sheet tr.k[data-p], #sheet [data-p].btn').forEach(el => {
+      el.onclick = (ev) => {
+        ev.stopPropagation();
+        const id = el.dataset.p || el.closest('[data-p]')?.dataset.p;
+        if (id) { S.voltaPara = 'diario'; abrir(id); }
+      };
+    });
+  }
   if (S.view==='fornecedores'){
     if (!S.catalogosLoaded && !S.catalogosBusy) carregarCatalogos().then(render);
     wireCatalogos();
@@ -3203,6 +3297,7 @@ function render(){
     if ($('#volta')) $('#volta').onclick = () => {
       if (S.voltaPara === 'alerta' && S.alertaFoco) { S.view = 'alerta'; S.voltaPara = null; render(); return; }
       if (S.voltaPara === 'monitor') { S.view = 'monitor'; S.voltaPara = null; render(); return; }
+      if (S.voltaPara === 'diario') { S.view = 'diario'; S.voltaPara = null; render(); return; }
       S.view='produtos'; render();
     };
     if ($('#mon')) $('#mon').onclick = () => {
