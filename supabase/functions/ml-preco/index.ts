@@ -152,18 +152,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // 1) Produto de catálogo direto (/p/MLB…)
     const rProd = await mlGet(`/products/${mlb}`, token);
     if (rProd.ok) {
       const p = await rProd.json();
       let preco = p.buy_box_winner?.price ?? null;
+      let anuncios: number | null = null;
 
-      // Nem todo produto tem buy_box_winner preenchido (visto ao vivo:
-      // acontece com frequência). /products/{id}/items sempre existe
-      // pra quem tem catálogo — usa o preço mediano de quem disputa.
       if (preco == null) {
         const rItens = await mlGet(`/products/${mlb}/items?limit=20`, token);
         if (rItens.ok) {
           const d = await rItens.json();
+          anuncios = typeof d.paging?.total === 'number' ? d.paging.total : (d.results?.length ?? null);
           const precos = (d.results ?? [])
             .map((x: { price?: number }) => x.price)
             .filter((v: unknown): v is number => typeof v === 'number')
@@ -177,12 +177,47 @@ Deno.serve(async (req) => {
         preco,
         imagem: p.pictures?.[0]?.url ?? null,
         permalink: p.permalink ?? null,
+        categoria: p.category_id ?? null,
+        anuncios,
+        na_base: false,
       });
     }
 
-    // Não é produto de catálogo (ou não achou) — tenta como anúncio.
-    // Testado ao vivo: dá 403 pra maioria dos casos de terceiro. Fica
-    // como tentativa, não como garantia.
+    // 2) Anúncio (item): tenta /items/{id} (mais confiável que ?ids=) e segue
+    //    o catalog_product_id quando existir.
+    const rItemOne = await mlGet(`/items/${mlb}`, token);
+    if (rItemOne.ok) {
+      const it = await rItemOne.json();
+      const catId = typeof it.catalog_product_id === 'string' ? it.catalog_product_id : null;
+
+      if (catId) {
+        const rCat = await mlGet(`/products/${catId}`, token);
+        if (rCat.ok) {
+          const p = await rCat.json();
+          return json({
+            ok: true, tipo: 'produto', id: p.id, nome: p.name ?? it.title ?? null,
+            preco: p.buy_box_winner?.price ?? it.price ?? null,
+            imagem: p.pictures?.[0]?.url ?? it.thumbnail ?? null,
+            permalink: p.permalink ?? it.permalink ?? null,
+            categoria: p.category_id ?? it.category_id ?? null,
+            mlb_anuncio: mlb,
+            na_base: false,
+          });
+        }
+      }
+
+      return json({
+        ok: true, tipo: 'item', id: it.id, nome: it.title ?? null,
+        preco: it.price ?? null,
+        imagem: it.thumbnail ?? it.secure_thumbnail ?? null,
+        permalink: it.permalink ?? null,
+        categoria: it.category_id ?? null,
+        catalog_product_id: catId,
+        na_base: false,
+      });
+    }
+
+    // 3) Fallback legado ?ids= (às vezes ainda responde)
     const rItem = await mlGet(`/items?ids=${mlb}`, token);
     if (rItem.ok) {
       const arr = await rItem.json();
@@ -194,6 +229,9 @@ Deno.serve(async (req) => {
           preco: it.price ?? null,
           imagem: it.thumbnail ?? it.secure_thumbnail ?? null,
           permalink: it.permalink ?? null,
+          categoria: it.category_id ?? null,
+          catalog_product_id: it.catalog_product_id ?? null,
+          na_base: false,
         });
       }
     }

@@ -586,7 +586,8 @@ const S = { view:'home', marketplace: localStorage.getItem('gr_mkt') || 'meli', 
             locaisMeliOn:false, locaisMeliCache:{}, locaisMeliBuscando:false,
             catalogos:[], catalogosBusy:false, catalogosMsg:null, catalogosLoaded:false,
             detalheAba:'catalogo', similares:[], similaresCarregado:false, detalheLocal:null,
-            locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, sel:null, selecao:new Set() };
+            locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, refVivo:null, refBusy:false, refPedidoOk:null,
+            sel:null, selecao:new Set() };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num = n => n==null?'—':Number(n).toLocaleString('pt-BR');
@@ -1147,10 +1148,28 @@ V.produtos = () => {
 
     <div class="busca-ref">
       <div class="frow"><label>Ou cole um MLB / link do anúncio</label>
-        <input id="f_ref" value="${esc(S.ref??'')}" placeholder="MLB123… ou https://produto.mercadolivre.com.br/…"></div>
-      <button class="btn g" id="b_ref">Localizar</button>
+        <input id="f_ref" value="${esc(S.ref??'')}" placeholder="MLB123… ou https://produto.mercadolivre.com.br/…"
+          ${S.refBusy?'disabled':''}></div>
+      <button class="btn g" id="b_ref" ${S.refBusy?'disabled':''}>${S.refBusy?'Buscando…':'Localizar'}</button>
     </div>
     ${S.refAviso?`<div class="msg err" style="margin:0 0 12px">${esc(S.refAviso)}</div>`:''}
+    ${S.refPedidoOk?`<div class="msg ok" style="margin:0 0 12px">${esc(S.refPedidoOk)}</div>`:''}
+    ${S.refVivo?`<div class="card cbox" style="margin:0 0 14px;display:flex;gap:14px;align-items:flex-start">
+      ${S.refVivo.imagem?`<img class="thumb" src="${esc(S.refVivo.imagem)}" alt="" style="width:64px;height:64px;border-radius:8px">`:''}
+      <div style="flex:1;min-width:0">
+        <div class="sb" style="margin-bottom:2px">Encontrado ao vivo no Mercado Livre
+          ${S.refVivo.tipo==='item'?' · anúncio':' · produto de catálogo'}
+          · ainda sem histórico no Gringa Radar</div>
+        <div class="nm" style="font-size:15px">${esc(S.refVivo.nome||S.refVivo.id)}</div>
+        <div class="sb">${esc(S.refVivo.id)}${S.refVivo.mlb_anuncio?` · anúncio ${esc(S.refVivo.mlb_anuncio)}`:''}
+          ${S.refVivo.preco!=null?` · ${brl(S.refVivo.preco)}`:''}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${S.refVivo.permalink?`<a class="btn g mini" href="${esc(S.refVivo.permalink)}" target="_blank" rel="noopener">Ver no ML</a>`:''}
+          <button class="btn mini" id="b_pedir_coleta">Pedir coleta deste anúncio</button>
+          <button class="btn g mini" id="b_ref_limpar">Fechar</button>
+        </div>
+      </div>
+    </div>`:''}
 
     <div class="atalhos"><span class="lb">Atalhos</span>${PREDEF.map(p=>
       `<button class="pd ${S.pred===p.k?'on':''}" data-pd="${p.k}">${p.t}</button>`).join('')}</div>
@@ -3065,20 +3084,83 @@ async function carregarNivelCategoria(parentId){
 async function localizar(){
   const ref = $('#f_ref')?.value.trim();
   if (!ref) return;
-  S.ref = ref; S.refAviso = null;
-  const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
-  if (error) { S.refAviso = error.message; render(); return; }
+  S.ref = ref; S.refAviso = null; S.refVivo = null; S.refPedidoOk = null; S.refBusy = true;
+  render();
+  try {
+    const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
+    if (error) { S.refAviso = error.message; return; }
 
-  if (data.tipo === 'produto'){
-    S.F = { p_produto: data.produto }; S.pred = null; S.catSel = null;
-    await buscar(); return;
+    if (data.tipo === 'produto'){
+      // Pode estar no catálogo sem ranking — tenta busca; se vier vazio, cai no ao vivo
+      S.F = { p_produto: data.produto, p_com_foto: true }; S.pred = null; S.catSel = null;
+      await buscar();
+      if (S.produtos?.length) return;
+      // Sem linha na busca: tenta ficha direta
+      const { data: ficha } = await sb.rpc('ficha_produto', { p_produto: data.produto });
+      if (ficha?.produto?.product_id || ficha?.produto?.name) {
+        S.voltaPara = 'produtos';
+        await abrir(data.produto);
+        return;
+      }
+    }
+
+    if (data.tipo === 'texto'){
+      S.F = { ...S.F, p_texto: ref, p_com_foto: true }; delete S.F.p_produto;
+      await buscar();
+      return;
+    }
+
+    // nao_encontrado (ou produto sem ficha) — consulta ao vivo no ML
+    const vivo = await buscarPrecoAoVivo(ref);
+    if (vivo?.ok && vivo.id) {
+      // Se a API devolveu um produto de catálogo, tenta de novo na nossa base
+      // (às vezes o anúncio MLB não está, mas o /p/MLB do catálogo sim).
+      if (vivo.tipo === 'produto' && vivo.id) {
+        const { data: again } = await sb.rpc('buscar_por_referencia', { p_ref: vivo.id });
+        if (again?.tipo === 'produto') {
+          S.F = { p_produto: again.produto, p_com_foto: true }; S.pred = null; S.catSel = null;
+          await buscar();
+          if (S.produtos?.length) return;
+          await abrir(again.produto);
+          return;
+        }
+      }
+      S.refVivo = vivo;
+      S.refAviso = null;
+      return;
+    }
+
+    if (vivo?.erro === 'bloqueado_ou_nao_encontrado') {
+      S.refAviso = `${vivo.mlb || data.mlb || 'Esse anúncio'} não está na nossa base e o Mercado Livre bloqueou a consulta ao vivo pra terceiro. Peça a coleta pela extensão Chrome abrindo o anúncio no ML.`;
+      return;
+    }
+    if (vivo?.erro === 'sem_credencial') {
+      S.refAviso = 'Não consegui consultar o Mercado Livre agora (credencial). Tente de novo em instantes.';
+      return;
+    }
+    S.refAviso = `${data.mlb || ref} não está na nossa base. Use a extensão Chrome no anúncio pra pedir a coleta.`;
+  } finally {
+    S.refBusy = false;
+    render();
   }
-  if (data.tipo === 'nao_encontrado'){
-    S.refAviso = `${data.mlb} não está na nossa base. Instale a extensão e abra o anúncio no Mercado Livre para pedir a coleta.`;
-    render(); return;
-  }
-  S.F = { ...S.F, p_texto: ref }; delete S.F.p_produto;
-  await buscar();
+}
+
+async function pedirColetaRef(){
+  const v = S.refVivo;
+  if (!v?.id && !S.ref) return;
+  const mlb = v?.mlb_anuncio || (v?.tipo === 'item' ? v.id : null) || v?.id;
+  if (!mlb) { S.refAviso = 'Não achei um MLB pra pedir coleta.'; render(); return; }
+  const { data, error } = await sb.rpc('solicitar_coleta', {
+    p_mlb: mlb,
+    p_categoria: v?.categoria || null,
+    p_url: v?.permalink || S.ref || null,
+  });
+  if (error) { S.refAviso = error.message; render(); return; }
+  S.refPedidoOk = data?.aviso
+    ? `Pedido registrado (${data.pedidos} pedido(s)). ${data.aviso}`
+    : `Pedido de coleta registrado (${data?.pedidos ?? 1}). Entra na fila da próxima rodada.`;
+  S.refAviso = null;
+  render();
 }
 
 async function buscar(){
@@ -3237,9 +3319,14 @@ function render(){
     if ($('#b_go2')) $('#b_go2').onclick = () => { S.F = lerFiltros(); buscar(); };
     if ($('#b_ref')) $('#b_ref').onclick = localizar;
     if ($('#f_ref')) $('#f_ref').onkeydown = (e) => { if (e.key==='Enter') localizar(); };
+    if ($('#b_pedir_coleta')) $('#b_pedir_coleta').onclick = pedirColetaRef;
+    if ($('#b_ref_limpar')) $('#b_ref_limpar').onclick = () => {
+      S.refVivo = null; S.refPedidoOk = null; S.refAviso = null; render();
+    };
     if ($('#f_txt')) $('#f_txt').onkeydown = (e) => { if (e.key==='Enter') { S.F = lerFiltros(); buscar(); } };
     if ($('#b_cl')) $('#b_cl').onclick = () => {
       S.F={ p_com_foto:true }; S.pred=null; S.catSel=null; S.catLista=[]; S.ref=''; S.refAviso=null;
+      S.refVivo=null; S.refPedidoOk=null;
       S.buscou=false; S.produtos=[]; S.contagem=null; S.sel=null; render(); };
 
     document.querySelectorAll('.mb').forEach(b => b.onclick = () => { S.modo=b.dataset.md; S.sel=null; render(); });
