@@ -1335,18 +1335,20 @@ V.diario = () => {
   const lista = S.diario || [];
   return `
   <h1 class="pg">Conteúdo diário</h1>
-  <p class="sub">Produtos analisados na coleta de hoje no Mercado Livre
-    ${meta.dia ? `· <b>${esc(fmtDiaChart(meta.dia))}</b>` : ''}.</p>
+  <p class="sub">Produtos da última coleta no Mercado Livre
+    ${meta.dia ? `· <b>${esc(fmtDiaChart(meta.dia))}</b>` : ''}
+    — atualiza sozinho depois da coleta (~03:10).</p>
   <div class="tabs" style="margin-bottom:14px">
-    <button class="tb ${aba==='todos'?'on':''}" data-daba="todos">Todos (${num(meta.total ?? '—')})</button>
-    <button class="tb ${aba==='novos'?'on':''}" data-daba="novos">Só novos (${num(meta.novos ?? '—')})</button>
+    <button class="tb ${aba==='todos'?'on':''}" data-daba="todos">Todos (${num(meta.total)})</button>
+    <button class="tb ${aba==='novos'?'on':''}" data-daba="novos">Só novos (${num(meta.novos)})</button>
   </div>
-  ${!S.diarioLoaded
-    ? '<div class="card"><div class="load">carregando produtos de hoje…</div></div>'
+  ${meta.erro
+    ? `<div class="card"><div class="none"><b>Não deu pra carregar</b>${esc(meta.erro)}</div></div>`
+    : !S.diarioLoaded
+    ? '<div class="card"><div class="load">carregando produtos da última coleta…</div></div>'
     : !lista.length
       ? `<div class="card"><div class="none"><b>Nada nesta lista ainda</b>
-          A coleta diária (~03:10) preenche esta aba. Se já rodou hoje e continua vazio, rode
-          <code>npm run collect digest</code> no coletor.</div></div>`
+          A coleta diária (~03:10) preenche e atualiza esta aba automaticamente.</div></div>`
       : `<div class="card"><table><thead><tr>
           <th>Produto</th><th class="n">Posição</th><th class="n">Preço med.</th>
           <th class="n">Anúncios</th><th>Movimento</th><th></th>
@@ -1381,22 +1383,27 @@ V.diario = () => {
 async function carregarDiario(acumular = false){
   const soNovos = S.diarioAba === 'novos';
   if (!acumular) S.diarioOffset = 0;
-  const [lista, meta] = await Promise.all([
-    sb.rpc('conteudo_diario', {
-      p_dia: null,
-      p_so_novos: soNovos,
-      p_limite: 60,
-      p_offset: S.diarioOffset,
-    }),
-    sb.rpc('contar_conteudo_diario', { p_dia: null, p_so_novos: soNovos }),
-  ]);
-  if (lista.error) {
+  try {
+    const [lista, meta] = await Promise.all([
+      sb.rpc('conteudo_diario', {
+        p_dia: null,
+        p_so_novos: soNovos,
+        p_limite: 60,
+        p_offset: S.diarioOffset,
+      }),
+      sb.rpc('contar_conteudo_diario', { p_dia: null, p_so_novos: soNovos }),
+    ]);
+    if (lista.error || meta.error) {
+      S.diario = [];
+      S.diarioMeta = { erro: (lista.error || meta.error).message };
+    } else {
+      S.diario = acumular ? [...S.diario, ...(lista.data ?? [])] : (lista.data ?? []);
+      S.diarioMeta = meta.data ?? {};
+    }
+  } catch (e) {
     S.diario = [];
-    S.diarioMeta = { erro: lista.error.message };
-  } else {
-    S.diario = acumular ? [...S.diario, ...(lista.data ?? [])] : (lista.data ?? []);
+    S.diarioMeta = { erro: e?.message || 'Falha ao carregar conteúdo diário' };
   }
-  S.diarioMeta = meta.data ?? S.diarioMeta;
   S.diarioLoaded = true;
 }
 
@@ -3252,17 +3259,17 @@ function render(){
     });
   }
   if (S.view==='diario'){
-    if (!S.diarioLoaded) carregarDiario().then(render);
+    if (!S.diarioLoaded) carregarDiario().then(render).catch(() => { S.diarioLoaded = true; render(); });
     document.querySelectorAll('[data-daba]').forEach(b => b.onclick = () => {
       S.diarioAba = b.dataset.daba;
       S.diarioLoaded = false;
       S.diario = [];
       render();
-      carregarDiario().then(render);
+      carregarDiario().then(render).catch(() => { S.diarioLoaded = true; render(); });
     });
     if ($('#d_mais')) $('#d_mais').onclick = () => {
       S.diarioOffset = S.diario.length;
-      carregarDiario(true).then(render);
+      carregarDiario(true).then(render).catch(() => render());
     };
     document.querySelectorAll('#sheet tr.k[data-p], #sheet [data-p].btn').forEach(el => {
       el.onclick = (ev) => {
