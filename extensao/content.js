@@ -562,6 +562,16 @@ function fotoDaPagina() {
   };
 }
 
+/** Grava leitura de vendidos no histórico do Monitor (e alerta se mudou). */
+async function atualizarVendasMonitor(produtoId) {
+  const snap = fotoDaPagina();
+  if (snap.vendidos == null && snap.preco == null) return null;
+  return rpc('atualizar_vendas_monitor', {
+    p_produto: produtoId,
+    p_snapshot: snap,
+  });
+}
+
 function abrirPastas(d, botao) {
   if (caixa.querySelector('#gr-pastas')) return;
   const painel = document.createElement('div');
@@ -620,6 +630,9 @@ function desenharPastas(painel, pastas, d, botao) {
         ? 'limite de ' + r.dados.limite + ' atingido' : 'nao deu';
       return;
     }
+
+    // Primeiro ponto do histórico de vendas
+    await atualizarVendasMonitor(d.produto);
 
     let semPasta = false;
     if (pastaId) {
@@ -729,6 +742,12 @@ async function consultar() {
   dados = r.dados;
   corpo.innerHTML = html(dados);
   ligarBotoes(dados);
+
+  // Se já está no monitor, atualiza vendidos/preço toda vez que a página
+  // abre — a API do ML não entrega isso; só a leitura da página atualiza.
+  if (dados && dados.monitorado && dados.produto) {
+    atualizarVendasMonitor(dados.produto).catch(() => {});
+  }
 }
 
 function limpar() {
