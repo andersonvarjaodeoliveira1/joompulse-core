@@ -41,3 +41,7 @@ enable_confirmations = false
 # ---------------------------------------------------------------------
 [functions.ml-callback]
 verify_jwt = false
+
+# Mercado Pago notifica o webhook sem JWT do Supabase.
+[functions.mp-webhook]
+verify_jwt = false

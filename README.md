@@ -274,6 +274,28 @@ supabase secrets set ML_REDIRECT_URI=...
 supabase secrets set ML_AUTH_STATE=...
 ```
 
+**Mercado Pago (assinatura).** Edge Functions `criar-checkout` e `mp-webhook`:
+
+```bash
+supabase db push   # migration payment_checkouts + ativar_assinatura_pagamento
+supabase functions deploy criar-checkout
+supabase functions deploy mp-webhook
+supabase secrets set MP_ACCESS_TOKEN=APP_USR-...
+# opcional:
+supabase secrets set APP_PUBLIC_URL=https://andersonvarjaodeoliveira1.github.io/joompulse-core/app
+```
+
+Sem `MP_ACCESS_TOKEN`, Assinar devolve `gateway_nao_configurado` (nada é cobrado).
+
+**Digest por e-mail (Actions).** No repositório GitHub → Secrets:
+
+| Secret | Uso |
+|---|---|
+| `RESEND_API_KEY` | Envio do digest diário |
+| `DIGEST_EMAIL_TO` | Destinatário do dono |
+
+O job `coleta-diaria` já passa esses env vars para `npm run collect digest`.
+
 **5. Autorização.** O ML não tem grant de máquina — a aplicação sempre
 age em nome de uma conta que autorizou pelo navegador. Uma vez só:
 

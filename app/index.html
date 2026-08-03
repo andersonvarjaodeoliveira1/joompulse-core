@@ -577,7 +577,7 @@ const S = { view:'home', marketplace: localStorage.getItem('gr_mkt') || 'meli', 
             buscaOpen:new Set(['essencial']),
             catAberto:false, catArvore:{}, catAbertos:new Set(), calcCats:[],
             clipesVista:null, clipesProdutos:{imagens:[], video:[]}, clipesAdd:false, clipesBusy:false,
-            planos:[], periodoPlano:'mes',
+            planos:[], periodoPlano:'mes', checkoutBusy:null, pagoMsg:null,
             assistOpen:false, assistMsgs:[], assistBusy:false,
             vendedores:[], vendBusca:'', vendResultado:[], vendBuscando:false, vendAdd:false,
             locaisCategorias:[], locaisCatSel:new Set(), locaisAba:'todos', locaisFiltrosAbertos:true,
@@ -593,6 +593,7 @@ const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFr
 const num = n => n==null?'—':Number(n).toLocaleString('pt-BR');
 const pct = n => n==null?'—':(Number(n)*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
 const esc = s => String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const NOME_PLANO = { free:'Gratuito', starter:'Starter', pro:'Pro', business:'Business' };
 
 /** Rótulos reais do /users/{id} do ML — level_id e power_seller_status. */
 const REP_LABEL = {
@@ -670,6 +671,21 @@ function lerUrl(){
   if (v) S.view = v;
   const ab = h.get('aba');
   if (ab) S.aba = ab;
+  // Retorno do Checkout Pro: /app/?pago=ok|falha|pendente&plano=pro
+  const q = new URLSearchParams(location.search || '');
+  const pago = q.get('pago');
+  if (pago) {
+    S.view = 'assinatura';
+    if (pago === 'ok') {
+      S.pagoMsg = { ok:true, texto:`Pagamento recebido${q.get('plano') ? ` (${NOME_PLANO[q.get('plano')] ?? q.get('plano')})` : ''}. Em instantes o plano ativa via webhook — atualize a página se o badge ainda mostrar o plano antigo.` };
+      quota();
+    } else if (pago === 'pendente') {
+      S.pagoMsg = { ok:false, texto:'Pagamento pendente no Mercado Pago. Assim que confirmar, o plano libera sozinho.' };
+    } else {
+      S.pagoMsg = { ok:false, texto:'Pagamento não concluído. Você pode tentar de novo quando quiser.' };
+    }
+    history.replaceState(null, '', location.pathname + (location.hash || ''));
+  }
 }
 window.addEventListener('hashchange', () => { lerUrl(); render(); });
 
@@ -2746,7 +2762,6 @@ async function adicionarProdutoClipes(){
 // verdade enganaria quem tentasse assinar — mesmo raciocínio de
 // Clipes e imagens, com um agravante: aqui envolveria dinheiro.
 // ---------------------------------------------------------------------
-const NOME_PLANO = { free:'Gratuito', starter:'Starter', pro:'Pro', business:'Business' };
 const LABEL_LIMITE = {
   product_search:'Buscas de produto/mês', rows_full:'Linhas completas por busca',
   category_view:'Consultas de categoria/mês', seller_search:'Buscas de vendedor/mês',
@@ -2793,11 +2808,11 @@ V.extensao = () => {
       <button class="btn" data-go="assinatura" style="margin-top:14px">Ver planos</button>
     </div>
   </div>
-  <div class="tip" style="margin-top:18px"><b>Gateway de pagamento.</b> A cobrança automática ainda
-    não está ligada. Enquanto isso, assinatura ativa = status
-    <code>active</code>/<code>trialing</code> no banco, trial válido, ou plano pago
-    atribuído manualmente. Quando conectar Mercado Pago/Stripe, o webhook só precisa
-    atualizar <code>profiles.subscription_status</code> e <code>plan</code>.</div>
+  <div class="tip" style="margin-top:18px"><b>Gateway de pagamento.</b> Assinar no painel cria checkout
+    Mercado Pago (<code>criar-checkout</code>). Com <code>MP_ACCESS_TOKEN</code> configurado, o webhook
+    atualiza <code>profiles.subscription_status</code> e <code>plan</code>. Sem o token, o botão
+    explica que o gateway ainda não está ligado — assinatura ativa = status
+    <code>active</code>/<code>trialing</code>, trial válido, ou plano atribuído manualmente.</div>
   <div class="cwarn" style="margin-top:14px">Chrome Web Store (instalação em 1 clique) vem depois —
     por enquanto o ZIP + “carregar sem compactação” é o caminho público.</div>`;
 };
@@ -2805,8 +2820,10 @@ V.extensao = () => {
 V.assinatura = () => {
   const anual = S.periodoPlano === 'ano';
   const planoAtual = S.quota?.plan;
+  const busy = S.checkoutBusy;
   return `<h1 class="pg">Escolha o plano ideal para expandir seu negócio</h1>
-  <p class="sub">Desbloqueie mais busca, mais monitoramento e mais análise.</p>
+  <p class="sub">Desbloqueie mais busca, mais monitoramento e mais análise. Pagamento via Mercado Pago.</p>
+  ${S.pagoMsg ? `<div class="msg ${S.pagoMsg.ok?'ok':'err'}" style="margin:0 0 16px;text-align:left">${esc(S.pagoMsg.texto)}</div>` : ''}
   <div style="display:flex;align-items:center;gap:10px;margin:18px 0 22px">
     <span style="font-size:13.5px;font-weight:${anual?'400':'600'}">Mês</span>
     <button id="pl_toggle" role="switch" aria-checked="${anual}"
@@ -2822,28 +2839,63 @@ V.assinatura = () => {
       const preco = anual ? p.price_annual_month : p.price_monthly;
       const destaque = p.code === 'pro';
       const seu = planoAtual === p.code;
+      const pago = p.code !== 'free' && Number(preco) > 0;
       const feats = Object.entries(p.limits)
         .filter(([,v]) => v !== 0)
         .map(([k,v]) => `${LABEL_LIMITE[k] ?? k}: <b>${v===-1?'ilimitado':num(v)}</b>`);
+      const btnLabel = seu ? 'Plano atual' : (busy === p.code ? 'Abrindo checkout…' : 'Assinar');
+      const disabled = seu || !pago || !!busy;
       return `<div class="card cbox" style="${destaque?'border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)':''}">
         ${destaque?`<div style="background:linear-gradient(90deg,var(--brand),#DB2777);color:#fff;font-size:11.5px;font-weight:600;text-align:center;padding:5px;border-radius:8px 8px 0 0;margin:-16px -16px 14px">⚡ Mais recomendado</div>`:''}
         <div style="display:flex;align-items:center;gap:8px"><div class="ct" style="font-size:16px">${NOME_PLANO[p.code]}</div>
           ${seu?'<span class="chip p">Seu plano</span>':''}</div>
         <div style="margin:10px 0"><b style="font-size:26px">${brl(preco)}</b><span class="sb">/mês</span></div>
         ${anual&&preco>0?`<div class="sb">Cobrado anualmente por ${brl(preco*12)}</div>`:''}
-        <button class="btn" disabled title="Configure um gateway de pagamento primeiro"
-          style="width:100%;margin:14px 0;opacity:.5;cursor:not-allowed">${seu?'Plano atual':'Assinar'}</button>
+        <button class="btn" data-assinar="${p.code}" ${disabled?'disabled':''}
+          style="width:100%;margin:14px 0;${!disabled?'':'opacity:.5;cursor:not-allowed'}">${btnLabel}</button>
         <div style="font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:8px">O que está incluído:</div>
         ${feats.map(f => `<div class="row" style="padding:5px 0;border-bottom:0"><span style="font-size:12.5px">✓ ${f}</span></div>`).join('')}
       </div>`;
     }).join('')}
   </div>`}
-  <div class="cwarn" style="margin-top:20px">⚠️ <b>"Assinar" ainda não processa pagamento.</b> Preços mostrados
-    são valor de referência — faltam decidir o valor final e conectar um gateway (Mercado Pago, Stripe...) antes
-    de cobrar de verdade. Mudar plano hoje é feito manualmente.
+  <div class="tip" style="margin-top:20px"><b>Mercado Pago.</b> O botão Assinar cria uma preferência Checkout Pro.
+    Sem o secret <code>MP_ACCESS_TOKEN</code> no Supabase, o app avisa que o gateway ainda não está configurado
+    (nada é cobrado). Depois do pagamento aprovado, o webhook ativa <code>plan</code> e
+    <code>subscription_status</code> na sua conta.</div>
+  <div class="cwarn" style="margin-top:12px">Preços são valor de referência até fechar a tabela comercial definitiva.
     A <button class="lnk" data-go="extensao" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">extensão Chrome</button>
-    já exige assinatura ativa no banco.</div>`;
+    exige assinatura ativa no banco.</div>`;
 };
+
+async function iniciarCheckout(plan){
+  if (!plan || plan === 'free' || S.checkoutBusy) return;
+  S.checkoutBusy = plan;
+  S.pagoMsg = null;
+  render();
+  try {
+    const { data, error } = await sb.functions.invoke('criar-checkout', {
+      body: { plan, periodo: S.periodoPlano === 'ano' ? 'ano' : 'mes' },
+    });
+    if (error) {
+      S.pagoMsg = { ok:false, texto: error.message || 'Falha ao chamar o checkout.' };
+      return;
+    }
+    if (data?.erro === 'gateway_nao_configurado') {
+      S.pagoMsg = { ok:false, texto: data.detalhe || 'Gateway Mercado Pago ainda sem MP_ACCESS_TOKEN no Supabase.' };
+      return;
+    }
+    if (!data?.ok || !data?.init_point) {
+      S.pagoMsg = { ok:false, texto: data?.detalhe || data?.erro || 'Não foi possível abrir o Mercado Pago.' };
+      return;
+    }
+    location.href = data.init_point;
+  } catch (e) {
+    S.pagoMsg = { ok:false, texto: e?.message || 'Erro inesperado no checkout.' };
+  } finally {
+    S.checkoutBusy = null;
+    render();
+  }
+}
 
 // ---------------------------------------------------------------------
 // ASSISTENTE — responde com os dados reais da conta (monitorados,
@@ -3669,6 +3721,9 @@ function render(){
     if ($('#pl_toggle')) $('#pl_toggle').onclick = () => {
       S.periodoPlano = S.periodoPlano === 'ano' ? 'mes' : 'ano'; render();
     };
+    document.querySelectorAll('[data-assinar]').forEach(b => {
+      b.onclick = () => iniciarCheckout(b.dataset.assinar);
+    });
   }
   window.scrollTo(0,0);
 }
