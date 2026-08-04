@@ -2099,99 +2099,24 @@ function blocoExemploImagens(){
   <div class="excap">Exemplo de gera├º├úo. Clique para visualizar.</div>`;
 }
 
-V.clipes = () => S.clipesVista ? vistaGerarConteudo(S.clipesVista) : `<h1 class="pg">Clipes e imagens</h1>
-  <p class="sub">V├¡deo e fotos de produto gerados por IA, direto de uma foto que voc├¬ j├í tem.</p>
-  <div class="cwarn" style="margin-bottom:18px">ÔÜá´©Å <b>A gera├º├úo em si ainda n├úo est├í ligada.</b> Falta escolher e
-    conectar um provedor de imagem/v├¡deo (tem custo por gera├º├úo). O resto ÔÇö anexar produto, quota do plano ÔÇö
-    j├í funciona de verdade.</div>
-  <div class="g2" style="grid-template-columns:1fr 1fr">
-    <div class="card cbox">
-      <div class="ct" style="text-align:center;margin-bottom:6px">V├¡deos realistas sem custos de produ├º├úo</div>
-      <p class="sub" style="margin:2px 0 14px;text-align:center">Gere um v├¡deo do zero com narra├º├úo que mostre um produto em uso
-        e ajude a aumentar sua convers├úo.</p>
-      ${blocoExemploVideo()}
-      <button class="btn" data-clv="video" style="width:100%">Ô£¿ Gerar clipes</button>
-    </div>
-    <div class="card cbox">
-      <div class="ct" style="text-align:center;margin-bottom:6px">Imagens para destacar seus produtos</div>
-      <p class="sub" style="margin:2px 0 14px;text-align:center">Gere imagens de alta qualidade que mostram seu produto em
-        cen├írios de uso reais e ajudam o an├║ncio a se destacar nas buscas.</p>
-      ${blocoExemploImagens()}
-      <button class="btn" data-clv="imagens" style="width:100%">Ô£¿ Gerar imagens</button>
-    </div>
-  </div>`;
+V.clipes = () => `<h1 class="pg">Clipes e imagens
+    <span class="chip y" style="margin-left:8px;vertical-align:middle">Em desenvolvimento</span></h1>
+  <p class="sub">Geracao de videos e imagens de produto com IA.</p>
+  <div class="hero" style="margin-bottom:22px">
+    <h3>Em desenvolvimento</h3>
+    <p>Esta área ainda não está disponível. Em breve você poderá gerar clipes e imagens
+      a partir dos seus produtos, direto pelo painel.</p>
+  </div>
+  <div class="cwarn">Estamos finalizando a integração com o provedor de IA.
+    Enquanto isso, use Busca, Monitor e a Extensão Chrome normalmente.</div>`;
 
 function vistaGerarConteudo(tipo){
-  const ehVideo = tipo === 'video';
-  const q = S.quota?.features?.ai_content;
-  const prods = S.clipesProdutos[tipo];
-  const exemplo = prods.find(p => p.imagem);
-  return `<button class="btn g mini" data-clv="" style="margin-bottom:14px">ÔåÉ Clipes e imagens</button>
-  <h1 class="pg">${ehVideo?'Gerar clipes':'Gerar imagens'}
-    <span class="chip" style="margin-left:8px;vertical-align:middle">IA ÔÇö provedor a configurar</span></h1>
-  <div class="g2">
-    <div>
-      <div class="card cbox" style="margin-bottom:18px">
-        ${q ? (q.unlimited
-          ? `<span class="lb">Gera├º├Áes usadas</span> <b>ilimitadas no seu plano</b>`
-          : `<div style="display:flex;justify-content:space-between;align-items:center">
-               <span>Gera├º├Áes usadas: <b>${q.used}/${q.limit}</b></span>
-               ${q.remaining===0?'<span style="color:var(--brand-2);font-size:13px;font-weight:600">Ver planos</span>':''}
-             </div>
-             <span class="track" style="width:100%;height:8px;margin-top:8px">
-               <u style="width:${q.limit?Math.min(100,(q.used/q.limit*100)):0}%"></u></span>`)
-          : `<span class="sb">Carregando quotaÔÇª</span>`}
-      </div>
-
-      <div class="ct" style="margin-bottom:10px">${ehVideo?'Gerar novos clipes':'Gerar novas imagens'}</div>
-      ${prods.map((p,i) => `<div class="card cbox" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 12px">
-        ${p.imagem?`<img src="${esc(p.imagem)}" width="40" height="40" style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:`<span class="thumb" style="width:40px;height:40px;flex:none"></span>`}
-        <div style="min-width:0;flex:1"><div class="nm" style="font-size:13.5px">${esc(p.nome ?? p.id)}</div></div>
-        <button class="btn g mini" data-clrm="${i}">Remover</button>
-      </div>`).join('')}
-      ${S.clipesAdd ? `<div class="card cbox" style="margin-bottom:10px">
-        <div style="display:flex;gap:8px">
-          <input id="cl_add_ref" placeholder="cole o link do produto ou o c├│digo MLB" ${S.clipesBusy?'disabled':''}>
-          <button class="btn" id="cl_add_ok" style="flex:none" ${S.clipesBusy?'disabled':''}>${S.clipesBusy?'...':'Adicionar'}</button>
-        </div>
-      </div>` : `<button class="btn g" data-cladd="1" style="width:100%;border-style:dashed;justify-content:flex-start;padding:16px">+ Adicionar produto</button>`}
-
-      <button class="btn" disabled title="Configure um provedor de IA primeiro"
-        style="width:100%;opacity:.5;cursor:not-allowed;margin-top:16px">Ô£¿ ${ehVideo?'Gerar clipes':'Gerar imagens'}</button>
-    </div>
-    <div class="card cbox">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span class="ct" style="margin:0">Resultado</span><span class="chip y">Exemplo</span>
-      </div>
-      <p class="sb" style="margin-bottom:14px">${ehVideo?'Geramos 1 v├¡deo':'Geramos 9 imagens'} para cada produto que voc├¬ escolher.</p>
-      ${exemplo
-        ? `<img src="${esc(exemplo.imagem)}" style="width:100%;border-radius:10px;object-fit:cover;max-height:420px">
-           <div class="hint" style="margin-top:8px">Foto atual de "${esc(exemplo.nome ?? exemplo.id)}", j├í coletada ÔÇö ainda n├úo ├® uma gera├º├úo por IA.</div>`
-        : `<div class="none" style="padding:30px 10px"><b>Sem pr├®via ainda</b>Anexe um produto pra ver a foto atual dele aqui.</div>`}
-    </div>
-  </div>`;
+  S.clipesVista = null;
+  return V.clipes();
 }
 
 async function adicionarProdutoClipes(){
-  const el = $('#cl_add_ref'); const ref = el?.value.trim();
-  if (!ref) return;
-  S.clipesBusy = true; render();
-  try {
-    const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
-    if (error) { alert(error.message); return; }
-    if (data.tipo === 'texto') { alert('N├úo reconheci isso como link ou c├│digo de produto do Mercado Livre.'); return; }
-    if (data.tipo === 'nao_encontrado') { alert(`${data.mlb} ainda n├úo est├í na nossa base.`); return; }
-    const { data: ficha, error: e2 } = await sb.rpc('ficha_produto', { p_produto: data.produto });
-    if (e2 || !ficha) { alert(e2?.message ?? 'N├úo consegui carregar esse produto.'); return; }
-    S.clipesProdutos[S.clipesVista].push({
-      id: ficha.produto?.id ?? data.produto,
-      nome: ficha.produto?.nome ?? data.produto,
-      imagem: ficha.produto?.imagem ?? null,
-    });
-    S.clipesAdd = false;
-  } finally {
-    S.clipesBusy = false; render();
-  }
+  return;
 }
 
 // ---------------------------------------------------------------------
@@ -2254,82 +2179,21 @@ V.extensao = () => {
   </div>`;
 };
 
-V.assinatura = () => {
-  const anual = S.periodoPlano === 'ano';
-  const planoAtual = S.quota?.plan;
-  const busy = S.checkoutBusy;
-  return `<h1 class="pg">Escolha o plano ideal para expandir seu neg├│cio</h1>
-  <p class="sub">Desbloqueie mais busca, mais monitoramento e mais an├ílise. Pagamento via Mercado Pago.</p>
-  ${S.pagoMsg ? `<div class="msg ${S.pagoMsg.ok?'ok':'err'}" style="margin:0 0 16px;text-align:left">${esc(S.pagoMsg.texto)}</div>` : ''}
-  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 22px">
-    <span style="font-size:13.5px;font-weight:${anual?'400':'600'}">M├¬s</span>
-    <button id="pl_toggle" role="switch" aria-checked="${anual}"
-      style="width:42px;height:24px;border-radius:99px;border:0;background:${anual?'var(--brand)':'var(--line)'};position:relative;flex:none">
-      <span style="position:absolute;top:2px;left:${anual?'20px':'2px'};width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s"></span>
-    </button>
-    <span style="font-size:13.5px;font-weight:${anual?'600':'400'}">Anual</span>
-    <span class="chip g">Economize 50%</span>
+V.assinatura = () => `<h1 class="pg">Assinatura
+    <span class="chip y" style="margin-left:8px;vertical-align:middle">Em desenvolvimento</span></h1>
+  <p class="sub">Planos e pagamento online.</p>
+  <div class="hero" style="margin-bottom:22px">
+    <h3>Em desenvolvimento</h3>
+    <p>A cobrança automática e a troca de plano pelo painel ainda não estão
+      disponíveis para o público. Em breve você assina e faz upgrade por aqui.</p>
   </div>
-  ${!S.planos.length ? '<div class="load">carregando planosÔÇª</div>' : `
-  <div class="g2" style="grid-template-columns:repeat(${S.planos.length},1fr);align-items:start">
-    ${S.planos.map(p => {
-      const preco = anual ? p.price_annual_month : p.price_monthly;
-      const destaque = p.code === 'pro';
-      const seu = planoAtual === p.code;
-      const pago = p.code !== 'free' && Number(preco) > 0;
-      const feats = Object.entries(p.limits)
-        .filter(([,v]) => v !== 0)
-        .map(([k,v]) => `${LABEL_LIMITE[k] ?? k}: <b>${v===-1?'ilimitado':num(v)}</b>`);
-      const btnLabel = seu ? 'Plano atual' : (busy === p.code ? 'Abrindo checkoutÔÇª' : 'Assinar');
-      const disabled = seu || !pago || !!busy;
-      return `<div class="card cbox" style="${destaque?'border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)':''}">
-        ${destaque?`<div style="background:linear-gradient(90deg,var(--brand),#DB2777);color:#fff;font-size:11.5px;font-weight:600;text-align:center;padding:5px;border-radius:8px 8px 0 0;margin:-16px -16px 14px">ÔÜí Mais recomendado</div>`:''}
-        <div style="display:flex;align-items:center;gap:8px"><div class="ct" style="font-size:16px">${NOME_PLANO[p.code]}</div>
-          ${seu?'<span class="chip p">Seu plano</span>':''}</div>
-        <div style="margin:10px 0"><b style="font-size:26px">${brl(preco)}</b><span class="sb">/m├¬s</span></div>
-        ${anual&&preco>0?`<div class="sb">Cobrado anualmente por ${brl(preco*12)}</div>`:''}
-        <button class="btn" data-assinar="${p.code}" ${disabled?'disabled':''}
-          style="width:100%;margin:14px 0;${!disabled?'':'opacity:.5;cursor:not-allowed'}">${btnLabel}</button>
-        <div style="font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:8px">O que est├í inclu├¡do:</div>
-        ${feats.map(f => `<div class="row" style="padding:5px 0;border-bottom:0"><span style="font-size:12.5px">Ô£ô ${f}</span></div>`).join('')}
-      </div>`;
-    }).join('')}
-  </div>`}
-  <div class="tip" style="margin-top:20px">Pagamento processado pelo Mercado Pago.
-    Depois da aprova├º├úo, o plano da sua conta ├® atualizado automaticamente.</div>
-  <div class="cwarn" style="margin-top:12px">Pre├ºos s├úo valor de refer├¬ncia at├® fechar a tabela comercial definitiva.
-    A <button class="lnk" data-go="extensao" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">extens├úo Chrome</button>
-    exige assinatura ativa.</div>`;
-};
+  <div class="cwarn">Enquanto isso, o acesso à extensão e aos recursos do plano continua
+    sendo controlado pela assinatura ativa (ou trial) no sistema.
+    Fale com o suporte se precisar alterar seu plano agora.</div>`;
 
 async function iniciarCheckout(plan){
-  if (!plan || plan === 'free' || S.checkoutBusy) return;
-  S.checkoutBusy = plan;
-  S.pagoMsg = null;
+  S.pagoMsg = { ok:false, texto: 'Assinatura ainda em desenvolvimento.' };
   render();
-  try {
-    const { data, error } = await sb.functions.invoke('criar-checkout', {
-      body: { plan, periodo: S.periodoPlano === 'ano' ? 'ano' : 'mes' },
-    });
-    if (error) {
-      S.pagoMsg = { ok:false, texto: error.message || 'Falha ao chamar o checkout.' };
-      return;
-    }
-    if (data?.erro === 'gateway_nao_configurado') {
-      S.pagoMsg = { ok:false, texto: 'Pagamento ainda em configura├º├úo. Tente de novo em breve ou fale com o suporte.' };
-      return;
-    }
-    if (!data?.ok || !data?.init_point) {
-      S.pagoMsg = { ok:false, texto: data?.detalhe || data?.erro || 'N├úo foi poss├¡vel abrir o Mercado Pago.' };
-      return;
-    }
-    location.href = data.init_point;
-  } catch (e) {
-    S.pagoMsg = { ok:false, texto: e?.message || 'Erro inesperado no checkout.' };
-  } finally {
-    S.checkoutBusy = null;
-    render();
-  }
 }
 
 // ---------------------------------------------------------------------
