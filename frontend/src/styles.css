@@ -196,7 +196,7 @@
   .csec{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
   .csec>summary{list-style:none;cursor:pointer;padding:13px 15px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
   .csec>summary::-webkit-details-marker{display:none}
-  .csec>summary::before{content:'Ôû©';color:var(--ink-3);font-size:11px;transition:transform .15s}
+  .csec>summary::before{content:'▸';color:var(--ink-3);font-size:11px;transition:transform .15s}
   .csec[open]>summary::before{transform:rotate(90deg)}
   .csec .sub2{font-weight:400;font-size:12.5px;color:var(--ink-3);margin-left:auto;text-align:right}
   .cbody{padding:2px 15px 15px}
@@ -318,7 +318,7 @@
   .semb{width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;display:flex;align-items:center}
   .semb:hover{border-color:var(--brand)}
   .semb.vazio{color:var(--ink-3)}
-  .semb::after{content:'Ôû¥';margin-left:auto;color:var(--ink-3);font-size:11px}
+  .semb::after{content:'▾';margin-left:auto;color:var(--ink-3);font-size:11px}
   .semd{position:absolute;top:100%;left:0;right:0;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.12);margin-top:4px;overflow:hidden}
   .semo{display:block;width:100%;text-align:left;background:none;border:0;padding:11px 14px;border-bottom:1px solid var(--line)}
   .semo:last-child{border-bottom:0}
@@ -348,7 +348,7 @@
   .fsec{border:1px solid var(--line);border-radius:11px;background:var(--bg-2);overflow:hidden}
   .fsec>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:13.5px;user-select:none}
   .fsec>summary::-webkit-details-marker{display:none}
-  .fsec>summary::before{content:'Ôû©';color:var(--ink-3);font-size:11px;transition:transform .15s}
+  .fsec>summary::before{content:'▸';color:var(--ink-3);font-size:11px;transition:transform .15s}
   .fsec[open]>summary::before{transform:rotate(90deg)}
   .fsec>summary .hint{margin-left:auto;font-weight:400;font-size:12px;color:var(--ink-3)}
   .fsec .fsec-body{padding:4px 14px 14px;background:var(--card);border-top:1px solid var(--line)}

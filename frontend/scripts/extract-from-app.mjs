@@ -10,16 +10,29 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const srcHtml = path.join(root, 'app', 'index.html');
 const outDir = path.join(root, 'frontend');
 
-// Se app/ já for artefato de build (tem assets/), use o snapshot monolito
-// em frontend/.cache se existir; senão falha com mensagem clara.
-let html = fs.readFileSync(srcHtml, 'utf8');
-if (html.includes('assets/app.') && !html.includes('<script type="module">')) {
-  const cache = path.join(outDir, '.cache', 'monolith.html');
-  if (!fs.existsSync(cache)) {
-    console.error('app/index.html já é build. Restaure o monolito ou rode extract antes do primeiro build.');
-    process.exit(1);
-  }
+let html;
+const cache = path.join(outDir, '.cache', 'monolith.html');
+const appIsBuild = (() => {
+  try {
+    const cur = fs.readFileSync(srcHtml, 'utf8');
+    return cur.includes('assets/app.') && !cur.includes('<script type="module">');
+  } catch { return true; }
+})();
+
+if (fs.existsSync(cache)) {
   html = fs.readFileSync(cache, 'utf8');
+  console.log('usando frontend/.cache/monolith.html');
+} else if (!appIsBuild) {
+  html = fs.readFileSync(srcHtml, 'utf8');
+} else {
+  console.error('app/index.html já é build e não há frontend/.cache/monolith.html');
+  process.exit(1);
+}
+
+// Guarda monolito limpo se ainda não existir cache
+if (!fs.existsSync(cache) && html.includes('<script type="module">')) {
+  fs.mkdirSync(path.dirname(cache), { recursive: true });
+  fs.writeFileSync(cache, html, 'utf8');
 }
 
 const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/i);

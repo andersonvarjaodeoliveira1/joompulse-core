@@ -7,7 +7,7 @@ const sb = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY,
 );
 const $ = s => document.querySelector(s);
-let monitorPollId = null; // atualiza├º├úo autom├ítica do Monitor ÔÇö ver render()
+let monitorPollId = null; // atualização automática do Monitor — ver render()
 const S = { view:'home', marketplace: localStorage.getItem('gr_mkt') || 'meli', mktAberto:false,
             produtos:[], categorias:[], categoriasRecentes:[], catDetalhe:null, catDetalheHist:[], categoriaDestaque:null, detalhe:null, quota:null, buscou:false,
             monitorados:[], alertas:[], pedidos:[], aba:'lista', alertaFoco:null, alertaAberto:null,
@@ -29,31 +29,31 @@ const S = { view:'home', marketplace: localStorage.getItem('gr_mkt') || 'meli', 
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, refVivo:null, refBusy:false, refPedidoOk:null,
             sel:null, selecao:new Set() };
 
-const brl = n => n==null?'ÔÇö':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-const num = n => n==null?'ÔÇö':Number(n).toLocaleString('pt-BR');
-const pct = n => n==null?'ÔÇö':(Number(n)*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = n => n==null?'—':Number(n).toLocaleString('pt-BR');
+const pct = n => n==null?'—':(Number(n)*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
 const esc = s => String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const NOME_PLANO = { free:'Gratuito', starter:'Starter', pro:'Pro', business:'Business' };
 
-/** R├│tulos reais do /users/{id} do ML ÔÇö level_id e power_seller_status. */
+/** Rótulos reais do /users/{id} do ML — level_id e power_seller_status. */
 const REP_LABEL = {
   '5_green':'Verde', '4_light_green':'Verde-claro', '3_yellow':'Amarelo',
   '2_orange':'Laranja', '1_red':'Vermelho',
 };
-const MED_LABEL = { platinum:'MercadoL├¡der Platinum', gold:'MercadoL├¡der Gold', silver:'MercadoL├¡der Silver' };
+const MED_LABEL = { platinum:'MercadoLíder Platinum', gold:'MercadoLíder Gold', silver:'MercadoLíder Silver' };
 const repChip = level => {
-  if (!level) return '<span class="chip">Sem reputa├º├úo ainda</span>';
+  if (!level) return '<span class="chip">Sem reputação ainda</span>';
   const cor = level.startsWith('5')||level.startsWith('4') ? 'g' : level.startsWith('3') ? 'y' : 'r';
   return `<span class="chip ${cor}">${esc(REP_LABEL[level] ?? level)}</span>`;
 };
 const medChip = m => m ? `<span class="chip p">${esc(MED_LABEL[m] ?? m)}</span>` : '';
-/** Bloco compacto: reputa├º├úo + medalha + vendas hist├│ricas (API). Sem seguidores ÔÇö o ML n├úo publica na API. */
+/** Bloco compacto: reputação + medalha + vendas históricas (API). Sem seguidores — o ML não publica na API. */
 const sellerBits = (c) => {
   const bits = [repChip(c.reputacao ?? c.reputation_level)];
   const med = medChip(c.medalha ?? c.power_seller_status);
   if (med) bits.push(med);
   const tx = c.transacoes ?? c.transactions_total;
-  if (tx != null) bits.push(`<span class="sb">${num(tx)} venda(s) no hist├│rico do ML</span>`);
+  if (tx != null) bits.push(`<span class="sb">${num(tx)} venda(s) no histórico do ML</span>`);
   return bits.join(' ');
 };
 
@@ -64,20 +64,20 @@ $('#go').onclick = async () => {
 };
 $('#reg').onclick = async () => {
   const { error } = await sb.auth.signUp({ email:$('#em').value.trim(), password:$('#pw').value });
-  gmsg(error ? error.message : 'Conta criada. Se pedir confirma├º├úo, olhe seu e-mail.', !error);
+  gmsg(error ? error.message : 'Conta criada. Se pedir confirmação, olhe seu e-mail.', !error);
 };
 $('#pw').onkeydown = e => { if (e.key==='Enter') $('#go').click(); };
 $('#sair').onclick = () => sb.auth.signOut();
 (function(){
   const salvo = localStorage.getItem('gr_tema') || 'claro';
   document.documentElement.setAttribute('data-tema', salvo);
-  const btn = $('#tema'); if (btn) btn.textContent = salvo === 'escuro' ? 'ÔÿÇ´©Å' : '­ƒîÖ';
+  const btn = $('#tema'); if (btn) btn.textContent = salvo === 'escuro' ? '☀️' : '🌙';
 })();
 $('#tema').onclick = () => {
   const atual = document.documentElement.getAttribute('data-tema') === 'escuro' ? 'claro' : 'escuro';
   document.documentElement.setAttribute('data-tema', atual);
   localStorage.setItem('gr_tema', atual);
-  $('#tema').textContent = atual === 'escuro' ? 'ÔÿÇ´©Å' : '­ƒîÖ';
+  $('#tema').textContent = atual === 'escuro' ? '☀️' : '🌙';
 };
 $('#abrirAssist').onclick = () => { S.assistOpen = !S.assistOpen; renderAssist(); };
 $('#assistClose').onclick = () => { S.assistOpen = false; renderAssist(); };
@@ -117,12 +117,12 @@ function lerUrl(){
   if (pago) {
     S.view = 'assinatura';
     if (pago === 'ok') {
-      S.pagoMsg = { ok:true, texto:`Pagamento recebido${q.get('plano') ? ` (${NOME_PLANO[q.get('plano')] ?? q.get('plano')})` : ''}. Em instantes o plano ativa via webhook ÔÇö atualize a p├ígina se o badge ainda mostrar o plano antigo.` };
+      S.pagoMsg = { ok:true, texto:`Pagamento recebido${q.get('plano') ? ` (${NOME_PLANO[q.get('plano')] ?? q.get('plano')})` : ''}. Em instantes o plano ativa via webhook — atualize a página se o badge ainda mostrar o plano antigo.` };
       quota();
     } else if (pago === 'pendente') {
       S.pagoMsg = { ok:false, texto:'Pagamento pendente no Mercado Pago. Assim que confirmar, o plano libera sozinho.' };
     } else {
-      S.pagoMsg = { ok:false, texto:'Pagamento n├úo conclu├¡do. Voc├¬ pode tentar de novo quando quiser.' };
+      S.pagoMsg = { ok:false, texto:'Pagamento não concluído. Você pode tentar de novo quando quiser.' };
     }
     history.replaceState(null, '', location.pathname + (location.hash || ''));
   }
@@ -171,7 +171,7 @@ function pintaMarketplace(){
   const dot = $('#mkt_dot');
   if (dot) {
     dot.className = 'dot ' + (shopee ? 'shopee' : 'meli');
-    dot.textContent = shopee ? 'S' : '­ƒñØ';
+    dot.textContent = shopee ? 'S' : '🤝';
   }
   const drop = $('#mkt_drop');
   if (drop) drop.classList.toggle('hide', !S.mktAberto);
@@ -198,23 +198,23 @@ function setMarketplace(mkt){
 
 V.shopee = () => `
   <h1 class="pg">Shopee</h1>
-  <p class="sub">Mesmo formato do Mercado Livre ÔÇö ranking, concorr├¬ncia e oportunidades ÔÇö quando a coleta estiver no ar.</p>
+  <p class="sub">Mesmo formato do Mercado Livre — ranking, concorrência e oportunidades — quando a coleta estiver no ar.</p>
   <div class="shopee-hero">
     <div class="art" aria-hidden="true">S</div>
-    <span class="sp-badge" style="background:rgba(255,255,255,.2);color:#fff;margin-bottom:10px">Em prepara├º├úo</span>
+    <span class="sp-badge" style="background:rgba(255,255,255,.2);color:#fff;margin-bottom:10px">Em preparação</span>
     <h3>Radar da Shopee a caminho</h3>
-    <p>Ainda n├úo coletamos ranking nem an├║ncios da Shopee. Esta aba j├í est├í pronta no app; os dados entram quando a integra├º├úo e a coleta di├íria forem ligadas ÔÇö sem inventar n├║mero.</p>
+    <p>Ainda não coletamos ranking nem anúncios da Shopee. Esta aba já está pronta no app; os dados entram quando a integração e a coleta diária forem ligadas — sem inventar número.</p>
   </div>
   <h2 class="sc">O que vai aparecer aqui</h2>
-  <p class="sc2">O mesmo jeito que voc├¬ j├í usa no Mercado Livre, adaptado ├á Shopee.</p>
+  <p class="sc2">O mesmo jeito que você já usa no Mercado Livre, adaptado à Shopee.</p>
   <div class="sp-grid">
-    <div class="sp-card">${sq('#FFF1ED','#EE4D2D',I.busca)}<b>Busca de produtos</b><p>Produtos em alta na Shopee, com posi├º├úo e pre├ºo quando a API permitir.</p></div>
+    <div class="sp-card">${sq('#FFF1ED','#EE4D2D',I.busca)}<b>Busca de produtos</b><p>Produtos em alta na Shopee, com posição e preço quando a API permitir.</p></div>
     <div class="sp-card">${sq('#FFEDD5','#EA580C',I.cat)}<b>Categorias</b><p>Onde entrar: rotatividade e estrutura de mercado por categoria.</p></div>
-    <div class="sp-card">${sq('#DCFCE7','#16A34A',I.mon)}<b>Monitor</b><p>Acompanhar produtos e alertas de mudan├ºa, no mesmo fluxo do MeLi.</p></div>
-    <div class="sp-card">${sq('#EDE9FE','#7C3AED',I.calc)}<b>Margem e custo</b><p>Cruzar pre├ºo da Shopee com fornecedor local quando houver dado.</p></div>
+    <div class="sp-card">${sq('#DCFCE7','#16A34A',I.mon)}<b>Monitor</b><p>Acompanhar produtos e alertas de mudança, no mesmo fluxo do MeLi.</p></div>
+    <div class="sp-card">${sq('#EDE9FE','#7C3AED',I.calc)}<b>Margem e custo</b><p>Cruzar preço da Shopee com fornecedor local quando houver dado.</p></div>
   </div>
-  <div class="tip" style="margin-top:18px"><b>Por que ainda est├í vazio.</b> Hoje a coleta di├íria e as RPCs do app leem s├│ o Mercado Livre.
-    Assim que a pipeline da Shopee existir, esta aba passa a listar produtos de verdade ÔÇö sem placeholder inventado.</div>
+  <div class="tip" style="margin-top:18px"><b>Por que ainda está vazio.</b> Hoje a coleta diária e as RPCs do app leem só o Mercado Livre.
+    Assim que a pipeline da Shopee existir, esta aba passa a listar produtos de verdade — sem placeholder inventado.</div>
   <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
     <button class="btn" data-mkt="meli">Voltar ao Mercado Livre</button>
   </div>`;
@@ -224,18 +224,18 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
   const avisosNovos = (S.avisos || []).filter(a => !a.lido).length;
   return `<div class="cols"><div>
   <h1 class="pg">Bem-vindo ao Gringa Radar</h1>
-  <p class="sub">Acompanhe o ranking, analise a concorr├¬ncia e ache o produto certo antes dos outros.</p>
+  <p class="sub">Acompanhe o ranking, analise a concorrência e ache o produto certo antes dos outros.</p>
   ${dig && (dig.novos_ranking!=null || dig.posicoes!=null) ? `
   <div class="tip" style="margin:0 0 16px">
     <b>Coleta de ${esc(fmtDiaChart(dig.dia))}.</b>
-    ${num(dig.novos_ranking)} <button class="lnk" data-go-diario="novos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline;font-weight:600">produto(s) novo(s) no ranking</button> ┬À
-    ${num(dig.novos_catalogo)} novo(s) no cat├ílogo ┬À
-    ${num(dig.posicoes)} posi├º├Áes lidas.
-    ${avisosNovos?` ┬À <button class="lnk" id="avisos_lidos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">${avisosNovos} aviso(s) n├úo lido(s)</button>`:''}
+    ${num(dig.novos_ranking)} <button class="lnk" data-go-diario="novos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline;font-weight:600">produto(s) novo(s) no ranking</button> ·
+    ${num(dig.novos_catalogo)} novo(s) no catálogo ·
+    ${num(dig.posicoes)} posições lidas.
+    ${avisosNovos?` · <button class="lnk" id="avisos_lidos" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">${avisosNovos} aviso(s) não lido(s)</button>`:''}
   </div>` : ''}
   ${(S.avisos||[]).filter(a=>!a.lido).slice(0,3).map(a => `
     <div class="card cbox" style="margin-bottom:10px;background:var(--tint)">
-      <div class="ct">${esc(a.tipo==='coleta_diaria'?'Coleta di├íria':a.tipo)}</div>
+      <div class="ct">${esc(a.tipo==='coleta_diaria'?'Coleta diária':a.tipo)}</div>
       <div style="font-weight:600;margin:4px 0">${esc(a.titulo)}</div>
       <div class="sb">${esc(a.detalhe||'')}</div>
     </div>`).join('')}
@@ -244,10 +244,10 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
       ${sq('#DCFCE7','#16A34A',I.mon)}<span><b style="font-size:20px;display:block">${num(S.monitorados.length)}</b>produto(s) monitorado(s)</span></button>
     <button class="qc" data-go="monitor" style="align-items:flex-start;text-align:left">
       ${sq(alertasNovos?'#FEE2E2':'#F3F4F6', alertasNovos?'#DC2626':'#6B7280',I.rad)}<span><b style="font-size:20px;display:block">${num(alertasNovos)}</b>alerta(s) novo(s)</span></button>
-    <button class="qc" data-go-diario="novos" style="align-items:flex-start;text-align:left">${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'ÔÇö'}</b>novo(s) no ranking hoje</span></button>
+    <button class="qc" data-go-diario="novos" style="align-items:flex-start;text-align:left">${sq('#DBEAFE','#2563EB',I.busca)}<span><b style="font-size:20px;display:block">${dig?num(dig.novos_ranking):'—'}</b>novo(s) no ranking hoje</span></button>
     ${cd?`<button class="qc" data-cd-go="${esc(cd.category_id)}" data-cd-nome="${esc(cd.categoria)}" style="align-items:flex-start;text-align:left">
       ${sq('#FFEDD5','#EA580C',I.cat)}<span><b style="font-size:14px;display:block">${esc(cd.categoria)}</b>
-      categoria em destaque hoje ┬À <span class="chip ${cd.oportunidade==='alta'?'g':'y'}" style="font-size:10px">${esc(cd.oportunidade)}</span></span></button>`:''}
+      categoria em destaque hoje · <span class="chip ${cd.oportunidade==='alta'?'g':'y'}" style="font-size:10px">${esc(cd.oportunidade)}</span></span></button>`:''}
   </div>
   <div class="hero">
     <svg class="art" width="190" height="190" viewBox="0 0 56 56" aria-hidden="true">
@@ -255,55 +255,55 @@ V.home = () => { const alertasNovos = S.alertas.filter(a=>!a.lido).length; const
       <circle cx="28" cy="28" r="15" fill="none" stroke="#fff" stroke-width="1.5"/>
       <path d="M28 28 L46 12" stroke="#fff" stroke-width="2.5"/></svg>
     <h3>Comece pela busca de produtos</h3>
-    <p>Veja quem est├í no topo de cada categoria, quanto custa e quantos vendedores disputam o mesmo produto.</p>
+    <p>Veja quem está no topo de cada categoria, quanto custa e quantos vendedores disputam o mesmo produto.</p>
     <button class="b" data-go="produtos">Buscar produtos</button>
   </div>
-  <h2 class="sc">A├º├Áes r├ípidas</h2>
-  <p class="sc2">Economize tempo com as ferramentas de an├ílise de produto e mercado.</p>
+  <h2 class="sc">Ações rápidas</h2>
+  <p class="sc2">Economize tempo com as ferramentas de análise de produto e mercado.</p>
   <div class="qa">
-    <button class="qc" data-go="diario">${sq('#E0E7FF','#4338CA',I.rad)}<span>Conte├║do di├írio</span></button>
+    <button class="qc" data-go="diario">${sq('#E0E7FF','#4338CA',I.rad)}<span>Conteúdo diário</span></button>
     <button class="qc" data-go="produtos">${sq('#EDE9FE','#7C3AED',I.busca)}<span>Busca de produtos</span></button>
-    <button class="qc" data-go="categorias">${sq('#FFEDD5','#EA580C',I.cat)}<span>An├ílise de categoria</span></button>
-    <button class="qc" data-go="produtos">${sq('#DBEAFE','#2563EB',I.conc)}<span>An├ílise da concorr├¬ncia</span></button>
+    <button class="qc" data-go="categorias">${sq('#FFEDD5','#EA580C',I.cat)}<span>Análise de categoria</span></button>
+    <button class="qc" data-go="produtos">${sq('#DBEAFE','#2563EB',I.conc)}<span>Análise da concorrência</span></button>
     <button class="qc" data-go="monitor">${sq('#DCFCE7','#16A34A',I.mon)}<span>Monitor de produtos</span></button>
     <button class="qc" data-go="fornecedores">${sq('#DBEAFE','#2563EB',I.loja)}<span>Produtos dos fornecedores</span></button>
     <button class="qc" data-go="locais">${sq('#FEF3C7','#D97706',I.loja)}<span>Produtos locais</span></button>
-    <button class="qc" data-go="extensao">${sq('#EDE9FE','#7C3AED',I.rad)}<span>Extens├úo Chrome</span></button>
+    <button class="qc" data-go="extensao">${sq('#EDE9FE','#7C3AED',I.rad)}<span>Extensão Chrome</span></button>
     <button class="qc" data-go="calc">${sq('#FCE7F3','#DB2777',I.calc)}<span>Calculadora de margem</span></button>
   </div></div>
   <aside>
     <h2 class="sc" style="margin-top:0">Recursos</h2>
-    <p class="sc2">O que j├í est├í no ar e o que vem em seguida.</p>
-    <div class="rcard">${sq('#EDE9FE','#7C3AED',I.rad)}<div><b>Coleta di├íria</b>
-      <p>O ranking ├® lido todo dia. Quanto mais dias, mais preciso o movimento.</p></div></div>
-    <div class="rcard">${sq('#DBEAFE','#2563EB',I.conc)}<div><b>Concorr├¬ncia real</b>
-      <p>Todos os vendedores do mesmo produto, com o pre├ºo de cada um.</p></div></div>
+    <p class="sc2">O que já está no ar e o que vem em seguida.</p>
+    <div class="rcard">${sq('#EDE9FE','#7C3AED',I.rad)}<div><b>Coleta diária</b>
+      <p>O ranking é lido todo dia. Quanto mais dias, mais preciso o movimento.</p></div></div>
+    <div class="rcard">${sq('#DBEAFE','#2563EB',I.conc)}<div><b>Concorrência real</b>
+      <p>Todos os vendedores do mesmo produto, com o preço de cada um.</p></div></div>
     <div class="rcard">${sq('#FEF9C3','#CA8A04',I.mon)}<div><b>Estimativa de vendas</b>
       <p>Chega quando houver contas conectadas para calibrar a curva.</p></div></div>
   </aside></div>`; };
 
 const PREDEF = [
-  { k:'subindo',  t:'Subindo r├ípido',       f:{ p_momentum:'subindo', p_delta_min:5 } },
-  { k:'calmo',    t:'Pouca concorr├¬ncia',   f:{ p_nivel_conc:'baixa' } },
+  { k:'subindo',  t:'Subindo rápido',       f:{ p_momentum:'subindo', p_delta_min:5 } },
+  { k:'calmo',    t:'Pouca concorrência',   f:{ p_nivel_conc:'baixa' } },
   { k:'firme',    t:'Desempenho comprovado',f:{ p_maturidade:'comprovado' } },
   { k:'novo',     t:'Nova oportunidade',    f:{ p_maturidade:'nova' } },
-  { k:'volatil',  t:'Pre├ºo bagun├ºado',      f:{ p_estabilidade:'volatil' } },
+  { k:'volatil',  t:'Preço bagunçado',      f:{ p_estabilidade:'volatil' } },
   { k:'semfull',  t:'Brecha no Full',       f:{ p_full_max:0.3 } },
 ];
 
 const SEM = {
   p_maturidade: { rot:'Maturidade no ranking', obrig:true, opcoes:[
-    { v:'nova',         t:'Nova oportunidade',    d:'Entrou no ranking nos ├║ltimos 14 dias' },
+    { v:'nova',         t:'Nova oportunidade',    d:'Entrou no ranking nos últimos 14 dias' },
     { v:'consolidando', t:'Consolidando',         d:'Duas semanas ou mais, ainda alternando dentro e fora do top 10' },
-    { v:'comprovado',   t:'Desempenho comprovado',d:'Tr├¬s semanas ou mais, com 80% do tempo no top 10' } ] },
-  p_nivel_conc: { rot:'N├¡vel de concorr├¬ncia', opcoes:[
-    { v:'baixa', t:'Baixa', d:'At├® 5 vendedores disputando. Bom para come├ºar' },
-    { v:'media', t:'M├®dia', d:'Entre 6 e 20 vendedores no mesmo produto' },
+    { v:'comprovado',   t:'Desempenho comprovado',d:'Três semanas ou mais, com 80% do tempo no top 10' } ] },
+  p_nivel_conc: { rot:'Nível de concorrência', opcoes:[
+    { v:'baixa', t:'Baixa', d:'Até 5 vendedores disputando. Bom para começar' },
+    { v:'media', t:'Média', d:'Entre 6 e 20 vendedores no mesmo produto' },
     { v:'alta',  t:'Alta',  d:'Mais de 20 disputando. Precisa de diferencial claro' } ] },
-  p_estabilidade: { rot:'Estabilidade de pre├ºo', opcoes:[
-    { v:'estavel',   t:'Est├ível',   d:'Menos de 25% entre o maior e o menor pre├ºo' },
-    { v:'oscilante', t:'Oscilante', d:'Entre 25% e 60% de diferen├ºa' },
-    { v:'volatil',   t:'Vol├ítil',   d:'Mais de 60%. Mercado desorganizado, espa├ºo para posicionar' } ] },
+  p_estabilidade: { rot:'Estabilidade de preço', opcoes:[
+    { v:'estavel',   t:'Estável',   d:'Menos de 25% entre o maior e o menor preço' },
+    { v:'oscilante', t:'Oscilante', d:'Entre 25% e 60% de diferença' },
+    { v:'volatil',   t:'Volátil',   d:'Mais de 60%. Mercado desorganizado, espaço para posicionar' } ] },
 };
 
 function semSelect(campo){
@@ -321,35 +321,35 @@ function semSelect(campo){
 
 function chipsAtivos(){
   const F = S.F, out = [];
-  const add = (t, k) => out.push(`<span class="fchip">${t}<button data-rmf="${k}">├ù</button></span>`);
+  const add = (t, k) => out.push(`<span class="fchip">${t}<button data-rmf="${k}">×</button></span>`);
   if (S.catSel)          add(`Categoria: ${esc(S.catSel.nome)}`, 'p_categoria');
   if (F.p_texto)         add(`Texto: ${esc(F.p_texto)}`, 'p_texto');
-  if (F.p_pos_min!=null||F.p_pos_max!=null) add(`Posi├º├úo ${F.p_pos_min??1}ÔÇô${F.p_pos_max??20}`, 'pos');
-  if (F.p_melhor_pos)    add(`J├í foi top ${F.p_melhor_pos}`, 'p_melhor_pos');
-  if (F.p_preco_min!=null||F.p_preco_max!=null) add(`Pre├ºo ${brl(F.p_preco_min??0)}ÔÇô${F.p_preco_max!=null?brl(F.p_preco_max):'Ôê×'}`, 'preco');
+  if (F.p_pos_min!=null||F.p_pos_max!=null) add(`Posição ${F.p_pos_min??1}–${F.p_pos_max??20}`, 'pos');
+  if (F.p_melhor_pos)    add(`Já foi top ${F.p_melhor_pos}`, 'p_melhor_pos');
+  if (F.p_preco_min!=null||F.p_preco_max!=null) add(`Preço ${brl(F.p_preco_min??0)}–${F.p_preco_max!=null?brl(F.p_preco_max):'∞'}`, 'preco');
   if (F.p_momentum)      add(`Movimento: ${esc(F.p_momentum)}`, 'p_momentum');
   if (F.p_delta_min)     add(`Subiu ${F.p_delta_min}+`, 'p_delta_min');
-  if (F.p_consistencia)  add(`Consist├¬ncia: ${esc(F.p_consistencia)}`, 'p_consistencia');
-  if (F.p_conc_min!=null||F.p_conc_max!=null) add(`Concorrentes ${F.p_conc_min??0}ÔÇô${F.p_conc_max??'Ôê×'}`, 'conc');
-  if (F.p_nivel_conc)    add(`Concorr├¬ncia: ${esc(F.p_nivel_conc)}`, 'p_nivel_conc');
-  if (F.p_dispersao_min) add(`Dispers├úo ${pct(F.p_dispersao_min)}+`, 'p_dispersao_min');
-  if (F.p_full_max!=null) add(`Full at├® ${pct(F.p_full_max)}`, 'p_full_max');
-  if (F.p_full_min!=null) add(`Full ÔëÑ ${pct(F.p_full_min)}`, 'p_full_min');
-  if (F.p_oficial_max!=null) add(`Loja oficial Ôëñ ${pct(F.p_oficial_max)}`, 'p_oficial_max');
+  if (F.p_consistencia)  add(`Consistência: ${esc(F.p_consistencia)}`, 'p_consistencia');
+  if (F.p_conc_min!=null||F.p_conc_max!=null) add(`Concorrentes ${F.p_conc_min??0}–${F.p_conc_max??'∞'}`, 'conc');
+  if (F.p_nivel_conc)    add(`Concorrência: ${esc(F.p_nivel_conc)}`, 'p_nivel_conc');
+  if (F.p_dispersao_min) add(`Dispersão ${pct(F.p_dispersao_min)}+`, 'p_dispersao_min');
+  if (F.p_full_max!=null) add(`Full até ${pct(F.p_full_max)}`, 'p_full_max');
+  if (F.p_full_min!=null) add(`Full ≥ ${pct(F.p_full_min)}`, 'p_full_min');
+  if (F.p_oficial_max!=null) add(`Loja oficial ≤ ${pct(F.p_oficial_max)}`, 'p_oficial_max');
   if (F.p_maturidade)    add(`Maturidade: ${esc(F.p_maturidade)}`, 'p_maturidade');
-  if (F.p_estabilidade)  add(`Pre├ºo: ${esc(F.p_estabilidade)}`, 'p_estabilidade');
-  if (F.p_visto_min!=null||F.p_visto_max!=null) add(`Na base ${F.p_visto_min??0}ÔÇô${F.p_visto_max??'Ôê×'} dias`, 'visto');
-  if (F.p_dias_min!=null||F.p_dias_max!=null) add(`Observado ${F.p_dias_min??0}ÔÇô${F.p_dias_max??'Ôê×'} dias`, 'obs');
-  if (F.p_top10_min)     add(`Top 10 ÔëÑ ${F.p_top10_min} dias`, 'p_top10_min');
-  if (F.p_top10_rate_min!=null) add(`Taxa top 10 ÔëÑ ${pct(F.p_top10_rate_min)}`, 'p_top10_rate_min');
+  if (F.p_estabilidade)  add(`Preço: ${esc(F.p_estabilidade)}`, 'p_estabilidade');
+  if (F.p_visto_min!=null||F.p_visto_max!=null) add(`Na base ${F.p_visto_min??0}–${F.p_visto_max??'∞'} dias`, 'visto');
+  if (F.p_dias_min!=null||F.p_dias_max!=null) add(`Observado ${F.p_dias_min??0}–${F.p_dias_max??'∞'} dias`, 'obs');
+  if (F.p_top10_min)     add(`Top 10 ≥ ${F.p_top10_min} dias`, 'p_top10_min');
+  if (F.p_top10_rate_min!=null) add(`Taxa top 10 ≥ ${pct(F.p_top10_rate_min)}`, 'p_top10_rate_min');
   if (F.p_com_foto===true)  add('Com foto', 'p_com_foto');
   if (F.p_com_foto===false) add('Sem foto', 'p_com_foto');
-  if (F.p_vend_min!=null||F.p_vend_max!=null) add(`Vendedores ${F.p_vend_min??0}ÔÇô${F.p_vend_max??'Ôê×'}`, 'vend');
+  if (F.p_vend_min!=null||F.p_vend_max!=null) add(`Vendedores ${F.p_vend_min??0}–${F.p_vend_max??'∞'}`, 'vend');
   if (F.p_caiu_min)      add(`Caiu ${F.p_caiu_min}+`, 'p_caiu_min');
   return out;
 }
 
-/** Preset de faixa De/At├® ÔÇö ativo quando min/max batem exatamente. */
+/** Preset de faixa De/Até — ativo quando min/max batem exatamente. */
 function faixaOn(curMin, curMax, a, z){
   const eq = (x,y) => (x==null||x==='') && (y==null||y==='') || Number(x)===Number(y);
   return eq(curMin, a===''?null:a) && eq(curMax, z===''?null:z);
@@ -361,16 +361,16 @@ function qcFaixa(attr, curMin, curMax, opcoes){
 }
 
 
-/** ├ürvore de categorias, no estilo do JoomPulse: ra├¡zes abertas de cara,
- *  seta Ôû© expande sem sair da posi├º├úo. Folha n├úo tem seta (nada abaixo). */
+/** Árvore de categorias, no estilo do JoomPulse: raízes abertas de cara,
+ *  seta ▸ expande sem sair da posição. Folha não tem seta (nada abaixo). */
 function catArvoreHtml(parentId, depth){
   const chave = parentId ?? '_raiz';
   const nos = S.catArvore[chave];
-  if (!nos) return '<div class="catcarr">carregandoÔÇª</div>';
+  if (!nos) return '<div class="catcarr">carregando…</div>';
   return nos.map(n => {
     const aberto = S.catAbertos.has(n.id);
     return `<div class="catno" style="padding-left:${depth*14}px">
-      <button class="catarrow ${n.is_leaf?'folha':''}" data-toggle="${esc(n.id)}">${aberto?'Ôû¥':'Ôû©'}</button>
+      <button class="catarrow ${n.is_leaf?'folha':''}" data-toggle="${esc(n.id)}">${aberto?'▾':'▸'}</button>
       <button class="catnome" data-cid="${esc(n.id)}" data-cn="${esc(n.nome)}">${esc(n.nome)}</button>
     </div>${aberto?catArvoreHtml(n.id, depth+1):''}`;
   }).join('');
@@ -382,12 +382,12 @@ V.produtos = () => {
   const open = (k) => (S.buscaOpen?.has(k) ? 'open' : '');
 
   const catBlock = S.catSel
-    ? `<span class="chosen">${esc(S.catSel.nome)} <button id="catx">├ù</button></span>`
-    : `<div class="catwrap"><input id="f_cat" placeholder="Ex.: suplementos, panelasÔÇª" autocomplete="off">
+    ? `<span class="chosen">${esc(S.catSel.nome)} <button id="catx">×</button></span>`
+    : `<div class="catwrap"><input id="f_cat" placeholder="Ex.: suplementos, panelas…" autocomplete="off">
        ${S.catAberto?`<div class="catdrop">${
          S.catLista.length?S.catLista.map(c=>
            `<button class="catop" data-cid="${esc(c.id)}" data-cn="${esc(c.nome)}">
-              <b>${esc(c.nome)}</b><span>${esc(c.caminho)} ┬À ${c.produtos} produtos</span></button>`).join('')
+              <b>${esc(c.nome)}</b><span>${esc(c.caminho)} · ${c.produtos} produtos</span></button>`).join('')
          :catArvoreHtml(null,0)
        }</div>`:''}
        </div>`;
@@ -398,7 +398,7 @@ V.produtos = () => {
   const filtrosAvancados = `
   <div class="fsecs">
     <details class="fsec" data-sec="essencial" ${open('essencial')}>
-      <summary>Essenciais <span class="hint">maturidade, pre├ºo est├ível, foto</span></summary>
+      <summary>Essenciais <span class="hint">maturidade, preço estável, foto</span></summary>
       <div class="fsec-body">
         <div class="fgrid2">
           <div>
@@ -406,46 +406,46 @@ V.produtos = () => {
             ${semSelect('p_estabilidade')}
           </div>
           <div>
-            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Foto no cat├ílogo</label>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Foto no catálogo</label>
             <div class="qc2">
               <button type="button" class="${F.p_com_foto===true?'on':''}" data-foto="1">Com foto</button>
               <button type="button" class="${F.p_com_foto===false?'on':''}" data-foto="0">Sem foto</button>
             </div>
-            <div class="indisp" style="margin-top:8px">Sem foto e sem nome ficam de fora por padr├úo.</div>
+            <div class="indisp" style="margin-top:8px">Sem foto e sem nome ficam de fora por padrão.</div>
           </div>
         </div>
       </div>
     </details>
 
     <details class="fsec" data-sec="ranking" ${open('ranking')}>
-      <summary>Posi├º├úo e movimento <span class="hint">top 20, tend├¬ncia</span></summary>
+      <summary>Posição e movimento <span class="hint">top 20, tendência</span></summary>
       <div class="fsec-body">
         <div class="fgrid2">
           <div>
-            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Posi├º├úo hoje</label>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Posição hoje</label>
             ${qcFaixa('rf', F.p_pos_min, F.p_pos_max, [
-              ['Top 5','1','5'],['Top 10','1','10'],['11ÔÇô20','11','20'],
+              ['Top 5','1','5'],['Top 10','1','10'],['11–20','11','20'],
             ])}
             <div class="duo" style="margin-bottom:12px">
               <input id="f_pmin" type="number" placeholder="De" value="${F.p_pos_min??''}">
-              <input id="f_pmax" type="number" placeholder="At├®" value="${F.p_pos_max??''}">
+              <input id="f_pmax" type="number" placeholder="Até" value="${F.p_pos_max??''}">
             </div>
-            <div class="frow"><label>J├í esteve pelo menos em</label>
+            <div class="frow"><label>Já esteve pelo menos em</label>
               <input id="f_best" type="number" placeholder="ex: 3" value="${F.p_melhor_pos??''}"></div>
           </div>
           <div>
             <div class="frow"><label>Movimento em 7 dias</label>
               <select id="f_mov"><option value="">Qualquer</option>
                 <option value="subindo" ${F.p_momentum==='subindo'?'selected':''}>Subindo</option>
-                <option value="estavel" ${F.p_momentum==='estavel'?'selected':''}>Est├ível</option>
+                <option value="estavel" ${F.p_momentum==='estavel'?'selected':''}>Estável</option>
                 <option value="caindo" ${F.p_momentum==='caindo'?'selected':''}>Caindo</option>
                 <option value="novo" ${F.p_momentum==='novo'?'selected':''}>Novo no ranking</option>
               </select></div>
             <div class="frow"><label>Subiu pelo menos</label>
-              <input id="f_delta" type="number" placeholder="ex: 5 posi├º├Áes" value="${F.p_delta_min??''}"></div>
+              <input id="f_delta" type="number" placeholder="ex: 5 posições" value="${F.p_delta_min??''}"></div>
             <div class="frow"><label>Caiu pelo menos (7 dias)</label>
               <input id="f_caiu" type="number" placeholder="ex: 3" value="${F.p_caiu_min??''}"></div>
-            <div class="frow"><label>Consist├¬ncia</label>
+            <div class="frow"><label>Consistência</label>
               <select id="f_cons"><option value="">Qualquer</option>
                 <option value="consolidado" ${F.p_consistencia==='consolidado'?'selected':''}>Consolidado</option>
                 <option value="recorrente" ${F.p_consistencia==='recorrente'?'selected':''}>Recorrente</option>
@@ -457,63 +457,63 @@ V.produtos = () => {
     </details>
 
     <details class="fsec" data-sec="preco" ${open('preco')}>
-      <summary>Pre├ºo e envio <span class="hint">faixa, Full, loja oficial</span></summary>
+      <summary>Preço e envio <span class="hint">faixa, Full, loja oficial</span></summary>
       <div class="fsec-body">
         <div class="fgrid2">
           <div>
-            <h3 style="font-size:13px;margin:0 0 8px">Pre├ºo mediano</h3>
+            <h3 style="font-size:13px;margin:0 0 8px">Preço mediano</h3>
             ${qcFaixa('pf', F.p_preco_min, F.p_preco_max, [
-              ['R$ 0ÔÇô100','0','100'],['R$ 100ÔÇô250','100','250'],['R$ 250+','250',''],
+              ['R$ 0–100','0','100'],['R$ 100–250','100','250'],['R$ 250+','250',''],
             ])}
             <div class="duo">
               <input id="f_vmin" type="number" placeholder="De R$" value="${F.p_preco_min??''}">
-              <input id="f_vmax" type="number" placeholder="At├® R$" value="${F.p_preco_max??''}">
+              <input id="f_vmax" type="number" placeholder="Até R$" value="${F.p_preco_max??''}">
             </div>
           </div>
           <div>
             <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Share de Full</label>
             <div class="radios">
               <label><input type="radio" name="full" value="ambos" ${fullVal==='ambos'?'checked':''}>Ambos</label>
-              <label><input type="radio" name="full" value="baixo" ${fullVal==='baixo'?'checked':''}>At├® 30% Full</label>
+              <label><input type="radio" name="full" value="baixo" ${fullVal==='baixo'?'checked':''}>Até 30% Full</label>
               <label><input type="radio" name="full" value="alto" ${fullVal==='alto'?'checked':''}>70%+ Full</label>
             </div>
             <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin:10px 0 6px">Loja oficial</label>
             <div class="radios">
               <label><input type="radio" name="ofi" value="" ${ofiVal==='ambos'?'checked':''}>Ambos</label>
               <label><input type="radio" name="ofi" value="0" ${ofiVal==='sem'?'checked':''}>Sem loja oficial</label>
-              <label><input type="radio" name="ofi" value="0.3" ${ofiVal==='pouca'?'checked':''}>At├® 30% oficial</label>
+              <label><input type="radio" name="ofi" value="0.3" ${ofiVal==='pouca'?'checked':''}>Até 30% oficial</label>
             </div>
-            <div class="indisp">Fatia real de an├║ncios Full / oficiais na coleta.</div>
+            <div class="indisp">Fatia real de anúncios Full / oficiais na coleta.</div>
           </div>
         </div>
       </div>
     </details>
 
     <details class="fsec" data-sec="conc" ${open('conc')}>
-      <summary>Concorr├¬ncia <span class="hint">an├║ncios, vendedores, dispers├úo</span></summary>
+      <summary>Concorrência <span class="hint">anúncios, vendedores, dispersão</span></summary>
       <div class="fsec-body">
         <div class="fgrid2">
           <div>
             ${semSelect('p_nivel_conc')}
-            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">N┬║ de an├║ncios</label>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de anúncios</label>
             ${qcFaixa('cf', F.p_conc_min, F.p_conc_max, [
-              ['1ÔÇô5','1','5'],['6ÔÇô20','6','20'],['21+','21',''],
+              ['1–5','1','5'],['6–20','6','20'],['21+','21',''],
             ])}
             <div class="duo" style="margin-bottom:12px">
               <input id="f_cmin" type="number" placeholder="De" value="${F.p_conc_min??''}">
-              <input id="f_cmax" type="number" placeholder="At├®" value="${F.p_conc_max??''}">
+              <input id="f_cmax" type="number" placeholder="Até" value="${F.p_conc_max??''}">
             </div>
           </div>
           <div>
-            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">N┬║ de vendedores</label>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Nº de vendedores</label>
             ${qcFaixa('sf', F.p_vend_min, F.p_vend_max, [
-              ['1ÔÇô3','1','3'],['4ÔÇô10','4','10'],['11+','11',''],
+              ['1–3','1','3'],['4–10','4','10'],['11+','11',''],
             ])}
             <div class="duo" style="margin-bottom:12px">
               <input id="f_smin" type="number" placeholder="De" value="${F.p_vend_min??''}">
-              <input id="f_smax" type="number" placeholder="At├®" value="${F.p_vend_max??''}">
+              <input id="f_smax" type="number" placeholder="Até" value="${F.p_vend_max??''}">
             </div>
-            <div class="frow"><label>Dispers├úo de pre├ºo m├¡nima</label>
+            <div class="frow"><label>Dispersão de preço mínima</label>
               <select id="f_disp"><option value="">Qualquer</option>
                 <option value="0.2" ${F.p_dispersao_min==0.2?'selected':''}>Acima de 20%</option>
                 <option value="0.4" ${F.p_dispersao_min==0.4?'selected':''}>Acima de 40%</option>
@@ -525,30 +525,30 @@ V.produtos = () => {
     </details>
 
     <details class="fsec" data-sec="hist" ${open('hist')}>
-      <summary>Hist├│rico na base <span class="hint">dias observados, top 10</span></summary>
+      <summary>Histórico na base <span class="hint">dias observados, top 10</span></summary>
       <div class="fsec-body">
-        <div class="indisp" style="margin-bottom:10px">Dados da nossa coleta ÔÇö n├úo ├® receita/vendas do ML.</div>
+        <div class="indisp" style="margin-bottom:10px">Dados da nossa coleta — não é receita/vendas do ML.</div>
         <div class="fgrid2">
           <div>
             <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias na nossa base</label>
             ${qcFaixa('vf', F.p_visto_min, F.p_visto_max, [
-              ['0ÔÇô7 dias','0','7'],['8ÔÇô30 dias','8','30'],['31+ dias','31',''],
+              ['0–7 dias','0','7'],['8–30 dias','8','30'],['31+ dias','31',''],
             ])}
             <div class="duo" style="margin-bottom:12px">
               <input id="f_vmin_visto" type="number" placeholder="De" value="${F.p_visto_min??''}">
-              <input id="f_vmax_visto" type="number" placeholder="At├®" value="${F.p_visto_max??''}">
+              <input id="f_vmax_visto" type="number" placeholder="Até" value="${F.p_visto_max??''}">
             </div>
             <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias observados no ranking</label>
             ${qcFaixa('of', F.p_dias_min, F.p_dias_max, [
-              ['At├® 7','','7'],['8ÔÇô21','8','21'],['22+','22',''],
+              ['Até 7','','7'],['8–21','8','21'],['22+','22',''],
             ])}
             <div class="duo">
               <input id="f_omin" type="number" placeholder="De" value="${F.p_dias_min??''}">
-              <input id="f_omax" type="number" placeholder="At├®" value="${F.p_dias_max??''}">
+              <input id="f_omax" type="number" placeholder="Até" value="${F.p_dias_max??''}">
             </div>
           </div>
           <div>
-            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias no top 10 (m├¡nimo)</label>
+            <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Dias no top 10 (mínimo)</label>
             <div class="qc2" style="margin-bottom:12px">
               <button type="button" class="${F.p_top10_min==1?'on':''}" data-t10="1">1+</button>
               <button type="button" class="${F.p_top10_min==3?'on':''}" data-t10="3">3+</button>
@@ -556,11 +556,11 @@ V.produtos = () => {
             </div>
             <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:6px">Taxa no top 10</label>
             <div class="qc2" style="margin-bottom:12px">
-              <button type="button" class="${F.p_top10_rate_min==0.3?'on':''}" data-t10r="0.3">ÔëÑ 30%</button>
-              <button type="button" class="${F.p_top10_rate_min==0.5?'on':''}" data-t10r="0.5">ÔëÑ 50%</button>
-              <button type="button" class="${F.p_top10_rate_min==0.7?'on':''}" data-t10r="0.7">ÔëÑ 70%</button>
+              <button type="button" class="${F.p_top10_rate_min==0.3?'on':''}" data-t10r="0.3">≥ 30%</button>
+              <button type="button" class="${F.p_top10_rate_min==0.5?'on':''}" data-t10r="0.5">≥ 50%</button>
+              <button type="button" class="${F.p_top10_rate_min==0.7?'on':''}" data-t10r="0.7">≥ 70%</button>
             </div>
-            <div class="frow"><label>Dias no top 10 (m├¡n. exato)</label>
+            <div class="frow"><label>Dias no top 10 (mín. exato)</label>
               <input id="f_top10" type="number" placeholder="ex: 5" value="${F.p_top10_min??''}"></div>
           </div>
         </div>
@@ -582,7 +582,7 @@ V.produtos = () => {
   return `
   <div class="rhead">
     <div><h1 class="pg">${S.buscou?'Resultados da busca':'Busca de produtos'}</h1>
-      <p class="sub" style="margin:0">Rankings do Mercado Livre com movimento, pre├ºo e concorr├¬ncia ÔÇö s├│ o que a API entrega de verdade.</p></div>
+      <p class="sub" style="margin:0">Rankings do Mercado Livre com movimento, preço e concorrência — só o que a API entrega de verdade.</p></div>
     <span style="flex:1"></span>
     ${S.buscou?`<button class="btn g" id="b_tog">${painel?'Ocultar filtros':'Ajustar filtros'}</button>`:''}
   </div>
@@ -591,22 +591,22 @@ V.produtos = () => {
 
   ${painel?`<div class="busca-panel">
     <div class="modo-mini">
-      <button class="mb ${av?'on':''}" data-md="avancada">Filtros avan├ºados</button>
-      <button class="mb ${av?'':'on'}" data-md="simples">Busca r├ípida</button>
+      <button class="mb ${av?'on':''}" data-md="avancada">Filtros avançados</button>
+      <button class="mb ${av?'':'on'}" data-md="simples">Busca rápida</button>
     </div>
 
     <div class="busca-bar">
-      <div class="frow"><label>O que voc├¬ procura</label>
+      <div class="frow"><label>O que você procura</label>
         <input id="f_txt" value="${esc(F.p_texto??'')}" placeholder="nome, marca ou modelo"></div>
       <div class="frow"><label>Categoria</label>${catBlock}</div>
       <button class="btn" id="b_go" ${seca()?'disabled':''}>Procurar</button>
     </div>
 
     <div class="busca-ref">
-      <div class="frow"><label>Ou cole um MLB / link do an├║ncio</label>
-        <input id="f_ref" value="${esc(S.ref??'')}" placeholder="MLB123ÔÇª ou https://produto.mercadolivre.com.br/ÔÇª"
+      <div class="frow"><label>Ou cole um MLB / link do anúncio</label>
+        <input id="f_ref" value="${esc(S.ref??'')}" placeholder="MLB123… ou https://produto.mercadolivre.com.br/…"
           ${S.refBusy?'disabled':''}></div>
-      <button class="btn g" id="b_ref" ${S.refBusy?'disabled':''}>${S.refBusy?'BuscandoÔÇª':'Localizar'}</button>
+      <button class="btn g" id="b_ref" ${S.refBusy?'disabled':''}>${S.refBusy?'Buscando…':'Localizar'}</button>
     </div>
     ${S.refAviso?`<div class="msg err" style="margin:0 0 12px">${esc(S.refAviso)}</div>`:''}
     ${S.refPedidoOk?`<div class="msg ok" style="margin:0 0 12px">${esc(S.refPedidoOk)}</div>`:''}
@@ -614,14 +614,14 @@ V.produtos = () => {
       ${S.refVivo.imagem?`<img class="thumb" src="${esc(S.refVivo.imagem)}" alt="" style="width:64px;height:64px;border-radius:8px">`:''}
       <div style="flex:1;min-width:0">
         <div class="sb" style="margin-bottom:2px">Encontrado ao vivo no Mercado Livre
-          ${S.refVivo.tipo==='item'?' ┬À an├║ncio':' ┬À produto de cat├ílogo'}
-          ┬À ainda sem hist├│rico no Gringa Radar</div>
+          ${S.refVivo.tipo==='item'?' · anúncio':' · produto de catálogo'}
+          · ainda sem histórico no Gringa Radar</div>
         <div class="nm" style="font-size:15px">${esc(S.refVivo.nome||S.refVivo.id)}</div>
-        <div class="sb">${esc(S.refVivo.id)}${S.refVivo.mlb_anuncio?` ┬À an├║ncio ${esc(S.refVivo.mlb_anuncio)}`:''}
-          ${S.refVivo.preco!=null?` ┬À ${brl(S.refVivo.preco)}`:''}</div>
+        <div class="sb">${esc(S.refVivo.id)}${S.refVivo.mlb_anuncio?` · anúncio ${esc(S.refVivo.mlb_anuncio)}`:''}
+          ${S.refVivo.preco!=null?` · ${brl(S.refVivo.preco)}`:''}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           ${S.refVivo.permalink?`<a class="btn g mini" href="${esc(S.refVivo.permalink)}" target="_blank" rel="noopener">Ver no ML</a>`:''}
-          <button class="btn mini" id="b_pedir_coleta">Pedir coleta deste an├║ncio</button>
+          <button class="btn mini" id="b_pedir_coleta">Pedir coleta deste anúncio</button>
           <button class="btn g mini" id="b_ref_limpar">Fechar</button>
         </div>
       </div>
@@ -633,7 +633,7 @@ V.produtos = () => {
     ${av ? filtrosAvancados : filtrosSimples}
 
     <div class="rodape sticky">
-      <span class="obs cnt">${S.contagem==null?'Ajuste os filtros ÔÇö a contagem n├úo gasta busca':`<b>${num(S.contagem)}</b> produto(s) batem com esses filtros`}</span>
+      <span class="obs cnt">${S.contagem==null?'Ajuste os filtros — a contagem não gasta busca':`<b>${num(S.contagem)}</b> produto(s) batem com esses filtros`}</span>
       <button class="btn g" id="b_cl">Limpar</button>
       <button class="btn" id="b_go2" ${seca()?'disabled':''}>Procurar</button>
     </div>
@@ -647,24 +647,24 @@ V.produtos = () => {
       <button class="${S.periodo==='30'?'on':''}" data-per="30">30 dias</button>
     </span>
     <select id="f_ord" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px">
-      <option value="posicao" ${(!F.p_ordem||F.p_ordem==='posicao')?'selected':''}>Posi├º├úo</option>
+      <option value="posicao" ${(!F.p_ordem||F.p_ordem==='posicao')?'selected':''}>Posição</option>
       <option value="movimento" ${F.p_ordem==='movimento'?'selected':''}>Quem mais subiu</option>
-      <option value="concorrencia" ${F.p_ordem==='concorrencia'?'selected':''}>Menos concorr├¬ncia</option>
+      <option value="concorrencia" ${F.p_ordem==='concorrencia'?'selected':''}>Menos concorrência</option>
       <option value="consistencia" ${F.p_ordem==='consistencia'?'selected':''}>Mais consistente</option>
-      <option value="preco" ${F.p_ordem==='preco'?'selected':''}>Maior pre├ºo</option>
+      <option value="preco" ${F.p_ordem==='preco'?'selected':''}>Maior preço</option>
     </select>
-    <button class="exp" id="b_exp">Ôñô CSV</button>
+    <button class="exp" id="b_exp">⤓ CSV</button>
   </div>`:''}
 
   ${S.selecao.size?`<div class="selbar"><b>${S.selecao.size}</b> selecionado(s)
     <span style="flex:1"></span>
     <button class="btn" id="b_lote">Monitorar selecionados</button>
-    <button class="btn g" id="b_nada">Limpar sele├º├úo</button></div>`:''}
+    <button class="btn g" id="b_nada">Limpar seleção</button></div>`:''}
 
   <div class="card" id="res">${seca()?wall():S.buscou?tprod():
-    `<div class="none"><b>Comece por um atalho ou digite o que procura</b>A contagem ao lado de Procurar n├úo consome sua quota.</div>`}</div>
-  <div class="tip"><b>Lista limpa.</b> Por padr├úo s├│ entram produtos com foto. Receita, vendas e avalia├º├Áes
-    n├úo aparecem nos filtros: a API do Mercado Livre n├úo entrega isso pra terceiro.</div>`;
+    `<div class="none"><b>Comece por um atalho ou digite o que procura</b>A contagem ao lado de Procurar não consome sua quota.</div>`}</div>
+  <div class="tip"><b>Lista limpa.</b> Por padrão só entram produtos com foto. Receita, vendas e avaliações
+    não aparecem nos filtros: a API do Mercado Livre não entrega isso pra terceiro.</div>`;
 };
 
 function tprod(){
@@ -685,51 +685,51 @@ function tprod(){
     const meta = [];
     if (p.momentum) meta.push(`<span class="chip">${esc(p.momentum)}</span>`);
     if (p.full_share!=null) meta.push(`<span class="chip ${p.full_share>=.5?'g':''}">Full ${pct(p.full_share)}</span>`);
-    if (p.days_in_top10!=null) meta.push(`<span class="chip">Top10 ${p.days_in_top10}/${p.days_observed??'ÔÇö'}</span>`);
+    if (p.days_in_top10!=null) meta.push(`<span class="chip">Top10 ${p.days_in_top10}/${p.days_observed??'—'}</span>`);
     return `<tr class="k ${tr}" data-p="${esc(p.product_id)}">
       <td style="width:34px"><input type="checkbox" data-ck="${esc(p.product_id)}"
         ${S.selecao.has(p.product_id)?'checked':''} ${i>=livres?'disabled':''}></td>
       <td style="max-width:340px"><div class="prow">
         ${p.picture?`<img class="thumb" src="${esc(p.picture)}" alt="" loading="lazy">`:`<span class="thumb"></span>`}
         <div><div class="nm">${esc(p.name ?? (p.tipo!=='PRODUCT'
-          ? 'Sem ficha p├║blica ÔÇö Mercado Livre bloqueia esse dado para terceiros'
+          ? 'Sem ficha pública — Mercado Livre bloqueia esse dado para terceiros'
           : p.product_id))}</div>
-          <div class="sb">${esc(p.category_name ?? '')} ┬À ${esc(p.product_id)}</div>
+          <div class="sb">${esc(p.category_name ?? '')} · ${esc(p.product_id)}</div>
           ${meta.length?`<div class="prod-meta">${meta.join('')}</div>`:''}
         </div>
       </div></td>
-      <td class="n">${p.position_now!=null?`<span class="pos" title="${esc(String(p.position_now))}┬░ em ${esc(p.category_name??'ÔÇö')}">${p.position_now}</span>`:'<span class="pos">ÔÇö</span>'}</td>
+      <td class="n">${p.position_now!=null?`<span class="pos" title="${esc(String(p.position_now))}° em ${esc(p.category_name??'—')}">${p.position_now}</span>`:'<span class="pos">—</span>'}</td>
       <td class="n ${b}"><span>${mov(p[per])}</span></td>
       <td class="n ${b}"><span>${num(p.listings)}</span></td>
       <td class="n ${b}"><span>${brl(p.median_price)}</span></td>
       <td class="n ${b}" style="font-size:13px;color:var(--ink-3)"><span>${
-        p.min_price!=null?brl(p.min_price)+' ÔÇô '+brl(p.max_price):'ÔÇö'}</span></td>
+        p.min_price!=null?brl(p.min_price)+' – '+brl(p.max_price):'—'}</span></td>
     </tr>`;
   }).join('');
 
   const travadas = Math.max(0, visiveis.length - livres);
   return `<table><thead><tr>
       <th style="width:34px"><input type="checkbox" id="ck_all"></th>
-      <th>Produto</th><th class="n">Posi├º├úo</th>
+      <th>Produto</th><th class="n">Posição</th>
       <th class="n">Mov. ${S.periodo==='30'?'30d':'7d'}</th>
-      <th class="n">An├║ncios</th>
-      <th class="n">Pre├ºo med.</th><th class="n">Faixa</th>
+      <th class="n">Anúncios</th>
+      <th class="n">Preço med.</th><th class="n">Faixa</th>
     </tr></thead><tbody>${linhas}</tbody></table>
     ${travadas>0?`<div class="upsell"><b>${travadas} produto(s) com dados ocultos</b>
       <p>O plano gratuito mostra os ${livres} primeiros por completo. Os outros aparecem borrados
-        para voc├¬ ver o tamanho do resultado antes de decidir.</p>
+        para você ver o tamanho do resultado antes de decidir.</p>
       <button class="btn">Ver planos</button></div>`:''}`;
 }
-const mov = d => d==null ? '<span class="mv f">ÔÇö</span>'
-  : d===0 ? '<span class="mv f">ÔÇö</span>'
-  : `<span class="mv ${d>0?'u':'d'}">${d>0?'Ôû▓ +':'Ôû╝ '}${Math.abs(d)}</span>`;
-const wall = () => `<div class="wall"><h3>Suas buscas do m├¬s acabaram</h3>
-  <p>O contador zera no dia 1┬║. Planos pagos liberam de 100 a ilimitadas.</p>
+const mov = d => d==null ? '<span class="mv f">—</span>'
+  : d===0 ? '<span class="mv f">—</span>'
+  : `<span class="mv ${d>0?'u':'d'}">${d>0?'▲ +':'▼ '}${Math.abs(d)}</span>`;
+const wall = () => `<div class="wall"><h3>Suas buscas do mês acabaram</h3>
+  <p>O contador zera no dia 1º. Planos pagos liberam de 100 a ilimitadas.</p>
   <button class="btn">Ver planos</button></div>`;
 
 V.categorias = () => `
   <h1 class="pg">Categorias</h1>
-  <p class="sub">Onde entrar. A rotatividade mostra quantos produtos do top 20 s├úo novos em rela├º├úo a 7 dias atr├ís.</p>
+  <p class="sub">Onde entrar. A rotatividade mostra quantos produtos do top 20 são novos em relação a 7 dias atrás.</p>
   <div class="filters">
     <div class="fld"><label>Nome da categoria</label><input id="c_txt" placeholder="ex: suplementos"></div>
     <div class="acts"><button class="btn" id="c_go">Carregar</button></div>
@@ -739,27 +739,27 @@ V.categorias = () => `
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${S.categoriasRecentes.map(c=>`<button class="chip ${c.oportunidade==='alta'?'g':c.oportunidade==='media'?'y':'p'}"
         data-crec="${esc(c.category_id)}" style="cursor:pointer;border:none" title="Buscado em ${new Date(c.ultima_busca).toLocaleDateString('pt-BR')}">
-        ${esc(c.nome)}${c.oportunidade?` ┬À ${esc(c.oportunidade)}`:''}
+        ${esc(c.nome)}${c.oportunidade?` · ${esc(c.oportunidade)}`:''}
       </button>`).join('')}
     </div>
   </div>`:''}
   <div class="card" id="cres">${S.categorias.length?tcat():
     `<div class="none"><b>Clique em Carregar</b>Cada carga consome uma unidade da quota de categorias.</div>`}</div>
-  <div class="tip"><b>Por que rotatividade e n├úo faturamento.</b> A API do Mercado Livre n├úo entrega
-    n├║mero de vendas de an├║ncio de terceiro. Ela entrega posi├º├úo ÔÇö e a troca de nomes no topo diz
+  <div class="tip"><b>Por que rotatividade e não faturamento.</b> A API do Mercado Livre não entrega
+    número de vendas de anúncio de terceiro. Ela entrega posição — e a troca de nomes no topo diz
     mais sobre chance de entrada do que um faturamento estimado diria.</div>`;
 
 function tcat(){
   if (!S.categorias.length) return '<div class="none"><b>Nada encontrado</b></div>';
   return `<table><thead><tr><th>Categoria</th><th class="n">Oportunidade</th>
     <th class="n">Rotatividade 7d</th><th class="n">Produtos</th><th class="n">Concorrentes/prod</th>
-    <th class="n">Pre├ºo mediano</th><th class="n">Dias</th></tr></thead><tbody>${S.categorias.map(c=>`
+    <th class="n">Preço mediano</th><th class="n">Dias</th></tr></thead><tbody>${S.categorias.map(c=>`
     <tr class="k" data-cid="${esc(c.category_id)}" data-cn="${esc(c.categoria)}"><td><div class="nm">${esc(c.categoria)}</div>
-      <div class="sb">${esc((c.path_names||[]).slice(0,2).join(' ÔÇ║ '))}</div></td>
+      <div class="sb">${esc((c.path_names||[]).slice(0,2).join(' › '))}</div></td>
       <td class="n"><span class="chip ${c.oportunidade==='alta'?'g':c.oportunidade==='media'?'y':'p'}">${esc(c.oportunidade)}</span></td>
       <td class="n">${c.rotatividade_7d!=null?`${pct(c.rotatividade_7d)} <span class="sb" style="display:inline">(${c.entrantes})</span>`:'<span style="color:var(--ink-3)">sem base</span>'}</td>
       <td class="n">${num(c.produtos_rankeados)}</td>
-      <td class="n">${c.concorrentes_medio ?? 'ÔÇö'}</td>
+      <td class="n">${c.concorrentes_medio ?? '—'}</td>
       <td class="n">${brl(c.preco_mediano)}</td>
       <td class="n" style="color:var(--ink-3)">${c.dias_observados ?? 0}</td>
     </tr>`).join('')}</tbody></table>`;
@@ -768,41 +768,41 @@ function tcat(){
 V.catdetalhe = () => {
   const c = S.catDetalhe;
   return `
-  <button class="btn g mini" id="cd_voltar" style="margin-bottom:14px">ÔÇ╣ Categorias</button>
-  ${!c ? '<div class="card"><div class="load">carregandoÔÇª</div></div>' : `
+  <button class="btn g mini" id="cd_voltar" style="margin-bottom:14px">‹ Categorias</button>
+  ${!c ? '<div class="card"><div class="load">carregando…</div></div>' : `
   <div class="rhead">
-    <div><div class="sb">${esc((c.path_names||[]).join(' ÔÇ║ '))}</div>
+    <div><div class="sb">${esc((c.path_names||[]).join(' › '))}</div>
       <h1 class="pg" style="margin-top:2px">${esc(c.categoria)}</h1></div>
     <span style="flex:1"></span>
     <span class="chip ${c.oportunidade==='alta'?'g':c.oportunidade==='media'?'y':'p'}" style="font-size:13px">${esc(c.oportunidade)}</span>
   </div>
   <div class="stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0">
     <div class="card cbox"><div class="ct">Rotatividade 7d</div>
-      <div class="v" style="font-size:22px;font-weight:700">${c.rotatividade_7d!=null?pct(c.rotatividade_7d):'ÔÇö'}</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.rotatividade_7d!=null?pct(c.rotatividade_7d):'—'}</div>
       <div class="sb">${c.entrantes} entrante(s) no top ${c.produtos_rankeados}</div></div>
-    <div class="card cbox"><div class="ct">Pre├ºo mediano</div>
+    <div class="card cbox"><div class="ct">Preço mediano</div>
       <div class="v" style="font-size:22px;font-weight:700">${brl(c.preco_mediano)}</div></div>
     <div class="card cbox"><div class="ct">Concorrentes/produto</div>
-      <div class="v" style="font-size:22px;font-weight:700">${c.concorrentes_medio ?? 'ÔÇö'}</div>
-      <div class="sb">${num(c.anuncios_totais)} an├║ncio(s) no total</div></div>
-    <div class="card cbox"><div class="ct">Dispers├úo de pre├ºo</div>
-      <div class="v" style="font-size:22px;font-weight:700">${c.dispersao_media!=null?pct(c.dispersao_media):'ÔÇö'}</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.concorrentes_medio ?? '—'}</div>
+      <div class="sb">${num(c.anuncios_totais)} anúncio(s) no total</div></div>
+    <div class="card cbox"><div class="ct">Dispersão de preço</div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.dispersao_media!=null?pct(c.dispersao_media):'—'}</div>
       <div class="sb">quanto maior, mais desorganizado o mercado</div></div>
     <div class="card cbox"><div class="ct">Vendido via Full</div>
-      <div class="v" style="font-size:22px;font-weight:700">${c.full_medio!=null?pct(c.full_medio):'ÔÇö'}</div></div>
+      <div class="v" style="font-size:22px;font-weight:700">${c.full_medio!=null?pct(c.full_medio):'—'}</div></div>
     <div class="card cbox"><div class="ct">Dias observados</div>
       <div class="v" style="font-size:22px;font-weight:700">${c.dias_observados ?? 0}</div></div>
   </div>
   <div class="tip" style="margin-bottom:14px"><b>Sem Receita e Vendas aqui.</b> Testamos ao vivo: o Mercado Livre
-    n├úo entrega quantidade vendida de an├║ncio de terceiro por nenhum caminho que a conta tem acesso ÔÇö nem no
-    endpoint de cat├ílogo, nem no de itens. Qualquer n├║mero de receita por categoria seria inventado. O que d├í
-    pra afirmar com dado real ├® estrutura de mercado: rotatividade, concorr├¬ncia e pre├ºo, acima.</div>
+    não entrega quantidade vendida de anúncio de terceiro por nenhum caminho que a conta tem acesso — nem no
+    endpoint de catálogo, nem no de itens. Qualquer número de receita por categoria seria inventado. O que dá
+    pra afirmar com dado real é estrutura de mercado: rotatividade, concorrência e preço, acima.</div>
   <div class="card" style="margin-bottom:14px">
-    <div class="ct">Tend├¬ncia real (30 dias)</div>
+    <div class="ct">Tendência real (30 dias)</div>
     ${sparkCategoria(S.catDetalheHist)}
   </div>
   <h2 style="font-size:16px;margin:18px 0 10px">Produtos desta categoria</h2>
-  <div class="card" id="res">${S.buscou?tprod():'<div class="load">carregando produtosÔÇª</div>'}</div>
+  <div class="card" id="res">${S.buscou?tprod():'<div class="load">carregando produtos…</div>'}</div>
   `}`;
 };
 
@@ -811,7 +811,7 @@ V.locais = () => {
   const aberto = S.locaisFiltrosAbertos;
   return `
   <h1 class="pg">Produtos locais</h1>
-  <p class="sub">Fornecedores no Brasil com pre├ºo de custo, comparado ao que o produto est├í valendo no Mercado Livre.</p>
+  <p class="sub">Fornecedores no Brasil com preço de custo, comparado ao que o produto está valendo no Mercado Livre.</p>
   <div class="cfld" style="max-width:520px;display:flex;gap:8px;margin-bottom:14px">
     <input id="l_txt" placeholder="Pesquisar por nome do produto">
     <button class="btn" id="l_go" style="flex:none">Buscar</button>
@@ -820,7 +820,7 @@ V.locais = () => {
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         ${aberto?'<b style="font-size:15px">Filtros</b>':''}
-        <button class="btn g mini" id="l_toggle_f" style="padding:6px 10px">${aberto?'ÔÇ╣':'ÔÇ║'}</button>
+        <button class="btn g mini" id="l_toggle_f" style="padding:6px 10px">${aberto?'‹':'›'}</button>
       </div>
       ${aberto?`<div class="card cbox">
         <div class="ct">Categorias</div>
@@ -839,30 +839,30 @@ V.locais = () => {
           </button>
           <span style="flex:1;font-size:13.5px">Encontrado no MeLi</span>
         </div>
-        <div class="sb" style="margin-top:6px">Busca ao vivo no cat├ílogo do Mercado Livre pelo nome do produto,
-          pros que ainda n├úo t├¬m v├¡nculo direto.${S.locaisMeliBuscando?' BuscandoÔÇª':''}</div>
+        <div class="sb" style="margin-top:6px">Busca ao vivo no catálogo do Mercado Livre pelo nome do produto,
+          pros que ainda não têm vínculo direto.${S.locaisMeliBuscando?' Buscando…':''}</div>
       </div>
       <div class="card cbox" style="margin-top:12px">
         <div class="ct">Faixa de custo personalizada</div>
         <div class="crow"><div class="cfld"><label>De</label><input type="number" id="l_custo_min" placeholder="R$"></div>
-          <div class="cfld"><label>At├®</label><input type="number" id="l_custo_max" placeholder="R$"></div></div>
+          <div class="cfld"><label>Até</label><input type="number" id="l_custo_max" placeholder="R$"></div></div>
       </div>
       <div class="card cbox" style="margin-top:12px">
-        <div class="ct">An├║ncio criado</div>
+        <div class="ct">Anúncio criado</div>
         <div class="radios" style="flex-direction:column;gap:8px;padding:4px 0">
-          ${[[null,'Qualquer ├®poca'],[7,'Nos ├║ltimos 7 dias'],[30,'Nos ├║ltimos 30 dias'],[90,'Nos ├║ltimos 90 dias']].map(([v,l])=>
+          ${[[null,'Qualquer época'],[7,'Nos últimos 7 dias'],[30,'Nos últimos 30 dias'],[90,'Nos últimos 90 dias']].map(([v,l])=>
             `<label><input type="radio" name="l_criado" value="${v??''}" ${S.locaisCriado===v?'checked':''}>${l}</label>`).join('')}
         </div>
       </div>
       <div class="card cbox" style="margin-top:12px">
         <div class="ct">Itens por caixa</div>
         <div class="radios" style="flex-direction:column;gap:8px;padding:4px 0">
-          ${[[null,null,'Qualquer'],[null,10,'At├® 10'],[null,50,'At├® 50'],[null,100,'At├® 100'],[100,null,'100+']].map(([mn,mx,l])=>
+          ${[[null,null,'Qualquer'],[null,10,'Até 10'],[null,50,'Até 50'],[null,100,'Até 100'],[100,null,'100+']].map(([mn,mx,l])=>
             `<label><input type="radio" name="l_caixa" value="${mn??''}|${mx??''}" ${S.locaisCaixaMin===mn&&S.locaisCaixaMax===mx?'checked':''}>${l}</label>`).join('')}
         </div>
       </div>
       <div class="card cbox" style="margin-top:12px">
-        <div class="ct">Margem bruta m├¡nima</div>
+        <div class="ct">Margem bruta mínima</div>
         <select id="l_marg"><option value="">Qualquer</option>
           <option value="0.3">Acima de 30%</option><option value="0.5">Acima de 50%</option>
           <option value="0.7">Acima de 70%</option></select>
@@ -875,8 +875,8 @@ V.locais = () => {
       </div>
       <div class="sb" style="margin-bottom:12px">${num(S.locais.length)} produto(s) encontrado(s)</div>
       ${q ? `<div class="tip" style="margin:0 0 16px">
-        <b>Desbloqueios restantes neste m├¬s: ${q.unlimited?'ilimitados':q.remaining}.</b>
-        Ver os contatos de um fornecedor consome um. Reabrir um que voc├¬ j├í liberou ├® gr├ítis.</div>`:''}
+        <b>Desbloqueios restantes neste mês: ${q.unlimited?'ilimitados':q.remaining}.</b>
+        Ver os contatos de um fornecedor consome um. Reabrir um que você já liberou é grátis.</div>`:''}
       <div id="lres">${cardsLocais()}</div>
     </div>
   </div>`;
@@ -910,8 +910,8 @@ function cardsLocais(){
     : S.locais;
   if (!lista.length) return `<div class="card"><div class="none">
     <b>${S.locaisAba==='favoritos'?'Nenhum favorito ainda':'Nada encontrado'}</b>
-    ${S.locaisAba==='favoritos'?'Clique no ÔÖí de um produto pra guardar aqui.'
-      :'Sem fornecedor cadastrado ainda ÔÇö importe com <code>npm run collect fornecedor arquivo.csv</code>.'}</div></div>`;
+    ${S.locaisAba==='favoritos'?'Clique no ♡ de um produto pra guardar aqui.'
+      :'Sem fornecedor cadastrado ainda — importe com <code>npm run collect fornecedor arquivo.csv</code>.'}</div></div>`;
   return `<div class="lgrid">${lista.map(p=>{
     const c = S.contatos[p.fornecedor_id];
     const fav = S.locaisFavoritos.has(p.produto_id);
@@ -927,45 +927,45 @@ function cardsLocais(){
         <div style="position:relative">
           ${p.imagem ? `<img class="limg" src="${esc(p.imagem)}" alt="" ${matchId?`style="cursor:pointer" data-labrir="${esc(matchId)}" data-lprodid="${esc(p.produto_id)}" data-lcusto="${p.custo??''}" data-lforn="${esc(p.fornecedor??'')}" data-lfornid="${esc(p.fornecedor_id??'')}" title="Ver dados de varejo"`:''}>`
                      : `<div class="limg">sem foto</div>`}
-          ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No cat├ílogo ML</span>`
+          ${p.catalog_product_id?`<span class="chip g" style="position:absolute;bottom:4px;left:4px;font-size:10px">No catálogo ML</span>`
             : achado?.encontrado?`<span class="chip y" style="position:absolute;bottom:4px;left:4px;font-size:10px">Encontrado no MeLi</span>`
-            : (S.locaisMeliOn && S.locaisMeliBuscando)?`<span class="chip" style="position:absolute;bottom:4px;left:4px;font-size:10px">buscandoÔÇª</span>`:''}
+            : (S.locaisMeliOn && S.locaisMeliBuscando)?`<span class="chip" style="position:absolute;bottom:4px;left:4px;font-size:10px">buscando…</span>`:''}
           <button class="btn g mini" data-lfav="${esc(p.produto_id)}"
-            style="position:absolute;top:4px;right:4px;padding:2px 6px;line-height:1">${fav?'ÔÖÑ':'ÔÖí'}</button>
+            style="position:absolute;top:4px;right:4px;padding:2px 6px;line-height:1">${fav?'♥':'♡'}</button>
         </div>
         <div><div class="lnome">${esc(p.nome)}</div>
-          <div class="sb">${p.unidades_por_caixa ?? 1} por caixa${p.moq?` ┬À m├¡nimo ${p.moq}`:''}
-            ${p.criado_em?` ┬À publicado em ${new Date(p.criado_em).toLocaleDateString('pt-BR')}`:''}</div></div>
+          <div class="sb">${p.unidades_por_caixa ?? 1} por caixa${p.moq?` · mínimo ${p.moq}`:''}
+            ${p.criado_em?` · publicado em ${new Date(p.criado_em).toLocaleDateString('pt-BR')}`:''}</div></div>
       </div>
       <div class="lbody">
         <div class="lprice">
           <div class="k">Custo do fornecedor</div>
           <div class="v">${brl(p.custo)}</div>
-          <div class="sb">pre├ºo v├ílido desde ${esc(p.preco_desde ?? 'ÔÇö')}</div>
+          <div class="sb">preço válido desde ${esc(p.preco_desde ?? '—')}</div>
           <div class="lmini">
-            <div><div class="k">Pre├ºo m├®dio no ML</div>
-              <div class="v">${precoMl!=null?brl(precoMl):'ÔÇö'}</div></div>
+            <div><div class="k">Preço médio no ML</div>
+              <div class="v">${precoMl!=null?brl(precoMl):'—'}</div></div>
             <div><div class="k">Margem bruta</div>
               <div class="v" style="color:${margemMl>=0.4?'var(--up)':margemMl!=null?'var(--warn)':'var(--ink-3)'}">
-                ${margemMl!=null?'Ôëê'+pct(margemMl):'sem base'}</div></div>
+                ${margemMl!=null?'≈'+pct(margemMl):'sem base'}</div></div>
           </div>
           ${p.posicao_ml!=null?`<div class="sb" style="margin-top:9px">
-            ${p.posicao_ml}┬║ no ranking ┬À ${p.concorrentes_ml ?? 0} concorrente(s)</div>`:''}
+            ${p.posicao_ml}º no ranking · ${p.concorrentes_ml ?? 0} concorrente(s)</div>`:''}
         </div>
       </div>
       <div class="lfoot">
         <div class="lforn"><b>${esc(p.fornecedor)}</b>
-          ${esc(p.cidade ?? '')}${p.estado?' ┬À '+esc(p.estado):''}
+          ${esc(p.cidade ?? '')}${p.estado?' · '+esc(p.estado):''}
           ${p.verificado?' <span class="chip g">verificado</span>':''}</div>
         ${c ? `<div class="ct2">
-            ${c.telefone?`<a href="tel:${esc(c.telefone)}">ÔÿÄ ${esc(c.telefone)}</a>`:''}
-            ${c.email?`<a href="mailto:${esc(c.email)}">Ô£ë ${esc(c.email)}</a>`:''}
-            ${c.site?`<a href="https://${esc(c.site)}" target="_blank" rel="noopener">­ƒîÉ ${esc(c.site)}</a>`:''}
-            ${c.instagram?`<span>ÔùÄ ${esc(c.instagram)}</span>`:''}
+            ${c.telefone?`<a href="tel:${esc(c.telefone)}">☎ ${esc(c.telefone)}</a>`:''}
+            ${c.email?`<a href="mailto:${esc(c.email)}">✉ ${esc(c.email)}</a>`:''}
+            ${c.site?`<a href="https://${esc(c.site)}" target="_blank" rel="noopener">🌐 ${esc(c.site)}</a>`:''}
+            ${c.instagram?`<span>◎ ${esc(c.instagram)}</span>`:''}
           </div>
-          <div class="aviso">Contatos vindos do cat├ílogo do fornecedor. N├úo verificamos a conduta dele ÔÇö
+          <div class="aviso">Contatos vindos do catálogo do fornecedor. Não verificamos a conduta dele —
             confira antes de fechar pedido.</div>`
-          : `<button class="lock" data-unl="${esc(p.fornecedor_id)}">­ƒöÆ Mostrar contatos</button>`}
+          : `<button class="lock" data-unl="${esc(p.fornecedor_id)}">🔒 Mostrar contatos</button>`}
       </div>
     </div>`;
   }).join('')}</div>
@@ -978,27 +978,27 @@ V.diario = () => {
   const aba = S.diarioAba || 'todos';
   const lista = S.diario || [];
   return `
-  <h1 class="pg">Conte├║do di├írio</h1>
-  <p class="sub">Produtos da ├║ltima coleta no Mercado Livre
-    ${meta.dia ? `┬À <b>${esc(fmtDiaChart(meta.dia))}</b>` : ''}
-    ÔÇö atualiza sozinho depois da coleta (~03:10).</p>
+  <h1 class="pg">Conteúdo diário</h1>
+  <p class="sub">Produtos da última coleta no Mercado Livre
+    ${meta.dia ? `· <b>${esc(fmtDiaChart(meta.dia))}</b>` : ''}
+    — atualiza sozinho depois da coleta (~03:10).</p>
   <div class="tabs" style="margin-bottom:14px">
     <button class="tb ${aba==='todos'?'on':''}" data-daba="todos">Todos (${num(meta.total)})</button>
-    <button class="tb ${aba==='novos'?'on':''}" data-daba="novos">S├│ novos (${num(meta.novos)})</button>
+    <button class="tb ${aba==='novos'?'on':''}" data-daba="novos">Só novos (${num(meta.novos)})</button>
   </div>
   ${meta.erro
-    ? `<div class="card"><div class="none"><b>N├úo deu pra carregar</b>${esc(meta.erro)}</div></div>`
+    ? `<div class="card"><div class="none"><b>Não deu pra carregar</b>${esc(meta.erro)}</div></div>`
     : !S.diarioLoaded
-    ? '<div class="card"><div class="load">carregando produtos da ├║ltima coletaÔÇª</div></div>'
+    ? '<div class="card"><div class="load">carregando produtos da última coleta…</div></div>'
     : !lista.length
       ? `<div class="card"><div class="none"><b>Nada nesta lista ainda</b>
-          A coleta di├íria (~03:10) preenche e atualiza esta aba automaticamente.</div></div>`
+          A coleta diária (~03:10) preenche e atualiza esta aba automaticamente.</div></div>`
       : `<div class="card"><table><thead><tr>
-          <th>Produto</th><th class="n">Posi├º├úo</th><th class="n">Pre├ºo med.</th>
-          <th class="n">An├║ncios</th><th>Movimento</th><th></th>
+          <th>Produto</th><th class="n">Posição</th><th class="n">Preço med.</th>
+          <th class="n">Anúncios</th><th>Movimento</th><th></th>
         </tr></thead><tbody>${lista.map(p => {
           const d = p.delta_7d;
-          const mov = d==null ? 'ÔÇö' : d>0 ? `Ôåæ ${d}` : d<0 ? `Ôåô ${Math.abs(d)}` : 'ÔÇö';
+          const mov = d==null ? '—' : d>0 ? `↑ ${d}` : d<0 ? `↓ ${Math.abs(d)}` : '—';
           const cor = d>0 ? 'var(--up)' : d<0 ? 'var(--dn)' : 'var(--ink-3)';
           return `<tr class="k" data-p="${esc(p.product_id)}">
             <td style="max-width:360px"><div style="display:flex;gap:10px;align-items:center">
@@ -1007,9 +1007,9 @@ V.diario = () => {
               <div style="min-width:0">
                 <div class="nm">${esc(p.nome)}
                   ${p.novo?' <span class="chip g">novo</span>':''}</div>
-                <div class="sb">${esc(p.categoria||'ÔÇö')} ┬À ${esc(p.product_id)}</div>
+                <div class="sb">${esc(p.categoria||'—')} · ${esc(p.product_id)}</div>
               </div></div></td>
-            <td class="n"><span class="pos">${p.posicao ?? 'ÔÇö'}</span></td>
+            <td class="n"><span class="pos">${p.posicao ?? '—'}</span></td>
             <td class="n">${brl(p.preco_mediano)}</td>
             <td class="n">${num(p.concorrentes)}</td>
             <td style="color:${cor};font-weight:600">${mov}
@@ -1019,9 +1019,9 @@ V.diario = () => {
         }).join('')}</tbody></table></div>
         ${lista.length >= 60 && lista.length % 60 === 0
           ? `<div style="text-align:center;margin-top:14px"><button class="btn" id="d_mais">Carregar mais</button></div>` : ''}`}
-  <div class="tip" style="margin-top:16px"><b>O que ├® ÔÇ£novoÔÇØ.</b> Produto que apareceu no ranking p├║blico
+  <div class="tip" style="margin-top:16px"><b>O que é “novo”.</b> Produto que apareceu no ranking público
     (top 20 da categoria) nesta coleta e nunca tinha entrado nas coletas anteriores.
-    Posi├º├úo = melhor coloca├º├úo do produto no dia entre as categorias lidas.
+    Posição = melhor colocação do produto no dia entre as categorias lidas.
     Itens sem foto e sem nome ficam de fora da lista.</div>`;
 };
 
@@ -1047,7 +1047,7 @@ async function carregarDiario(acumular = false){
     }
   } catch (e) {
     S.diario = [];
-    S.diarioMeta = { erro: e?.message || 'Falha ao carregar conte├║do di├írio' };
+    S.diarioMeta = { erro: e?.message || 'Falha ao carregar conteúdo diário' };
   }
   S.diarioLoaded = true;
 }
@@ -1056,55 +1056,55 @@ V.fornecedores = () => {
   const msg = S.catalogosMsg;
   const lista = S.catalogos;
   const stChip = s => s==='email_enviado' ? '<span class="chip g">e-mail enviado</span>'
-    : s==='erro_email' ? '<span class="chip r">salvo ┬À e-mail pendente</span>'
+    : s==='erro_email' ? '<span class="chip r">salvo · e-mail pendente</span>'
     : '<span class="chip y">recebido</span>';
   return `
   <h1 class="pg">Produtos dos fornecedores <span class="beta">Beta</span></h1>
-  <p class="sub">Carregue cat├ílogos de fornecedores em PDF. Guardamos o arquivo no banco (Storage) e
-    enviamos automaticamente para an├ílise. Depois do processamento, os itens entram em
+  <p class="sub">Carregue catálogos de fornecedores em PDF. Guardamos o arquivo no banco (Storage) e
+    enviamos automaticamente para análise. Depois do processamento, os itens entram em
     <button class="lnk" data-go="locais" style="padding:0;font-size:inherit;color:var(--brand)">Produtos locais</button>.</p>
   <div class="tip" style="margin-bottom:16px"><b>O que esta aba faz de verdade.</b>
     Sobe o PDF, registra metadados e dispara o e-mail com o anexo.
-    A convers├úo autom├ítica do PDF em tabela (SKU, pre├ºo, EAN, fotos) ainda n├úo roda sozinha ÔÇö
-    n├úo inventamos produtos a partir do arquivo.</div>
+    A conversão automática do PDF em tabela (SKU, preço, EAN, fotos) ainda não roda sozinha —
+    não inventamos produtos a partir do arquivo.</div>
   <div class="dropz" id="cat_drop" ${S.catalogosBusy?'style="opacity:.6;pointer-events:none"':''}>
-    <div class="dz-ico" aria-hidden="true">­ƒôä</div>
-    <div class="dz-t">${S.catalogosBusy?'Enviando cat├ílogoÔÇª':'Carregue ou solte cat├ílogos aqui'}</div>
-    <p class="dz-d">V├írios PDFs dos seus fornecedores. M├íximo 20&nbsp;MB por arquivo.</p>
+    <div class="dz-ico" aria-hidden="true">📄</div>
+    <div class="dz-t">${S.catalogosBusy?'Enviando catálogo…':'Carregue ou solte catálogos aqui'}</div>
+    <p class="dz-d">Vários PDFs dos seus fornecedores. Máximo 20&nbsp;MB por arquivo.</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
       <input id="cat_forn" placeholder="Nome do fornecedor (opcional)" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;min-width:220px;background:var(--card)">
       <input id="cat_notas" placeholder="Notas (opcional)" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;min-width:220px;background:var(--card)">
     </div>
-    <button class="btn" id="cat_pick" ${S.catalogosBusy?'disabled':''}>Ô¼å Escolha os cat├ílogos</button>
+    <button class="btn" id="cat_pick" ${S.catalogosBusy?'disabled':''}>⬆ Escolha os catálogos</button>
     <input type="file" id="cat_file" accept="application/pdf,.pdf" multiple hidden>
   </div>
   ${msg?`<div class="msg ${msg.ok?'ok':'err'}" style="margin-top:14px">${esc(msg.t)}</div>`:''}
   <h2 class="sc">Seus envios</h2>
-  <p class="sc2">Hist├│rico dos PDFs que voc├¬ mandou nesta conta.</p>
+  <p class="sc2">Histórico dos PDFs que você mandou nesta conta.</p>
   <div class="card">${!S.catalogosLoaded
-    ? '<div class="load">carregandoÔÇª</div>'
+    ? '<div class="load">carregando…</div>'
     : !lista.length
-      ? `<div class="none"><b>Nenhum cat├ílogo ainda</b>Escolha um PDF acima pra come├ºar.</div>`
+      ? `<div class="none"><b>Nenhum catálogo ainda</b>Escolha um PDF acima pra começar.</div>`
       : `<table><thead><tr><th>Arquivo</th><th>Fornecedor</th><th class="n">Tamanho</th><th>Status</th><th class="n">Enviado em</th></tr></thead><tbody>${
         lista.map(c=>`<tr>
           <td><div class="nm">${esc(c.nome_arquivo)}</div>
             ${c.email_erro?`<div class="sb" style="color:var(--dn)">${esc(c.email_erro)}</div>`:''}</td>
-          <td>${esc(c.fornecedor_nome||'ÔÇö')}</td>
-          <td class="n">${c.tamanho_bytes!=null?(c.tamanho_bytes/1024/1024).toFixed(2)+' MB':'ÔÇö'}</td>
+          <td>${esc(c.fornecedor_nome||'—')}</td>
+          <td class="n">${c.tamanho_bytes!=null?(c.tamanho_bytes/1024/1024).toFixed(2)+' MB':'—'}</td>
           <td>${stChip(c.status)}</td>
-          <td class="n">${c.criado_em?new Date(c.criado_em).toLocaleString('pt-BR'):'ÔÇö'}</td>
+          <td class="n">${c.criado_em?new Date(c.criado_em).toLocaleString('pt-BR'):'—'}</td>
         </tr>`).join('')
       }</tbody></table>`}</div>
   <div class="feat2">
     <div class="fcard">
-      <h3>Carregue qualquer cat├ílogo</h3>
-      <p>O PDF fica no Storage com o seu usu├írio e o e-mail vai com o anexo pra an├ílise.
-        Quando o cat├ílogo for importado (CSV / produtos locais), voc├¬ compara custo com o MeLi.</p>
+      <h3>Carregue qualquer catálogo</h3>
+      <p>O PDF fica no Storage com o seu usuário e o e-mail vai com o anexo pra análise.
+        Quando o catálogo for importado (CSV / produtos locais), você compara custo com o MeLi.</p>
     </div>
     <div class="fcard">
       <h3>Depois: dados de mercado</h3>
-      <p>Com o produto j├í em Produtos locais (e v├¡nculo de cat├ílogo MeLi quando houver),
-        voc├¬ v├¬ pre├ºo e concorr├¬ncia reais ÔÇö sem inventar receita ou vendas do PDF.</p>
+      <p>Com o produto já em Produtos locais (e vínculo de catálogo MeLi quando houver),
+        você vê preço e concorrência reais — sem inventar receita ou vendas do PDF.</p>
     </div>
   </div>`;
 };
@@ -1119,7 +1119,7 @@ async function carregarCatalogos(){
 async function enviarCatalogos(files){
   const pdfs = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
   if (!pdfs.length) {
-    S.catalogosMsg = { ok:false, t:'S├│ aceitamos PDF.' }; render(); return;
+    S.catalogosMsg = { ok:false, t:'Só aceitamos PDF.' }; render(); return;
   }
   const big = pdfs.find(f => f.size > 20 * 1024 * 1024);
   if (big) {
@@ -1127,7 +1127,7 @@ async function enviarCatalogos(files){
   }
   const { data: sess } = await sb.auth.getSession();
   const user = sess?.session?.user;
-  if (!user) { S.catalogosMsg = { ok:false, t:'Fa├ºa login de novo.' }; render(); return; }
+  if (!user) { S.catalogosMsg = { ok:false, t:'Faça login de novo.' }; render(); return; }
 
   const forn = ($('#cat_forn')?.value || '').trim() || null;
   const notas = ($('#cat_notas')?.value || '').trim() || null;
@@ -1165,8 +1165,8 @@ async function enviarCatalogos(files){
   else if (okN) S.catalogosMsg = {
     ok: true,
     t: emailOk === okN
-      ? `${okN} cat├ílogo(s) salvos e enviados por e-mail.`
-      : `${okN} cat├ílogo(s) salvos.${emailOk?` ${emailOk} com e-mail.`:' E-mail ainda n├úo disparou ÔÇö o arquivo ficou guardado.'}${failN?` ${failN} falhou(aram).`:''}`,
+      ? `${okN} catálogo(s) salvos e enviados por e-mail.`
+      : `${okN} catálogo(s) salvos.${emailOk?` ${emailOk} com e-mail.`:' E-mail ainda não disparou — o arquivo ficou guardado.'}${failN?` ${failN} falhou(aram).`:''}`,
   };
   render();
 }
@@ -1188,7 +1188,7 @@ function wireCatalogos(){
 V.monitor = () => {
   const novos = S.alertas.filter(a=>!a.lido).length;
   return `<h1 class="pg">Monitor</h1>
-  <p class="sub">Produtos que voc├¬ acompanha. Os alertas s├úo gerados depois de cada coleta ÔÇö mesmo que voc├¬ n├úo abra o app.</p>
+  <p class="sub">Produtos que você acompanha. Os alertas são gerados depois de cada coleta — mesmo que você não abra o app.</p>
   <div class="tabs">
     <button class="tb ${S.aba==='lista'?'on':''}" data-ab="lista">Acompanhando (${S.monitorados.length})</button>
     <button class="tb ${S.aba==='fila'?'on':''}" data-ab="fila">Aguardando coleta (${S.pedidos.filter(p=>p.status==='pendente').length})</button>
@@ -1197,9 +1197,9 @@ V.monitor = () => {
     ${S.aba==='alertas'&&novos?'<button class="btn g" id="lidos" style="margin-left:auto">Marcar como lidos</button>':''}
   </div>
   <div class="card" id="mres">${S.aba==='lista'?tmon():S.aba==='fila'?tfila():S.aba==='vendedores'?tvend():talert()}</div>
-  <div class="tip"><b>O que dispara alerta.</b> Mudan├ºa de posi├º├úo, top 10, pre├ºo mediano, concorrentes ÔÇö
-    e tamb├®m mudan├ºa de <b>vendidos</b> quando a extens├úo l├¬ de novo a p├ígina do an├║ncio.
-    Clique em <b>Ver dados do alerta</b> para ver antes ÔåÆ depois. No m├íximo um aviso por tipo por dia.</div>`;
+  <div class="tip"><b>O que dispara alerta.</b> Mudança de posição, top 10, preço mediano, concorrentes —
+    e também mudança de <b>vendidos</b> quando a extensão lê de novo a página do anúncio.
+    Clique em <b>Ver dados do alerta</b> para ver antes → depois. No máximo um aviso por tipo por dia.</div>`;
 };
 
 function tfila(){
@@ -1222,30 +1222,30 @@ function tfila(){
            style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
         <div style="min-width:0">
           <div class="nm">${esc(f.titulo || p.mlb)}</div>
-          <div class="sb">${esc(p.mlb)}${f.vendedor?' ┬À '+esc(f.vendedor):''}
-          ${p.url?` ┬À <a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ver no ML</a>`:''}</div>
+          <div class="sb">${esc(p.mlb)}${f.vendedor?' · '+esc(f.vendedor):''}
+          ${p.url?` · <a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ver no ML</a>`:''}</div>
         </div></div></td>
-      <td class="n">${f.preco!=null?brl(f.preco):'ÔÇö'}</td>
-      <td class="n">${f.vendidos!=null?(f.aprox?'~':'')+num(f.vendidos):'ÔÇö'}</td>
-      <td class="n">${receita!=null?brl(receita):'ÔÇö'}</td>
-      <td>${esc(p.categoria ?? p.category_id ?? 'ÔÇö')}</td>
+      <td class="n">${f.preco!=null?brl(f.preco):'—'}</td>
+      <td class="n">${f.vendidos!=null?(f.aprox?'~':'')+num(f.vendidos):'—'}</td>
+      <td class="n">${receita!=null?brl(receita):'—'}</td>
+      <td>${esc(p.categoria ?? p.category_id ?? '—')}</td>
       <td class="n">${p.pedidos ?? 1}</td>
       <td><span class="mv ${r[1]}">${r[0]}</span></td>
-      <td class="n">${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : 'ÔÇö'}</td>
+      <td class="n">${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
       <td class="n"><div style="display:flex;gap:6px;justify-content:flex-end">
         ${p.produto?`<button class="btn mini" data-seg="${esc(p.produto)}">Monitorar</button>`:''}
         <button class="btn g mini" data-rmped="${esc(p.mlb)}" title="Remover da fila">Remover</button>
       </div></td>
     </tr>`;}).join('')}</tbody></table>
-  <div class="tip"><b>Preco, vendidos e receita sao a leitura da pagina no dia do pedido</b> ÔÇö
-    o Mercado Livre arredonda o numero de vendidos, entao use como ordem de grandeza. A receita e ACUMULADA desde que o anuncio existe, nao mensal ÔÇö o ML nao publica a data de criacao, entao nao da para dividir pelo tempo. Posicao no
+  <div class="tip"><b>Preco, vendidos e receita sao a leitura da pagina no dia do pedido</b> —
+    o Mercado Livre arredonda o numero de vendidos, entao use como ordem de grandeza. A receita e ACUMULADA desde que o anuncio existe, nao mensal — o ML nao publica a data de criacao, entao nao da para dividir pelo tempo. Posicao no
     ranking e concorrentes so aparecem depois da coleta.<br><br>
     <b>Como funciona.</b> A coleta roda uma vez por dia e atende primeiro o que mais
     gente pediu. Categoria sem ranking publico do Mercado Livre fica marcada como tal e nao e
-    tentada de novo ÔÇö cerca de 63% das categorias estao nessa situacao.<br><br>
-    <b>"Fora do alcance da coleta"</b> s├│ aparece quando a busca no cat├ílogo do Mercado Livre
-    tamb├®m n├úo achou o produto (pelo t├¡tulo da p├ígina). Antes esse r├│tulo sa├¡a cedo demais ÔÇö
-    a API de an├║ncio (<code>/items</code>) ├® bloqueada pra terceiro, mas a de cat├ílogo funciona
+    tentada de novo — cerca de 63% das categorias estao nessa situacao.<br><br>
+    <b>"Fora do alcance da coleta"</b> só aparece quando a busca no catálogo do Mercado Livre
+    também não achou o produto (pelo título da página). Antes esse rótulo saía cedo demais —
+    a API de anúncio (<code>/items</code>) é bloqueada pra terceiro, mas a de catálogo funciona
     e a coleta agora usa ela. Pedidos antigos foram recolocados na fila pra reprocessar.</div>`;
 }
 function tmon(){
@@ -1253,9 +1253,9 @@ function tmon(){
     Abra um produto na busca e clique em Monitorar.</div>`;
   return `<table><thead><tr>
     <th>Produto</th>
-    <th>Tend├¬ncia (21d)</th>
-    <th class="n">Posi├º├úo</th>
-    <th class="n">Pre├ºo</th>
+    <th>Tendência (21d)</th>
+    <th class="n">Posição</th>
+    <th class="n">Preço</th>
     <th class="n">Vendidos</th>
     <th class="n">Concorrentes</th>
     <th class="n">Alertas</th>
@@ -1271,15 +1271,15 @@ function tmon(){
       const lidoEm = m.vendas_lido_em || f.lido_em;
       const lidoTxt = lidoEm ? new Date(lidoEm).toLocaleDateString('pt-BR') : null;
       const delta = m.delta_desde_inicio;
-      const deltaHtml = delta == null ? '<span class="mv f">ÔÇö</span>'
+      const deltaHtml = delta == null ? '<span class="mv f">—</span>'
         : `<span class="mv ${delta>0?'u':delta<0?'d':'f'}">${
-            delta>0?'Ôû▓ +':delta<0?'Ôû╝ ':''}${delta===0?'ÔÇö':Math.abs(delta)}</span>`;
+            delta>0?'▲ +':delta<0?'▼ ':''}${delta===0?'—':Math.abs(delta)}</span>`;
       const varP = m.variacao_preco;
-      const varHtml = varP == null ? 'ÔÇö'
+      const varHtml = varP == null ? '—'
         : `<span class="mv ${varP<0?'u':varP>0?'d':'f'}">${varP>0?'+':''}${pct(varP)}</span>`;
       const deltaVHtml = deltaV == null ? ''
         : `<div class="sb" style="margin-top:3px"><span class="mv ${deltaV>0?'u':deltaV<0?'d':'f'}">${
-            deltaV>0?'Ôû▓ +':deltaV<0?'Ôû╝ ':''}${deltaV===0?'ÔÇö':num(Math.abs(deltaV))}</span> vs leitura anterior</div>`;
+            deltaV>0?'▲ +':deltaV<0?'▼ ':''}${deltaV===0?'—':num(Math.abs(deltaV))}</span> vs leitura anterior</div>`;
       return `<tr class="k" data-p="${esc(m.product_id)}">
       <td style="width:260px;max-width:280px"><div style="display:flex;gap:10px;align-items:center">
         ${(m.imagem||f.imagem)?`<img src="${esc(m.imagem||f.imagem)}" alt="" width="40" height="40"
@@ -1292,8 +1292,8 @@ function tmon(){
         </div></div></td>
       <td>${sparkMini(S.histMon[m.product_id]||[])}</td>
       <td class="n">
-        <span class="pos">${m.pos_atual ?? 'ÔÇö'}</span>
-        <div class="sb" style="margin-top:4px">${deltaHtml} ┬À entrou em ${m.pos_inicial ?? 'ÔÇö'}┬║</div>
+        <span class="pos">${m.pos_atual ?? '—'}</span>
+        <div class="sb" style="margin-top:4px">${deltaHtml} · entrou em ${m.pos_inicial ?? '—'}º</div>
       </td>
       <td class="n">
         <div style="font-weight:500">${brl(m.preco_atual)}</div>
@@ -1303,18 +1303,18 @@ function tmon(){
         ${vendidos!=null
           ? `<div style="font-weight:500">${aprox?'~':''}${num(vendidos)}</div>
              ${deltaVHtml}
-             <div class="sb" style="margin-top:3px">${lidoTxt?`lido ${lidoTxt}`:'abra no ML c/ extens├úo'}</div>`
-          : `<span class="sb">ÔÇö</span><div class="sb">abra no ML c/ extens├úo</div>`}
+             <div class="sb" style="margin-top:3px">${lidoTxt?`lido ${lidoTxt}`:'abra no ML c/ extensão'}</div>`
+          : `<span class="sb">—</span><div class="sb">abra no ML c/ extensão</div>`}
       </td>
       <td class="n">${num(m.concorrentes)}</td>
-      <td class="n">${m.alertas_novos>0?`<span class="chip p">${m.alertas_novos}</span>`:'ÔÇö'}</td>
+      <td class="n">${m.alertas_novos>0?`<span class="chip p">${m.alertas_novos}</span>`:'—'}</td>
       <td class="n"><button class="btn g mini" data-rm="${esc(m.product_id)}">Remover</button></td>
     </tr>`;}).join('')}</tbody></table>
   <div class="tip"><b>O que atualiza sozinho todo dia (~03:10).</b>
-    Posi├º├úo no ranking, pre├ºo mediano e concorrentes ÔÇö v├¬m da coleta da API.
-    <b>Vendidos</b> o Mercado Livre n├úo entrega pra terceiro pela API: s├│ atualizam quando voc├¬
-    abre o an├║ncio com a extens├úo Gringa Radar instalada (grava hist├│rico e alerta se mudou).
-    O ML arredonda ÔÇ£+100 vendidosÔÇØ; use como ordem de grandeza. Receita = vendidos ├ù pre├ºo daquela leitura (acumulada, n├úo mensal).</div>`;
+    Posição no ranking, preço mediano e concorrentes — vêm da coleta da API.
+    <b>Vendidos</b> o Mercado Livre não entrega pra terceiro pela API: só atualizam quando você
+    abre o anúncio com a extensão Gringa Radar instalada (grava histórico e alerta se mudou).
+    O ML arredonda “+100 vendidos”; use como ordem de grandeza. Receita = vendidos × preço daquela leitura (acumulada, não mensal).</div>`;
 }
 
 function tvend(){
@@ -1327,25 +1327,25 @@ function tvend(){
       ${S.vendResultado.map(r => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">
         <div style="flex:1;min-width:0"><div class="nm" style="font-size:13.5px">${esc(r.nickname ?? r.id)}
           ${r.is_official_store?' <span class="chip p">Loja oficial</span>':''}</div>
-          <div class="sb" style="margin:3px 0">${esc([r.city,r.state].filter(Boolean).join(' ┬À ') || 'ÔÇö')} ┬À ${num(r.anuncios_vistos)} an├║ncio(s) na nossa base</div>
+          <div class="sb" style="margin:3px 0">${esc([r.city,r.state].filter(Boolean).join(' · ') || '—')} · ${num(r.anuncios_vistos)} anúncio(s) na nossa base</div>
           <div>${sellerBits(r)}</div></div>
         <button class="btn mini" data-vadd="${r.id}">Acompanhar</button>
       </div>`).join('')}
     </div>` : (S.vendBusca.trim().length>=2 && !S.vendBuscando ? '<div class="sb" style="margin-top:8px">Nada encontrado com esse nome.</div>' : '')}
   </div>`;
 
-  if (!S.vendedores.length) return buscaBox + `<div class="none"><b>Ainda n├úo h├í nada aqui</b>
-    Busque um vendedor acima pra come├ºar a acompanhar.</div>`;
+  if (!S.vendedores.length) return buscaBox + `<div class="none"><b>Ainda não há nada aqui</b>
+    Busque um vendedor acima pra começar a acompanhar.</div>`;
 
   return buscaBox + `<table><thead><tr><th>Vendedor</th><th>Cidade/UF</th><th></th></tr></thead><tbody>${
     S.vendedores.map(v => { const s = v.sellers || {}; return `<tr>
       <td><div class="nm">${esc(s.nickname ?? v.seller_id)}${s.is_official_store?' <span class="chip p">Loja oficial</span>':''}</div>
         ${s.permalink?`<div class="sb"><a href="${esc(s.permalink)}" target="_blank" rel="noopener">ver perfil no ML</a></div>`:''}</td>
-      <td>${esc([s.city,s.state].filter(Boolean).join(' ┬À ') || 'ÔÇö')}</td>
+      <td>${esc([s.city,s.state].filter(Boolean).join(' · ') || '—')}</td>
       <td class="n"><button class="btn g mini" data-vrm="${v.seller_id}">Remover</button></td>
     </tr>`; }).join('')}</tbody></table>
-    <div class="hint" style="margin-top:10px">Ao buscar, a reputa├º├úo e a medalha v├¬m do ├║ltimo snapshot coletado via API do ML.
-      Seguidores o Mercado Livre n├úo publica na API ÔÇö n├úo inventamos esse n├║mero.</div>`;
+    <div class="hint" style="margin-top:10px">Ao buscar, a reputação e a medalha vêm do último snapshot coletado via API do ML.
+      Seguidores o Mercado Livre não publica na API — não inventamos esse número.</div>`;
 }
 
 function chaveAlerta(a, i){
@@ -1366,7 +1366,7 @@ function talert(){
       <span class="dt ${cor(a.tipo)}" style="margin-top:8px"></span>
       <div style="flex:1;min-width:180px">
         <div class="nm">${esc(a.titulo)}</div>
-        <div class="sb">${esc(a.nome ?? a.product_id)}${a.detalhe?' ┬À '+esc(a.detalhe):''}</div>
+        <div class="sb">${esc(a.nome ?? a.product_id)}${a.detalhe?' · '+esc(a.detalhe):''}</div>
         <div class="sb" style="margin-top:2px">${esc(fmtDiaChart(a.dia))}</div>
       </div>
       <div style="display:flex;gap:8px;flex:none;flex-wrap:wrap">
@@ -1378,14 +1378,14 @@ function talert(){
         ${a.detalhe?`<p style="margin:0 0 10px;color:var(--ink-2);font-size:13.5px">${esc(a.detalhe)}</p>`:''}
         <div class="al-delta" style="margin:0">
           <div class="lado"><div class="k">Antes</div><div class="v">${fmtValorAlerta(a.tipo, a.antes)}</div></div>
-          <div class="seta" aria-hidden="true">ÔåÆ</div>
+          <div class="seta" aria-hidden="true">→</div>
           <div class="lado"><div class="k">Depois</div>
             <div class="v" style="color:${cor(a.tipo)==='g'?'var(--up)':cor(a.tipo)==='r'?'var(--dn)':'var(--brand)'}">${fmtValorAlerta(a.tipo, a.depois)}</div>
           </div>
         </div>
         <p class="sb" style="margin:12px 0 0">Gravado em ${esc(fmtDiaChart(a.dia))}
-          ${a.product_id?' ┬À '+esc(a.product_id):''}
-          ${a.lido?' ┬À lido':' ┬À novo'}</p>
+          ${a.product_id?' · '+esc(a.product_id):''}
+          ${a.lido?' · lido':' · novo'}</p>
       </div>`:''}
     </div>`;
   }).join('')}</div>`;
@@ -1396,19 +1396,19 @@ const TIPO_ALERTA = {
   caiu: 'Caiu no ranking',
   entrou_top10: 'Entrou no top 10',
   saiu_top10: 'Saiu do top 10',
-  preco_subiu: 'Pre├ºo mediano subiu',
-  preco_caiu: 'Pre├ºo mediano caiu',
-  concorrencia: 'Mudan├ºa de concorr├¬ncia',
-  vendas_subiu: 'Vendidos subiu (p├ígina)',
-  vendas_caiu: 'Vendidos caiu (p├ígina)',
+  preco_subiu: 'Preço mediano subiu',
+  preco_caiu: 'Preço mediano caiu',
+  concorrencia: 'Mudança de concorrência',
+  vendas_subiu: 'Vendidos subiu (página)',
+  vendas_caiu: 'Vendidos caiu (página)',
 };
 
 function fmtValorAlerta(tipo, v){
-  if (v == null || v === '') return 'ÔÇö';
+  if (v == null || v === '') return '—';
   if (tipo === 'preco_subiu' || tipo === 'preco_caiu') return brl(v);
-  if (tipo === 'concorrencia') return num(v) + ' an├║ncio(s)';
+  if (tipo === 'concorrencia') return num(v) + ' anúncio(s)';
   if (tipo === 'vendas_subiu' || tipo === 'vendas_caiu') return num(v) + ' vendido(s)';
-  return num(v) + '┬║';
+  return num(v) + 'º';
 }
 
 function marcarAlertaLido(a){
@@ -1452,16 +1452,16 @@ V.detalhe = () => {
   const pri = d.historico[0], ult = d.historico[d.historico.length-1];
   const seguido = S.monitorados.some(m=>m.product_id===d.produto.product_id);
   return `<div style="display:flex;gap:8px;margin-bottom:14px">
-    <button class="btn g" id="volta">ÔåÉ Voltar</button>
-    <button class="btn ${seguido?'g':''}" id="mon">${seguido?'Ô£ô Monitorando':'+ Monitorar'}</button>
+    <button class="btn g" id="volta">← Voltar</button>
+    <button class="btn ${seguido?'g':''}" id="mon">${seguido?'✓ Monitorando':'+ Monitorar'}</button>
   </div>
   <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:4px">
     ${d.produto.picture?`<img src="${esc(d.produto.picture)}" alt="" width="64" height="64" style="border-radius:10px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
     <div>
       <h1 class="pg" style="margin-bottom:2px">${esc(d.produto.name ?? d.produto.product_id)}</h1>
-      <p class="sub" style="margin:0">${esc(d.produto.category_name ?? '')} ┬À ${esc(d.produto.product_id)}
-        ${d.produto.brand?` ┬À ${esc(d.produto.brand)}`:''}
-        ${d.produto.permalink?` ┬À <a href="${esc(d.produto.permalink)}" target="_blank" rel="noopener">ver no Mercado Livre</a>`:''}</p>
+      <p class="sub" style="margin:0">${esc(d.produto.category_name ?? '')} · ${esc(d.produto.product_id)}
+        ${d.produto.brand?` · ${esc(d.produto.brand)}`:''}
+        ${d.produto.permalink?` · <a href="${esc(d.produto.permalink)}" target="_blank" rel="noopener">ver no Mercado Livre</a>`:''}</p>
     </div>
   </div>
   ${S.detalheLocal?`<div class="card cbox" style="margin:14px 0;background:var(--tint)">
@@ -1470,101 +1470,101 @@ V.detalhe = () => {
     ${S.detalheLocal.fornecedor?`<div class="sb">${esc(S.detalheLocal.fornecedor)}</div>`:''}
     ${(S.detalheLocal.custo!=null && d.produto.median_price>0)?`<div class="sb" style="margin-top:4px">
       Margem bruta estimada: <b>${pct((d.produto.median_price-S.detalheLocal.custo)/d.produto.median_price)}</b>
-      (pre├ºo mediano do Mercado Livre ÔêÆ custo do fornecedor)</div>`:''}
+      (preço mediano do Mercado Livre − custo do fornecedor)</div>`:''}
   </div>
   ${S.detalheLocal.fornecedorId?(() => {
     const cont = S.contatos[S.detalheLocal.fornecedorId];
     return `<div class="card cbox" style="margin-bottom:14px">
       <div class="ct">Fornecedor local</div>
-      <div style="font-weight:600;font-size:15px;margin:4px 0 8px">${esc(S.detalheLocal.fornecedor ?? 'ÔÇö')}</div>
+      <div style="font-weight:600;font-size:15px;margin:4px 0 8px">${esc(S.detalheLocal.fornecedor ?? '—')}</div>
       ${cont ? `<div class="ct2">
-          ${cont.telefone?`<a href="tel:${esc(cont.telefone)}">ÔÿÄ ${esc(cont.telefone)}</a>`:''}
-          ${cont.email?`<a href="mailto:${esc(cont.email)}">Ô£ë ${esc(cont.email)}</a>`:''}
-          ${cont.site?`<a href="https://${esc(cont.site)}" target="_blank" rel="noopener">­ƒîÉ ${esc(cont.site)}</a>`:''}
-          ${cont.instagram?`<span>ÔùÄ ${esc(cont.instagram)}</span>`:''}
+          ${cont.telefone?`<a href="tel:${esc(cont.telefone)}">☎ ${esc(cont.telefone)}</a>`:''}
+          ${cont.email?`<a href="mailto:${esc(cont.email)}">✉ ${esc(cont.email)}</a>`:''}
+          ${cont.site?`<a href="https://${esc(cont.site)}" target="_blank" rel="noopener">🌐 ${esc(cont.site)}</a>`:''}
+          ${cont.instagram?`<span>◎ ${esc(cont.instagram)}</span>`:''}
         </div>
-        <div class="aviso">Contatos vindos do cat├ílogo do fornecedor. N├úo verificamos a conduta dele ÔÇö
+        <div class="aviso">Contatos vindos do catálogo do fornecedor. Não verificamos a conduta dele —
           confira antes de fechar pedido.</div>`
-        : `<button class="lock" data-unl="${esc(S.detalheLocal.fornecedorId)}">­ƒöÆ Mostrar contatos</button>`}
+        : `<button class="lock" data-unl="${esc(S.detalheLocal.fornecedorId)}">🔒 Mostrar contatos</button>`}
     </div>`;
   })():''}`:''}
   <div class="g2">
     <div class="card"><div class="cbox">
-      <div class="ct">Posi├º├úo e pre├ºo ÔÇö ${d.historico.length} dia(s). Linha roxa = posi├º├úo (pra cima = subiu); linha verde = pre├ºo mediano.</div>
+      <div class="ct">Posição e preço — ${d.historico.length} dia(s). Linha roxa = posição (pra cima = subiu); linha verde = preço mediano.</div>
       ${spark2(d.historico)}
       ${pri?`<div class="sb" style="display:flex;justify-content:space-between;margin-top:8px">
-        <span>${pri.dia}${pri.posicao!=null?' ┬À '+pri.posicao+'┬║':''}${pri.preco!=null?' ┬À '+brl(pri.preco):''}</span>
-        <span>${ult.dia}${ult.posicao!=null?' ┬À '+ult.posicao+'┬║':''}${ult.preco!=null?' ┬À '+brl(ult.preco):''}</span></div>`:''}
-      ${d.produto.position_now==null?`<div class="hint" style="margin-top:8px">Sem posi├º├úo no ranking p├║blico ÔÇö o Mercado Livre s├│ publica o top 20 da categoria. Pre├ºo e concorrentes abaixo v├¬m da coleta de an├║ncios do cat├ílogo.</div>`:''}
+        <span>${pri.dia}${pri.posicao!=null?' · '+pri.posicao+'º':''}${pri.preco!=null?' · '+brl(pri.preco):''}</span>
+        <span>${ult.dia}${ult.posicao!=null?' · '+ult.posicao+'º':''}${ult.preco!=null?' · '+brl(ult.preco):''}</span></div>`:''}
+      ${d.produto.position_now==null?`<div class="hint" style="margin-top:8px">Sem posição no ranking público — o Mercado Livre só publica o top 20 da categoria. Preço e concorrentes abaixo vêm da coleta de anúncios do catálogo.</div>`:''}
     </div></div>
     <div class="card">
-      <div class="stat"><div class="k">Posi├º├úo hoje</div><div class="v">${d.produto.position_now!=null?d.produto.position_now+'┬║':'ÔÇö'}</div></div>
-      <div class="stat"><div class="k">Melhor posi├º├úo</div><div class="v">${d.produto.best_position!=null?d.produto.best_position+'┬║':'ÔÇö'}</div></div>
+      <div class="stat"><div class="k">Posição hoje</div><div class="v">${d.produto.position_now!=null?d.produto.position_now+'º':'—'}</div></div>
+      <div class="stat"><div class="k">Melhor posição</div><div class="v">${d.produto.best_position!=null?d.produto.best_position+'º':'—'}</div></div>
       <div class="stat"><div class="k">Dias no top 10</div><div class="v">${d.produto.days_in_top10 ?? 0}/${d.produto.days_observed ?? 0}</div></div>
-      <div class="stat"><div class="k">Pre├ºo mediano</div><div class="v">${brl(d.produto.median_price)}</div></div>
-      <div class="stat"><div class="k">Faixa de pre├ºo (${num(d.produto.listings)} an├║ncio(s))</div>
-        <div class="v" style="font-size:16px">${d.produto.min_price!=null?brl(d.produto.min_price)+' ÔÇô '+brl(d.produto.max_price):'ÔÇö'}</div></div>
+      <div class="stat"><div class="k">Preço mediano</div><div class="v">${brl(d.produto.median_price)}</div></div>
+      <div class="stat"><div class="k">Faixa de preço (${num(d.produto.listings)} anúncio(s))</div>
+        <div class="v" style="font-size:16px">${d.produto.min_price!=null?brl(d.produto.min_price)+' – '+brl(d.produto.max_price):'—'}</div></div>
     </div>
   </div>
   <div class="tabs" style="margin-top:18px">
-    <button class="tb ${S.detalheAba==='catalogo'?'on':''}" data-dab="catalogo">Produtos do cat├ílogo (${d.concorrentes.length})</button>
+    <button class="tb ${S.detalheAba==='catalogo'?'on':''}" data-dab="catalogo">Produtos do catálogo (${d.concorrentes.length})</button>
     <button class="tb ${S.detalheAba==='similares'?'on':''}" data-dab="similares">Produtos similares</button>
   </div>
   <div class="card">${S.detalheAba==='catalogo' ? (d.concorrentes.length?`<table><thead><tr>
-    <th>An├║ncio</th><th class="n">Pre├ºo</th><th>Vendedor</th><th>Reputa├º├úo</th><th>Detalhes da listagem</th>
+    <th>Anúncio</th><th class="n">Preço</th><th>Vendedor</th><th>Reputação</th><th>Detalhes da listagem</th>
     </tr></thead><tbody>${d.concorrentes.map(c=>{
       const link = c.permalink || (c.nickname ? `https://perfil.mercadolivre.com.br/${encodeURIComponent(c.nickname)}` : null);
-      const onde = [c.cidade, c.estado].filter(Boolean).join(' ┬À ') || 'ÔÇö';
+      const onde = [c.cidade, c.estado].filter(Boolean).join(' · ') || '—';
       return `<tr class="${link?'k':''}" ${link?`data-open="${esc(link)}"`:''}>
       <td class="sb">${esc(c.item_id)}</td>
       <td class="n" style="font-weight:500">${brl(c.preco)}</td>
-      <td><div class="nm" style="font-size:13.5px">${link?`<a href="${esc(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(c.nickname ?? c.seller_id)}</a>`:esc(c.nickname ?? c.seller_id ?? 'ÔÇö')}
+      <td><div class="nm" style="font-size:13.5px">${link?`<a href="${esc(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(c.nickname ?? c.seller_id)}</a>`:esc(c.nickname ?? c.seller_id ?? '—')}
         ${c.oficial?' <span class="chip g">Oficial</span>':''}</div>
         <div class="sb">${esc(onde)}</div></td>
       <td>${sellerBits(c)}</td>
       <td>${c.full?'<span class="chip y">Full</span>':'<span class="chip">Comum</span>'}
-          ${c.frete_gratis?' <span class="chip">Frete gr├ítis</span>':''}</td>
+          ${c.frete_gratis?' <span class="chip">Frete grátis</span>':''}</td>
     </tr>`;}).join('')}</tbody></table>
-    <div class="hint" style="margin-top:10px">Reputa├º├úo, medalha e vendas hist├│ricas v├¬m do perfil p├║blico do vendedor no Mercado Livre
-      (<code>/users/{id}</code>). Seguidores o ML n├úo publica na API ÔÇö por isso n├úo aparecem aqui.</div>`
+    <div class="hint" style="margin-top:10px">Reputação, medalha e vendas históricas vêm do perfil público do vendedor no Mercado Livre
+      (<code>/users/{id}</code>). Seguidores o ML não publica na API — por isso não aparecem aqui.</div>`
     :'<div class="none"><b>Sem concorrentes coletados</b>Rode <code>npm run collect produtos</code>.</div>')
-  : (!S.similaresCarregado ? '<div class="load">carregandoÔÇª</div>' : S.similares.length ? `<table><thead><tr>
-    <th>Produto</th><th class="n">Posi├º├úo</th><th class="n">Pre├ºo mediano</th><th class="n">An├║ncios</th></tr></thead><tbody>${
+  : (!S.similaresCarregado ? '<div class="load">carregando…</div>' : S.similares.length ? `<table><thead><tr>
+    <th>Produto</th><th class="n">Posição</th><th class="n">Preço mediano</th><th class="n">Anúncios</th></tr></thead><tbody>${
     S.similares.map(sp=>`<tr class="k" data-p="${esc(sp.product_id)}">
       <td style="max-width:280px"><div style="display:flex;gap:10px;align-items:center">
         ${sp.picture?`<img src="${esc(sp.picture)}" width="36" height="36" style="border-radius:6px;object-fit:cover;flex:none;background:#f2f2f5">`:''}
         <div class="nm" style="font-size:13.5px">${esc(sp.name ?? sp.product_id)}</div></div></td>
-      <td class="n"><span class="pos">${sp.position_now ?? 'ÔÇö'}</span></td>
+      <td class="n"><span class="pos">${sp.position_now ?? '—'}</span></td>
       <td class="n">${brl(sp.median_price)}</td>
       <td class="n">${num(sp.listings)}</td>
     </tr>`).join('')}</tbody></table>`
     : '<div class="none"><b>Nada parecido rankeado ainda nessa categoria</b></div>')}</div>`;
 };
 function spark(v,w=560,h=110){
-  if (!v.length) return '<div class="none">sem hist├│rico ainda</div>';
+  if (!v.length) return '<div class="none">sem histórico ainda</div>';
   const mx=Math.max(...v), mn=Math.min(...v), rg=(mx-mn)||1;
   const p = v.map((x,i)=>[(i/Math.max(v.length-1,1))*w, ((x-mn)/rg)*(h-18)+9]);
   const d = p.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"
-    role="img" aria-label="Hist├│rico de ${v.length} dias">
+    role="img" aria-label="Histórico de ${v.length} dias">
     <path d="${d} L ${w} ${h} L 0 ${h} Z" fill="#7C3AED" opacity=".08"/>
     <path d="${d}" fill="none" stroke="#7C3AED" stroke-width="2.2" stroke-linejoin="round"/>
     ${p.map(q=>`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="#7C3AED"/>`).join('')}</svg>`;
 }
 
-/** Posi├º├úo + pre├ºo juntos, eixos independentes. Aceita s├®rie s├│ de um dos dois. */
+/** Posição + preço juntos, eixos independentes. Aceita série só de um dos dois. */
 function fmtDiaChart(d){
-  if (d == null) return 'ÔÇö';
+  if (d == null) return '—';
   const s = String(d).slice(0, 10);
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return String(d); }
 }
 function spark2(hist,w=560,h=170){
-  if (!hist.length) return '<div class="none">sem hist├│rico ainda</div>';
+  if (!hist.length) return '<div class="none">sem histórico ainda</div>';
   const temPos = hist.some(x=>x.posicao!=null);
   const temPreco = hist.some(x=>x.preco!=null);
-  if (!temPos && !temPreco) return '<div class="none">sem hist├│rico ainda</div>';
+  if (!temPos && !temPreco) return '<div class="none">sem histórico ainda</div>';
   const linha = (getY,cor,invertido,serie) => {
     const pts = hist.map((x,i)=>{
       const v = getY(x); if (v==null) return null;
@@ -1588,29 +1588,29 @@ function spark2(hist,w=560,h=170){
   const Lpos = temPos ? linha(x=>x.posicao, '#7C3AED', true, 'pos') : { path:'', dots:'', hits:'' };
   const Lpre = temPreco ? linha(x=>x.preco, '#16A34A', false, 'preco') : { path:'', dots:'', hits:'' };
   return `<div class="cht">
-    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Hist├│rico">
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico">
       ${Lpos.path}${Lpre.path}${Lpos.dots}${Lpre.dots}${Lpos.hits}${Lpre.hits}
     </svg>
     <div class="cht-tip" hidden></div>
   </div>
   <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
-    ${temPos?'<span>ÔùÅ posi├º├úo</span>':''}
-    ${temPreco?'<span style="color:var(--up)">ÔùÅ pre├ºo mediano</span>':''}
+    ${temPos?'<span>● posição</span>':''}
+    ${temPreco?'<span style="color:var(--up)">● preço mediano</span>':''}
     <span style="margin-left:auto">passe o mouse nas bolinhas pra ver dia e valor</span>
   </div>`;
 }
 
-/** Mini-gr├ífico do Monitor: posi├º├úo (roxa) + pre├ºo (verde). Aceita s├®rie s├│ de pre├ºo. */
+/** Mini-gráfico do Monitor: posição (roxa) + preço (verde). Aceita série só de preço. */
 function sparkMini(hist,w=168,h=44){
   if (!hist.length) {
-    return `<div class="spark-wrap"><div class="spark-empty">sem s├®rie ainda</div>
-      <div class="spark-leg"><span><i style="background:var(--brand)"></i>posi├º├úo</span>
-      <span><i style="background:var(--up)"></i>pre├ºo</span></div></div>`;
+    return `<div class="spark-wrap"><div class="spark-empty">sem série ainda</div>
+      <div class="spark-leg"><span><i style="background:var(--brand)"></i>posição</span>
+      <span><i style="background:var(--up)"></i>preço</span></div></div>`;
   }
   const temPos = hist.some(x => x.posicao != null);
   const temPreco = hist.some(x => x.preco != null);
   if (!temPos && !temPreco) {
-    return `<div class="spark-wrap"><div class="spark-empty">sem s├®rie ainda</div></div>`;
+    return `<div class="spark-wrap"><div class="spark-empty">sem série ainda</div></div>`;
   }
 
   const linha = (getY, cor, invertido, label) => {
@@ -1625,16 +1625,16 @@ function sparkMini(hist,w=168,h=44){
                               : (h - 4) - ((y - mn) / rg) * (h - 8);
     if (pts.length === 1) {
       const p = pts[0];
-      const txt = label === 'pos' ? `${p[1]}┬║` : brl(p[1]);
+      const txt = label === 'pos' ? `${p[1]}º` : brl(p[1]);
       return `<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="3" style="fill:${cor}">
-        <title>${esc(p[2].dia)} ┬À ${txt}</title></circle>`;
+        <title>${esc(p[2].dia)} · ${txt}</title></circle>`;
     }
     const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + py(p[1]).toFixed(1)).join(' ');
     const ult = pts[pts.length - 1];
     const pontos = pts.map(p => {
-      const txt = label === 'pos' ? `${p[1]}┬║` : brl(p[1]);
+      const txt = label === 'pos' ? `${p[1]}º` : brl(p[1]);
       return `<circle cx="${p[0].toFixed(1)}" cy="${py(p[1]).toFixed(1)}" r="2" style="fill:${cor}">
-        <title>${esc(p[2].dia)} ┬À ${txt}</title></circle>`;
+        <title>${esc(p[2].dia)} · ${txt}</title></circle>`;
     }).join('');
     return `<path d="${d}" fill="none" style="stroke:${cor}" stroke-width="1.8" stroke-linejoin="round"/>
       ${pontos}
@@ -1642,21 +1642,21 @@ function sparkMini(hist,w=168,h=44){
   };
 
   return `<div class="spark-wrap">
-    <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" role="img" aria-label="Tend├¬ncia 21 dias">
+    <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" role="img" aria-label="Tendência 21 dias">
       ${temPos ? linha(x => x.posicao, 'var(--brand)', true, 'pos') : ''}
       ${temPreco ? linha(x => x.preco, 'var(--up)', false, 'preco') : ''}
     </svg>
     <div class="spark-leg">
-      ${temPos ? '<span><i style="background:var(--brand)"></i>posi├º├úo</span>' : ''}
-      ${temPreco ? '<span><i style="background:var(--up)"></i>pre├ºo</span>' : ''}
+      ${temPos ? '<span><i style="background:var(--brand)"></i>posição</span>' : ''}
+      ${temPreco ? '<span><i style="background:var(--up)"></i>preço</span>' : ''}
       ${!temPos && temPreco ? '<span>fora do top 20</span>' : ''}
     </div>
   </div>`;
 }
 
-/** Mesmo desenho do spark2, mas pra s├®rie de categoria: produtos no top + pre├ºo mediano do dia. */
+/** Mesmo desenho do spark2, mas pra série de categoria: produtos no top + preço mediano do dia. */
 function sparkCategoria(hist,w=560,h=170){
-  if (hist.length<2) return '<div class="none">sem hist├│rico ainda ÔÇö volte depois de alguns dias de coleta</div>';
+  if (hist.length<2) return '<div class="none">sem histórico ainda — volte depois de alguns dias de coleta</div>';
   const linha = (getY,cor,serie) => {
     const pts = hist.map((x,i)=>{
       const v = getY(x); if (v==null) return null;
@@ -1680,13 +1680,13 @@ function sparkCategoria(hist,w=560,h=170){
   const La = linha(x=>x.produtos_no_top, '#7C3AED', 'prod');
   const Lb = linha(x=>x.preco_mediano, '#16A34A', 'preco');
   return `<div class="cht">
-    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Hist├│rico da categoria">
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Histórico da categoria">
       ${La.path}${Lb.path}${La.dots}${Lb.dots}${La.hits}${Lb.hits}
     </svg>
     <div class="cht-tip" hidden></div>
   </div>
   <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--ink-3)">
-    <span>ÔùÅ produtos no top 20</span><span style="color:var(--up)">ÔùÅ pre├ºo mediano</span>
+    <span>● produtos no top 20</span><span style="color:var(--up)">● preço mediano</span>
     <span style="margin-left:auto">passe o mouse nas bolinhas pra ver dia e valor</span>
   </div>`;
 }
@@ -1709,14 +1709,14 @@ function wireChartTips(){
     };
     wrap.querySelectorAll('.cht-hit').forEach(el => {
       el.onmouseenter = (e) => {
-        const dia = el.dataset.dia || 'ÔÇö';
+        const dia = el.dataset.dia || '—';
         const lines = [`<b>${esc(dia)}</b>`];
         if (el.dataset.pos !== undefined && el.dataset.pos !== '')
-          lines.push(`<span>Posi├º├úo: <b style="display:inline">${esc(el.dataset.pos)}┬║</b></span>`);
+          lines.push(`<span>Posição: <b style="display:inline">${esc(el.dataset.pos)}º</b></span>`);
         if (el.dataset.produtos !== undefined && el.dataset.produtos !== '')
           lines.push(`<span>Produtos no top: <b style="display:inline">${esc(el.dataset.produtos)}</b></span>`);
         if (el.dataset.preco !== undefined && el.dataset.preco !== '')
-          lines.push(`<span>Pre├ºo mediano: <b style="display:inline">${brl(Number(el.dataset.preco))}</b></span>`);
+          lines.push(`<span>Preço mediano: <b style="display:inline">${brl(Number(el.dataset.preco))}</b></span>`);
         if (lines.length === 1) lines.push('<span>Sem valor neste ponto</span>');
         tip.innerHTML = lines.join('');
         move(e);
@@ -1727,12 +1727,12 @@ function wireChartTips(){
   });
 }
 
-// Anexo I do Simples Nacional (com├®rcio) ÔÇö faixas oficiais, est├íveis desde a
-// LC 155/2016. Al├¡quota efetiva = ((RBT12 ├ù al├¡quota nominal) ÔêÆ parcela a
-// deduzir) / RBT12. ├ë a ├║nica tabela de custo aqui calculada por f├│rmula:
-// comiss├úo do ML e tabela de frete variam por categoria/reputa├º├úo de um jeito
-// que muda sem aviso e sem fonte p├║blica confi├ível pra travar em c├│digo ÔÇö
-// por isso ficam edit├íveis, com valor inicial s├│ como ponto de partida.
+// Anexo I do Simples Nacional (comércio) — faixas oficiais, estáveis desde a
+// LC 155/2016. Alíquota efetiva = ((RBT12 × alíquota nominal) − parcela a
+// deduzir) / RBT12. É a única tabela de custo aqui calculada por fórmula:
+// comissão do ML e tabela de frete variam por categoria/reputação de um jeito
+// que muda sem aviso e sem fonte pública confiável pra travar em código —
+// por isso ficam editáveis, com valor inicial só como ponto de partida.
 const SIMPLES_ANEXO1 = [
   { ate: 180000,   aliq: .04,  pd: 0 },
   { ate: 360000,   aliq: .073, pd: 5940 },
@@ -1758,48 +1758,48 @@ function presetsCalc(){
 V.calc = () => {
   const presets = presetsCalc();
   return `<h1 class="pg">Calculadora de margem</h1>
-  <p class="sub">O n├║mero que decide a compra. Comiss├úo, frete e imposto saem antes do lucro.</p>
+  <p class="sub">O número que decide a compra. Comissão, frete e imposto saem antes do lucro.</p>
   ${presets.length ? `<div class="presets">${presets.map((p,i)=>
     `<span class="preset"><button data-loadp="${i}" style="opacity:1;color:inherit">${esc(p.nome)}</button>
-     <button data-delp="${i}">├ù</button></span>`).join('')}</div>` : ''}
+     <button data-delp="${i}">×</button></span>`).join('')}</div>` : ''}
   <div class="g2">
     <div>
       <div class="card cbox">
         <div class="ct">Produto</div>
         <div class="cfld" style="margin-bottom:10px">
-          <label>Link ou c├│digo do produto <i>(opcional ÔÇö puxa o pre├ºo mediano da nossa base)</i></label>
+          <label>Link ou código do produto <i>(opcional — puxa o preço mediano da nossa base)</i></label>
           <div style="display:flex;gap:8px">
             <input id="pc_link" placeholder="cole o link do Mercado Livre ou o MLB">
             <button class="btn" id="pc_aplicar" style="flex:none">Aplicar</button>
           </div>
         </div>
         <div class="crow">
-          <div class="cfld"><label>Pre├ºo de venda, R$ *</label><input type="number" id="pc_venda" value="199.90" step="0.01"></div>
-          <div class="cfld"><label>Pre├ºo de compra, R$ *</label><input type="number" id="pc_compra" value="70.00" step="0.01"></div>
+          <div class="cfld"><label>Preço de venda, R$ *</label><input type="number" id="pc_venda" value="199.90" step="0.01"></div>
+          <div class="cfld"><label>Preço de compra, R$ *</label><input type="number" id="pc_compra" value="70.00" step="0.01"></div>
         </div>
-        <div class="cfld"><label>Vendas por m├¬s</label><input type="number" id="pc_vendas" value="1" min="0" step="1"></div>
+        <div class="cfld"><label>Vendas por mês</label><input type="number" id="pc_vendas" value="1" min="0" step="1"></div>
       </div>
 
       <details class="csec" open>
-        <summary>Comiss├Áes <span class="sub2" id="pc_com_resumo"></span></summary>
+        <summary>Comissões <span class="sub2" id="pc_com_resumo"></span></summary>
         <div class="cbody">
           <div class="cattag">
             <span style="font-size:13px;color:var(--ink-2)">Categorias:</span>
-            ${S.calcCats.map((c,i)=>`<span class="preset">${esc(c)}<button data-catdel="${i}">├ù</button></span>`).join('')}
-            <input id="pc_cat_add" placeholder="ex: Eletr├┤nicos (s├│ anota├º├úo ÔÇö n├úo muda a %)">
+            ${S.calcCats.map((c,i)=>`<span class="preset">${esc(c)}<button data-catdel="${i}">×</button></span>`).join('')}
+            <input id="pc_cat_add" placeholder="ex: Eletrônicos (só anotação — não muda a %)">
             <button class="btn" id="pc_cat_addbtn" style="padding:6px 12px;font-size:12.5px">Add</button>
           </div>
-          <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px">Tipo de an├║ncio</label>
+          <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px">Tipo de anúncio</label>
           <div class="radios">
-            <label><input type="radio" name="pc_tipo" value="classico" checked>Cl├íssico</label>
+            <label><input type="radio" name="pc_tipo" value="classico" checked>Clássico</label>
             <label><input type="radio" name="pc_tipo" value="premium">Premium</label>
           </div>
           <div class="crow">
-            <div class="cfld"><label>Comiss├úo, %</label>
+            <div class="cfld"><label>Comissão, %</label>
               <input type="number" id="pc_comissao" value="${COMISSAO_PADRAO.classico}" step="0.1"></div>
-            <div class="cfld"><label>Comiss├úo em R$</label><div class="roval" id="pc_comissao_rs">R$ 0,00</div></div>
+            <div class="cfld"><label>Comissão em R$</label><div class="roval" id="pc_comissao_rs">R$ 0,00</div></div>
           </div>
-          <div class="hint">├ë aplicada uma m├®dia de comiss├úo (11%ÔÇô19% conforme categoria) ÔÇö confira o valor exato na Central do Vendedor.</div>
+          <div class="hint">É aplicada uma média de comissão (11%–19% conforme categoria) — confira o valor exato na Central do Vendedor.</div>
           <div class="cfld chk" style="padding-top:10px">
             <input type="checkbox" id="pc_taxafixa" checked>
             <label for="pc_taxafixa" style="font-size:12.5px">Cobrar taxa fixa em vendas abaixo de R$79 (<input type="number" id="pc_taxafixa_v" value="6.50" step="0.01" style="width:60px;padding:3px 5px;border:1px solid var(--line);border-radius:6px">)</label>
@@ -1810,23 +1810,23 @@ V.calc = () => {
       <details class="csec">
         <summary>Envio <span class="sub2" id="pc_env_resumo"></span></summary>
         <div class="cbody">
-          <div class="cfld" style="margin-bottom:10px"><label>Reputa├º├úo do vendedor</label>
-            <select id="pc_reput"><option value="verde">Verde / MercadoL├¡der</option><option value="amarelo">Amarela</option><option value="vermelho">Vermelha</option><option value="nova">Sem reputa├º├úo</option></select></div>
+          <div class="cfld" style="margin-bottom:10px"><label>Reputação do vendedor</label>
+            <select id="pc_reput"><option value="verde">Verde / MercadoLíder</option><option value="amarelo">Amarela</option><option value="vermelho">Vermelha</option><option value="nova">Sem reputação</option></select></div>
           <div class="crow3">
             <div class="cfld"><label>Peso, kg</label><input type="number" id="pc_peso" value="0.5" step="0.01"></div>
-            <div class="cfld"><label>Altura, cm</label><input type="number" id="pc_altura" step="0.1" placeholder="ÔÇö"></div>
-            <div class="cfld"><label>Largura, cm</label><input type="number" id="pc_largura" step="0.1" placeholder="ÔÇö"></div>
-            <div class="cfld"><label>Comprimento, cm</label><input type="number" id="pc_comprimento" step="0.1" placeholder="ÔÇö"></div>
+            <div class="cfld"><label>Altura, cm</label><input type="number" id="pc_altura" step="0.1" placeholder="—"></div>
+            <div class="cfld"><label>Largura, cm</label><input type="number" id="pc_largura" step="0.1" placeholder="—"></div>
+            <div class="cfld"><label>Comprimento, cm</label><input type="number" id="pc_comprimento" step="0.1" placeholder="—"></div>
           </div>
           <div class="hint" id="pc_cubagem_hint" style="margin:-4px 0 10px"></div>
-          <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px">Frete gr├ítis</label>
+          <label style="display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:5px">Frete grátis</label>
           <div class="radios">
             <label><input type="radio" name="pc_gratis" value="sim" checked>Sim</label>
-            <label><input type="radio" name="pc_gratis" value="nao">N├úo</label>
+            <label><input type="radio" name="pc_gratis" value="nao">Não</label>
           </div>
           <div class="cfld" style="margin-top:6px"><label>Custo de envio pra mim, R$</label>
             <input type="number" id="pc_frete" value="0" step="0.01"></div>
-          <div class="hint">Pre├ºo aproximado pra voc├¬ bancar o frete gr├ítis ÔÇö confira no simulador de frete do Mercado Livre, a tabela deles varia por peso, pre├ºo e reputa├º├úo.</div>
+          <div class="hint">Preço aproximado pra você bancar o frete grátis — confira no simulador de frete do Mercado Livre, a tabela deles varia por peso, preço e reputação.</div>
         </div>
       </details>
 
@@ -1838,19 +1838,19 @@ V.calc = () => {
               <option value="simples">Simples Nacional</option>
               <option value="mei">MEI</option>
               <option value="presumido">Lucro Presumido</option>
-              <option value="nenhum">Nenhum / pessoa f├¡sica</option>
+              <option value="nenhum">Nenhum / pessoa física</option>
             </select></div>
           <div class="crow" id="pc_receita_wrap">
             <div class="cfld"><label>Receita bruta anual (faixa)</label>
               <select id="pc_faixa">
-                <option value="180000">At├® R$ 180.000,00</option>
-                <option value="360000">R$ 180.000,01 ÔÇô R$ 360.000,00</option>
-                <option value="720000">R$ 360.000,01 ÔÇô R$ 720.000,00</option>
-                <option value="1800000">R$ 720.000,01 ÔÇô R$ 1.800.000,00</option>
-                <option value="3600000">R$ 1.800.000,01 ÔÇô R$ 3.600.000,00</option>
-                <option value="4800000">R$ 3.600.000,01 ÔÇô R$ 4.800.000,00</option>
+                <option value="180000">Até R$ 180.000,00</option>
+                <option value="360000">R$ 180.000,01 – R$ 360.000,00</option>
+                <option value="720000">R$ 360.000,01 – R$ 720.000,00</option>
+                <option value="1800000">R$ 720.000,01 – R$ 1.800.000,00</option>
+                <option value="3600000">R$ 1.800.000,01 – R$ 3.600.000,00</option>
+                <option value="4800000">R$ 3.600.000,01 – R$ 4.800.000,00</option>
               </select></div>
-            <div class="cfld"><label>Receita bruta, ├║ltimos 12 meses, R$</label>
+            <div class="cfld"><label>Receita bruta, últimos 12 meses, R$</label>
               <input type="number" id="pc_receita" value="120000" step="1000"></div>
           </div>
           <div class="cfld"><label>Impostos, % <i>(Simples calcula sozinho pelo Anexo I; outros regimes, digite)</i></label>
@@ -1861,7 +1861,7 @@ V.calc = () => {
       <details class="csec">
         <summary>Custo adicional <span class="sub2" id="pc_extra_resumo"></span></summary>
         <div class="cbody">
-          <div class="cfld"><label>Embalagem, ADS, outros ÔÇö por unidade, R$</label>
+          <div class="cfld"><label>Embalagem, ADS, outros — por unidade, R$</label>
             <input type="number" id="pc_extra" value="0" step="0.01"></div>
         </div>
       </details>
@@ -1869,15 +1869,15 @@ V.calc = () => {
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn" id="pc_calc">Calcular</button>
         <button class="btn" id="pc_limpar" style="background:var(--card);color:var(--ink-2);border:1px solid var(--line)">Limpar</button>
-        <button class="btn" id="pc_salvar" style="background:var(--card);color:var(--brand-2);border:1px solid var(--soft)">Salvar como predefini├º├úo</button>
+        <button class="btn" id="pc_salvar" style="background:var(--card);color:var(--brand-2);border:1px solid var(--soft)">Salvar como predefinição</button>
       </div>
     </div>
     <div class="card cbox" id="kout" style="align-self:flex-start;position:sticky;top:16px"></div>
   </div>
-  <div class="tip"><b>Comiss├úo e frete s├úo pontos de partida, n├úo a tabela oficial.</b> O Mercado Livre
-    varia comiss├úo por categoria (11%ÔÇô19%) e o custo de frete gr├ítis por mais de 250 combina├º├Áes de peso,
-    pre├ºo e reputa├º├úo ÔÇö confira o valor exato na Central do Vendedor antes de decidir. S├│ o imposto do
-    Simples Nacional ├® calculado pela tabela oficial (Anexo I).</div>`;
+  <div class="tip"><b>Comissão e frete são pontos de partida, não a tabela oficial.</b> O Mercado Livre
+    varia comissão por categoria (11%–19%) e o custo de frete grátis por mais de 250 combinações de peso,
+    preço e reputação — confira o valor exato na Central do Vendedor antes de decidir. Só o imposto do
+    Simples Nacional é calculado pela tabela oficial (Anexo I).</div>`;
 };
 
 function calc(){
@@ -1908,7 +1908,7 @@ function calc(){
   const margemLiquida = venda ? lucro / venda : null;
   const margemBruta = venda ? (venda - compra) / venda : null;
 
-  // resumos nas abas fechadas, pra n├úo precisar abrir tudo pra conferir
+  // resumos nas abas fechadas, pra não precisar abrir tudo pra conferir
   const rc = $('#pc_com_resumo'); if (rc) rc.textContent = `${comissaoPct}%${taxaFixa?' + taxa fixa':''}`;
   const re = $('#pc_env_resumo'); if (re) re.textContent = gratis ? brl(freteUn) : 'frete pago pelo comprador';
   const ri = $('#pc_imp_resumo'); if (ri) ri.textContent = `${impostoPct.toFixed(2)}%`;
@@ -1916,15 +1916,15 @@ function calc(){
   const rvR = $('#pc_comissao_rs'); if (rvR) rvR.textContent = brl(comissaoR);
   const wrapReceita = $('#pc_receita_wrap'); if (wrapReceita) wrapReceita.style.display = regime === 'simples' ? '' : 'none';
 
-  // peso c├║bico: f├│rmula padr├úo de transportadoras (A├ùL├ùC em cm ├À 6000 = kg).
-  // Informativo ÔÇö n├úo muda o custo de envio, que continua edit├ível.
+  // peso cúbico: fórmula padrão de transportadoras (A×L×C em cm ÷ 6000 = kg).
+  // Informativo — não muda o custo de envio, que continua editável.
   const cub = $('#pc_cubagem_hint');
   if (cub) {
     const alt = g('pc_altura'), larg = g('pc_largura'), comp = g('pc_comprimento'), peso = g('pc_peso');
     if (alt && larg && comp) {
       const pesoCubico = (alt * larg * comp) / 6000;
       const considerado = Math.max(peso, pesoCubico);
-      cub.textContent = `Peso c├║bico: ${pesoCubico.toFixed(2)}kg ÔÇö peso considerado pela transportadora: ${considerado.toFixed(2)}kg`;
+      cub.textContent = `Peso cúbico: ${pesoCubico.toFixed(2)}kg — peso considerado pela transportadora: ${considerado.toFixed(2)}kg`;
     } else {
       cub.textContent = '';
     }
@@ -1941,32 +1941,32 @@ function calc(){
   const cor = lucro > 0 ? 'var(--up)' : 'var(--dn)';
 
   o.innerHTML = `
-    <div class="stat"><div class="k">Margem l├¡quida</div>
-      <div class="v" style="color:${cor}">${margemLiquida!=null?pct(margemLiquida):'ÔÇö'}</div></div>
-    <div class="stat"><div class="k">Lucro l├¡quido</div>
+    <div class="stat"><div class="k">Margem líquida</div>
+      <div class="v" style="color:${cor}">${margemLiquida!=null?pct(margemLiquida):'—'}</div></div>
+    <div class="stat"><div class="k">Lucro líquido</div>
       <div class="v" style="color:${cor}">${brl(lucro)}</div></div>
-    ${faltando?`<div class="cwarn">ÔÜá´©Å Preencha pre├ºo de venda e pre├ºo de compra pra ter a margem l├¡quida correta.</div>`:''}
-    <details class="cdet" style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:10px 0">C├ílculo detalhado</summary>
+    ${faltando?`<div class="cwarn">⚠️ Preencha preço de venda e preço de compra pra ter a margem líquida correta.</div>`:''}
+    <details class="cdet" style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:10px 0">Cálculo detalhado</summary>
       <div class="grp">Margem bruta</div>
-      <div class="row"><span>Margem bruta</span><b>${margemBruta!=null?pct(margemBruta):'ÔÇö'}</b></div>
+      <div class="row"><span>Margem bruta</span><b>${margemBruta!=null?pct(margemBruta):'—'}</b></div>
       <div class="row"><span>Receita bruta</span><b>${brl(receitaBruta)}</b></div>
 
       <div class="grp">Por unidade</div>
-      <div class="row"><span>Despesas totais</span><b class="neg">ÔêÆ${brl(despesas)}</b></div>
-      <div class="row"><span>Receita (lucro l├¡quido)</span><b style="color:${cor}">${brl(lucro)}</b></div>
+      <div class="row"><span>Despesas totais</span><b class="neg">−${brl(despesas)}</b></div>
+      <div class="row"><span>Receita (lucro líquido)</span><b style="color:${cor}">${brl(lucro)}</b></div>
 
-      <div class="grp">Incluindo todas as vendas do m├¬s</div>
+      <div class="grp">Incluindo todas as vendas do mês</div>
       <div class="row"><span>Vendas mensais</span><b>${num(qtd)}</b></div>
-      <div class="row"><span>Despesas totais</span><b class="neg">ÔêÆ${brl(despesas*qtd)}</b></div>
-      <div class="row"><span>Receita (lucro l├¡quido)</span><b style="color:${cor}">${brl(lucro*qtd)}</b></div>
+      <div class="row"><span>Despesas totais</span><b class="neg">−${brl(despesas*qtd)}</b></div>
+      <div class="row"><span>Receita (lucro líquido)</span><b style="color:${cor}">${brl(lucro*qtd)}</b></div>
 
       <div class="grp">Todas as despesas (por unidade)</div>
-      <div class="row"><span>Pre├ºo de compra</span><b class="neg">ÔêÆ${brl(compra)}</b></div>
-      <div class="row"><span>Comiss├úo (${comissaoPct}%)</span><b class="neg">ÔêÆ${brl(comissaoR)}</b></div>
-      ${taxaFixa?`<div class="row"><span>Taxa fixa</span><b class="neg">ÔêÆ${brl(taxaFixa)}</b></div>`:''}
-      <div class="row"><span>Frete</span><b class="neg">ÔêÆ${brl(freteUn)}</b></div>
-      <div class="row"><span>Impostos (${impostoPct.toFixed(2)}%)</span><b class="neg">ÔêÆ${brl(impostoR)}</b></div>
-      <div class="row"><span>Custos adicionais</span><b class="neg">ÔêÆ${brl(extra)}</b></div>
+      <div class="row"><span>Preço de compra</span><b class="neg">−${brl(compra)}</b></div>
+      <div class="row"><span>Comissão (${comissaoPct}%)</span><b class="neg">−${brl(comissaoR)}</b></div>
+      ${taxaFixa?`<div class="row"><span>Taxa fixa</span><b class="neg">−${brl(taxaFixa)}</b></div>`:''}
+      <div class="row"><span>Frete</span><b class="neg">−${brl(freteUn)}</b></div>
+      <div class="row"><span>Impostos (${impostoPct.toFixed(2)}%)</span><b class="neg">−${brl(impostoR)}</b></div>
+      <div class="row"><span>Custos adicionais</span><b class="neg">−${brl(extra)}</b></div>
     </details>`;
 }
 
@@ -1976,10 +1976,10 @@ const CALC_IDS = ['pc_venda','pc_compra','pc_vendas','pc_comissao','pc_taxafixa'
 const CALC_RADIOS = ['pc_tipo','pc_gratis'];
 
 function aplicarPresetCalc(p){
-  // N├úo chama render() aqui de prop├│sito: V.calc() gera o HTML com os
-  // valores padr├úo fixos do template, ent├úo re-renderizar depois de
-  // setar os campos apagaria a predefini├º├úo que acabou de ser carregada.
-  // O DOM da view calc j├í existe (├® da├¡ que veio o clique), ent├úo s├│
+  // Não chama render() aqui de propósito: V.calc() gera o HTML com os
+  // valores padrão fixos do template, então re-renderizar depois de
+  // setar os campos apagaria a predefinição que acabou de ser carregada.
+  // O DOM da view calc já existe (é daí que veio o clique), então só
   // precisa atualizar os campos e recalcular.
   CALC_IDS.forEach(id => {
     const el = document.getElementById(id); const v = p.campos[id];
@@ -1994,7 +1994,7 @@ function aplicarPresetCalc(p){
   calc();
 }
 function salvarPresetCalc(){
-  const nome = prompt('Nome da predefini├º├úo:');
+  const nome = prompt('Nome da predefinição:');
   if (!nome) return;
   const campos = {};
   CALC_IDS.forEach(id => { const el = document.getElementById(id); if (el) campos[id] = el.type==='checkbox' ? el.checked : el.value; });
@@ -2010,8 +2010,8 @@ function excluirPresetCalc(i){
   localStorage.setItem('gr_calc_presets', JSON.stringify(presets));
   render();
 }
-/** Busca ao vivo no Mercado Livre ÔÇö usado quando o produto ainda n├úo
- *  est├í na nossa base. Cobre link de cat├ílogo sempre; an├║ncio direto de
+/** Busca ao vivo no Mercado Livre — usado quando o produto ainda não
+ *  está na nossa base. Cobre link de catálogo sempre; anúncio direto de
  *  outro vendedor pode vir bloqueado (ver ml-preco, o ML restringe
  *  esse tipo de consulta pra terceiro). */
 async function buscarPrecoAoVivo(ref){
@@ -2027,7 +2027,7 @@ async function aplicarLinkCalc(){
   try {
     const { data, error } = await sb.rpc('buscar_por_referencia', { p_ref: ref });
     if (error) { alert(error.message); return; }
-    if (data.tipo === 'texto') { alert('N├úo reconheci isso como link ou c├│digo de produto do Mercado Livre.'); return; }
+    if (data.tipo === 'texto') { alert('Não reconheci isso como link ou código de produto do Mercado Livre.'); return; }
 
     if (data.tipo !== 'nao_encontrado') {
       const { data: ficha, error: e2 } = await sb.rpc('ficha_produto', { p_produto: data.produto });
@@ -2037,7 +2037,7 @@ async function aplicarLinkCalc(){
         calc();
         return;
       }
-      // achou o produto na nossa base, mas sem pre├ºo coletado ainda ÔÇö
+      // achou o produto na nossa base, mas sem preço coletado ainda —
       // tenta ao vivo antes de desistir.
     }
 
@@ -2048,46 +2048,46 @@ async function aplicarLinkCalc(){
       return;
     }
     if (vivo.ok && vivo.preco == null) {
-      alert(`Achei "${vivo.nome ?? data.mlb ?? ref}" no Mercado Livre, mas n├úo consegui um pre├ºo agora ÔÇö preencha manualmente.`);
+      alert(`Achei "${vivo.nome ?? data.mlb ?? ref}" no Mercado Livre, mas não consegui um preço agora — preencha manualmente.`);
       return;
     }
     if (vivo.erro === 'bloqueado_ou_nao_encontrado') {
-      alert(`${data.mlb ?? ref}: o Mercado Livre bloqueia consulta a an├║ncio de terceiro desse tipo ÔÇö preencha o pre├ºo manualmente, ou pe├ºa a coleta pela extens├úo.`);
+      alert(`${data.mlb ?? ref}: o Mercado Livre bloqueia consulta a anúncio de terceiro desse tipo — preencha o preço manualmente, ou peça a coleta pela extensão.`);
       return;
     }
-    alert(`N├úo consegui achar "${ref}" ÔÇö nem na nossa base, nem ao vivo no Mercado Livre.`);
+    alert(`Não consegui achar "${ref}" — nem na nossa base, nem ao vivo no Mercado Livre.`);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Aplicar'; }
   }
 }
 
 // ---------------------------------------------------------------------
-// CLIPES E IMAGENS ÔÇö a navega├º├úo e a quota s├úo reais; a gera├º├úo em si
-// n├úo ├®.
+// CLIPES E IMAGENS — a navegação e a quota são reais; a geração em si
+// não é.
 //
-// Gerar v├¡deo/imagem de produto por IA precisa de um provedor pago
-// (ex.: Kling/Runway pra v├¡deo, Ideogram/Recraft pra imagem) que este
-// projeto ainda n├úo tem configurado. Deixar o bot├úo "funcionando" sem
-// gerar nada de verdade seria prometer o que n├úo existe ÔÇö o app inteiro
+// Gerar vídeo/imagem de produto por IA precisa de um provedor pago
+// (ex.: Kling/Runway pra vídeo, Ideogram/Recraft pra imagem) que este
+// projeto ainda não tem configurado. Deixar o botão "funcionando" sem
+// gerar nada de verdade seria prometer o que não existe — o app inteiro
 // evita isso (ver as etiquetas honestas no Monitor e na Busca). Por
-// isso "Gerar" fica desabilitado com aviso, at├® ter um provedor ÔÇö mas
-// clicar em "Gerar imagens"/"Gerar clipes" no hub J├ü leva pra tela de
-// verdade, com a quota real do plano (feature ai_content, j├í existe em
+// isso "Gerar" fica desabilitado com aviso, até ter um provedor — mas
+// clicar em "Gerar imagens"/"Gerar clipes" no hub JÁ leva pra tela de
+// verdade, com a quota real do plano (feature ai_content, já existe em
 // plans.limits) e um jeito de anexar produto de verdade.
 // ---------------------------------------------------------------------
 // Preencha aqui quando tiver links de exemplo com direito de uso (foto
-// pr├│pria, estoque licenciado, ou reaproveitar foto real j├í coletada).
-// Nunca aponte pra asset hospedado pela concorrente ÔÇö ver conversa.
+// própria, estoque licenciado, ou reaproveitar foto real já coletada).
+// Nunca aponte pra asset hospedado pela concorrente — ver conversa.
 const EXEMPLO_MIDIA = {
   video: null,       // ex.: 'https://.../seu-video-exemplo.mp4'
-  imagens: [],        // ex.: ['https://.../1.jpg', ...] at├® 9
+  imagens: [],        // ex.: ['https://.../1.jpg', ...] até 9
 };
 
 function blocoExemploVideo(){
   return `<div class="exvideo">${EXEMPLO_MIDIA.video
     ? `<video src="${esc(EXEMPLO_MIDIA.video)}" controls preload="metadata"></video>`
     : `<div class="exph">sem exemplo ainda</div>`}</div>
-  <div class="excap">Exemplo de gera├º├úo. Clique para visualizar.</div>`;
+  <div class="excap">Exemplo de geração. Clique para visualizar.</div>`;
 }
 function blocoExemploImagens(){
   const imgs = EXEMPLO_MIDIA.imagens.slice(0, 9);
@@ -2096,12 +2096,12 @@ function blocoExemploImagens(){
     ${imgs.map(u => `<img src="${esc(u)}" alt="">`).join('')}
     ${Array.from({length: vazios}, () => `<div class="exph">sem exemplo</div>`).join('')}
   </div>
-  <div class="excap">Exemplo de gera├º├úo. Clique para visualizar.</div>`;
+  <div class="excap">Exemplo de geração. Clique para visualizar.</div>`;
 }
 
 V.clipes = () => `<h1 class="pg">Clipes e imagens
     <span class="chip y" style="margin-left:8px;vertical-align:middle">Em desenvolvimento</span></h1>
-  <p class="sub">Geracao de videos e imagens de produto com IA.</p>
+  <p class="sub">Geração de vídeos e imagens de produto com IA.</p>
   <div class="hero" style="margin-bottom:22px">
     <h3>Em desenvolvimento</h3>
     <p>Esta área ainda não está disponível. Em breve você poderá gerar clipes e imagens
@@ -2120,19 +2120,19 @@ async function adicionarProdutoClipes(){
 }
 
 // ---------------------------------------------------------------------
-// ASSINATURA ÔÇö planos e pre├ºos s├úo reais (tabela plans). "Assinar"
-// fica desabilitado: cobran├ºa recorrente precisa de um gateway de
-// pagamento (Mercado Pago, Stripe...) que este projeto n├úo tem
+// ASSINATURA — planos e preços são reais (tabela plans). "Assinar"
+// fica desabilitado: cobrança recorrente precisa de um gateway de
+// pagamento (Mercado Pago, Stripe...) que este projeto não tem
 // conectado ainda. Fingir que processa pagamento sem gateway de
-// verdade enganaria quem tentasse assinar ÔÇö mesmo racioc├¡nio de
+// verdade enganaria quem tentasse assinar — mesmo raciocínio de
 // Clipes e imagens, com um agravante: aqui envolveria dinheiro.
 // ---------------------------------------------------------------------
 const LABEL_LIMITE = {
-  product_search:'Buscas de produto/m├¬s', rows_full:'Linhas completas por busca',
-  category_view:'Consultas de categoria/m├¬s', seller_search:'Buscas de vendedor/m├¬s',
-  tracked_items:'Produtos no Monitor', extension_view:'Consultas pela extens├úo/m├¬s',
-  supplier_unlock:'Fornecedores desbloqueados/m├¬s', competitor_analysis:'An├ílises de concorr├¬ncia/m├¬s',
-  ai_content:'Gera├º├Áes de IA/m├¬s', export_csv:'Exporta├º├Áes CSV/m├¬s', calculator:'Usos da calculadora/m├¬s',
+  product_search:'Buscas de produto/mês', rows_full:'Linhas completas por busca',
+  category_view:'Consultas de categoria/mês', seller_search:'Buscas de vendedor/mês',
+  tracked_items:'Produtos no Monitor', extension_view:'Consultas pela extensão/mês',
+  supplier_unlock:'Fornecedores desbloqueados/mês', competitor_analysis:'Análises de concorrência/mês',
+  ai_content:'Gerações de IA/mês', export_csv:'Exportações CSV/mês', calculator:'Usos da calculadora/mês',
 };
 
 async function carregarPlanos(){
@@ -2144,36 +2144,36 @@ async function carregarPlanos(){
 V.extensao = () => {
   const store = 'https://chromewebstore.google.com/detail/gringa-radar/eilndeohnfhbfhbcikepjpbmgkdkjblp';
   return `
-  <h1 class="pg">Extens├úo Chrome</h1>
-  <p class="sub">Instale agora e passe a monitorar produtos do Mercado Livre direto na p├ígina do an├║ncio ÔÇö
+  <h1 class="pg">Extensão Chrome</h1>
+  <p class="sub">Instale agora e passe a monitorar produtos do Mercado Livre direto na página do anúncio —
     com a mesma conta deste painel.</p>
   <div class="hero" style="margin-bottom:22px">
     <h3>Monitore produtos no Mercado Livre</h3>
-    <p>Depois de colocar a extens├úo no Chrome, abra qualquer an├║ncio no Mercado Livre:
-      o Gringa Radar mostra posi├º├úo no ranking, concorr├¬ncia, pre├ºos e vendidos, e voc├¬
-      pode adicionar o produto ao <b>Monitor</b> sem sair da p├ígina.</p>
+    <p>Depois de colocar a extensão no Chrome, abra qualquer anúncio no Mercado Livre:
+      o Gringa Radar mostra posição no ranking, concorrência, preços e vendidos, e você
+      pode adicionar o produto ao <b>Monitor</b> sem sair da página.</p>
     <a class="b" href="${store}" target="_blank" rel="noopener"
-      style="display:inline-block;text-decoration:none">´╝ï Instalar extens├úo no Chrome</a>
+      style="display:inline-block;text-decoration:none">＋ Instalar extensão no Chrome</a>
   </div>
   <div class="g2">
     <div class="card cbox">
       <div class="ct">Como instalar</div>
       <ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.55">
-        <li>Clique em <b>Instalar extens├úo no Chrome</b> acima</li>
+        <li>Clique em <b>Instalar extensão no Chrome</b> acima</li>
         <li>Na Chrome Web Store, escolha <b>Usar no Chrome</b></li>
-        <li>Confirme ÔÇö a extens├úo aparece na barra do navegador</li>
+        <li>Confirme — a extensão aparece na barra do navegador</li>
       </ol>
       <p class="hint" style="margin:14px 0 0">Link direto:
-        <a href="${store}" target="_blank" rel="noopener">Chrome Web Store ÔÇö Gringa Radar</a></p>
+        <a href="${store}" target="_blank" rel="noopener">Chrome Web Store — Gringa Radar</a></p>
     </div>
     <div class="card cbox">
       <div class="ct">Como monitorar</div>
       <ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.55">
-        <li>Entre na extens├úo com o <b>mesmo e-mail e senha</b> deste painel</li>
+        <li>Entre na extensão com o <b>mesmo e-mail e senha</b> deste painel</li>
         <li>Abra um produto no Mercado Livre</li>
-        <li>No card do Gringa Radar, use <b>Monitorar</b> para acompanhar posi├º├úo, pre├ºo e vendidos</li>
+        <li>No card do Gringa Radar, use <b>Monitorar</b> para acompanhar posição, preço e vendidos</li>
       </ol>
-      <p class="hint" style="margin:14px 0 0">Assinatura ativa (ou trial) ├® necess├íria para liberar os dados na p├ígina.</p>
+      <p class="hint" style="margin:14px 0 0">Assinatura ativa (ou trial) é necessária para liberar os dados na página.</p>
       <button class="btn" data-go="assinatura" style="margin-top:12px">Ver planos</button>
     </div>
   </div>`;
@@ -2197,10 +2197,10 @@ async function iniciarCheckout(plan){
 }
 
 // ---------------------------------------------------------------------
-// ASSISTENTE ÔÇö responde com os dados reais da conta (monitorados,
+// ASSISTENTE — responde com os dados reais da conta (monitorados,
 // alertas, quota, e o produto aberto quando houver). A Edge Function
 // consome a quota ai_content ANTES de chamar a IA, pra nunca gastar
-// chamada de API num pedido que o plano j├í n├úo permite.
+// chamada de API num pedido que o plano já não permite.
 // ---------------------------------------------------------------------
 function renderAssist(){
   const panel = $('#assistPanel'); if (!panel) return;
@@ -2208,9 +2208,9 @@ function renderAssist(){
   const box = $('#assistMsgs'); if (!box) return;
   box.innerHTML = (S.assistMsgs.length ? S.assistMsgs.map(m =>
       `<div class="amsg ${m.role}">${esc(m.texto)}</div>`).join('')
-    : `<div class="amsg ai">Oi! Pergunte sobre os produtos que voc├¬ monitora, um alerta, ou o que uma
-        m├®trica da tela significa.</div>`)
-    + (S.assistBusy ? `<div class="amsg ai busy">pensandoÔÇª</div>` : '');
+    : `<div class="amsg ai">Oi! Pergunte sobre os produtos que você monitora, um alerta, ou o que uma
+        métrica da tela significa.</div>`)
+    + (S.assistBusy ? `<div class="amsg ai busy">pensando…</div>` : '');
   box.scrollTop = box.scrollHeight;
 }
 
@@ -2228,13 +2228,13 @@ async function enviarPerguntaAssistente(){
     const { data, error } = await sb.functions.invoke('assistente', { body: { pergunta, contexto } });
     if (error || !data?.ok) {
       S.assistMsgs.push({ role:'erro', texto: data?.erro === 'quota'
-        ? 'Sua quota de IA deste m├¬s acabou. Veja os planos em Assinatura.'
-        : 'N├úo consegui responder agora. Tenta de novo em um instante.' });
+        ? 'Sua quota de IA deste mês acabou. Veja os planos em Assinatura.'
+        : 'Não consegui responder agora. Tenta de novo em um instante.' });
     } else {
       S.assistMsgs.push({ role:'ai', texto: data.resposta });
     }
   } catch {
-    S.assistMsgs.push({ role:'erro', texto:'N├úo consegui responder agora. Tenta de novo em um instante.' });
+    S.assistMsgs.push({ role:'erro', texto:'Não consegui responder agora. Tenta de novo em um instante.' });
   } finally {
     S.assistBusy = false; renderAssist();
   }
@@ -2279,7 +2279,7 @@ async function seguir(id, snapshot){
   const { data, error } = await sb.rpc('monitorar_produto',{ p_produto:id, p_snapshot:snapshot ?? null });
   if (error) return alert(error.message);
   if (!data?.ok){
-    alert(`Seu plano permite acompanhar ${data.limite} produtos e voc├¬ j├í tem ${data.usados}. Remova um ou fa├ºa upgrade.`);
+    alert(`Seu plano permite acompanhar ${data.limite} produtos e você já tem ${data.usados}. Remova um ou faça upgrade.`);
     return;
   }
   await carregarMonitor(); render();
@@ -2296,7 +2296,7 @@ async function removerPedido(mlb){
 }
 
 async function buscarLocais(acumular){
-  const el = $('#lres'); if (el && !acumular) el.innerHTML = '<div class="load">buscandoÔÇª</div>';
+  const el = $('#lres'); if (el && !acumular) el.innerHTML = '<div class="load">buscando…</div>';
   const criadoDesde = S.locaisCriado ? new Date(Date.now() - S.locaisCriado*86400000).toISOString().slice(0,10) : null;
   const { data, error } = await sb.rpc('listar_produtos_locais', {
     p_texto: vT('l_txt'), p_custo_max: vF('l_custo_max'), p_custo_min: vF('l_custo_min'),
@@ -2315,16 +2315,16 @@ async function desbloquear(fid){
   if (error) return alert(error.message);
   if (!data?.ok){
     alert(data?.motivo === 'quota_exceeded' || data?.motivo === 'plan_upgrade_required'
-      ? 'Seus desbloqueios do m├¬s acabaram. O contador zera no dia 1┬║.'
-      : 'N├úo foi poss├¡vel liberar este fornecedor.');
+      ? 'Seus desbloqueios do mês acabaram. O contador zera no dia 1º.'
+      : 'Não foi possível liberar este fornecedor.');
     await quota(); render(); return;
   }
   S.contatos[fid] = data;
   await quota(); render();
 }
 
-/** Baixa o resultado em CSV. S├│ as linhas vis├¡veis ÔÇö exportar o que
- *  est├í borrado seria burlar o pr├│prio limite. */
+/** Baixa o resultado em CSV. Só as linhas visíveis — exportar o que
+ *  está borrado seria burlar o próprio limite. */
 function exportarCsv(){
   const lim = S.quota?.features?.rows_full;
   const livres = (lim?.unlimited || lim?.limit === -1) ? S.produtos.length : (lim?.limit ?? 5);
@@ -2365,7 +2365,7 @@ const vI = id => { const v = parseInt($('#'+id)?.value); return Number.isFinite(
 const vF = id => { const v = parseFloat($('#'+id)?.value); return Number.isFinite(v)?v:null; };
 const vT = id => $('#'+id)?.value.trim() || null;
 
-/** L├¬ a tela e monta o objeto de filtros que vai para a RPC. */
+/** Lê a tela e monta o objeto de filtros que vai para a RPC. */
 function lerFiltros(){
   const F = {
     ...S.F,
@@ -2408,7 +2408,7 @@ function lerFiltros(){
   return F;
 }
 
-/** Contagem ao vivo ÔÇö n├úo consome quota. */
+/** Contagem ao vivo — não consome quota. */
 async function contar(){
   const F = { ...S.F };
   const { data } = await sb.rpc('contar_produtos', {
@@ -2431,7 +2431,7 @@ async function contar(){
   });
   S.contagem = data ?? null;
   document.querySelectorAll('.cnt').forEach(el => {
-    el.innerHTML = S.contagem==null ? 'ÔÇö'
+    el.innerHTML = S.contagem==null ? '—'
       : `<b>${num(S.contagem)}</b> produto(s) batem com esses filtros`;
   });
 }
@@ -2459,7 +2459,7 @@ async function localizar(){
     if (error) { S.refAviso = error.message; return; }
 
     if (data.tipo === 'produto'){
-      // Pode estar no cat├ílogo sem ranking ÔÇö tenta busca; se vier vazio, cai no ao vivo
+      // Pode estar no catálogo sem ranking — tenta busca; se vier vazio, cai no ao vivo
       S.F = { p_produto: data.produto, p_com_foto: true }; S.pred = null; S.catSel = null;
       await buscar();
       if (S.produtos?.length) return;
@@ -2478,11 +2478,11 @@ async function localizar(){
       return;
     }
 
-    // nao_encontrado (ou produto sem ficha) ÔÇö consulta ao vivo no ML
+    // nao_encontrado (ou produto sem ficha) — consulta ao vivo no ML
     const vivo = await buscarPrecoAoVivo(ref);
     if (vivo?.ok && vivo.id) {
-      // Se a API devolveu um produto de cat├ílogo, tenta de novo na nossa base
-      // (├ás vezes o an├║ncio MLB n├úo est├í, mas o /p/MLB do cat├ílogo sim).
+      // Se a API devolveu um produto de catálogo, tenta de novo na nossa base
+      // (às vezes o anúncio MLB não está, mas o /p/MLB do catálogo sim).
       if (vivo.tipo === 'produto' && vivo.id) {
         const { data: again } = await sb.rpc('buscar_por_referencia', { p_ref: vivo.id });
         if (again?.tipo === 'produto') {
@@ -2499,14 +2499,14 @@ async function localizar(){
     }
 
     if (vivo?.erro === 'bloqueado_ou_nao_encontrado') {
-      S.refAviso = `${vivo.mlb || data.mlb || 'Esse an├║ncio'} n├úo est├í na nossa base e o Mercado Livre bloqueou a consulta ao vivo pra terceiro. Pe├ºa a coleta pela extens├úo Chrome abrindo o an├║ncio no ML.`;
+      S.refAviso = `${vivo.mlb || data.mlb || 'Esse anúncio'} não está na nossa base e o Mercado Livre bloqueou a consulta ao vivo pra terceiro. Peça a coleta pela extensão Chrome abrindo o anúncio no ML.`;
       return;
     }
     if (vivo?.erro === 'sem_credencial') {
-      S.refAviso = 'N├úo consegui consultar o Mercado Livre agora (credencial). Tente de novo em instantes.';
+      S.refAviso = 'Não consegui consultar o Mercado Livre agora (credencial). Tente de novo em instantes.';
       return;
     }
-    S.refAviso = `${data.mlb || ref} n├úo est├í na nossa base. Use a extens├úo Chrome no an├║ncio pra pedir a coleta.`;
+    S.refAviso = `${data.mlb || ref} não está na nossa base. Use a extensão Chrome no anúncio pra pedir a coleta.`;
   } finally {
     S.refBusy = false;
     render();
@@ -2517,7 +2517,7 @@ async function pedirColetaRef(){
   const v = S.refVivo;
   if (!v?.id && !S.ref) return;
   const mlb = v?.mlb_anuncio || (v?.tipo === 'item' ? v.id : null) || v?.id;
-  if (!mlb) { S.refAviso = 'N├úo achei um MLB pra pedir coleta.'; render(); return; }
+  if (!mlb) { S.refAviso = 'Não achei um MLB pra pedir coleta.'; render(); return; }
   const { data, error } = await sb.rpc('solicitar_coleta', {
     p_mlb: mlb,
     p_categoria: v?.categoria || null,
@@ -2526,21 +2526,21 @@ async function pedirColetaRef(){
   if (error) { S.refAviso = error.message; render(); return; }
   S.refPedidoOk = data?.aviso
     ? `Pedido registrado (${data.pedidos} pedido(s)). ${data.aviso}`
-    : `Pedido de coleta registrado (${data?.pedidos ?? 1}). Entra na fila da pr├│xima rodada.`;
+    : `Pedido de coleta registrado (${data?.pedidos ?? 1}). Entra na fila da próxima rodada.`;
   S.refAviso = null;
   render();
 }
 
 async function buscar(){
   S.F = { ...S.F, ...lerFiltros() };
-  $('#res').innerHTML = '<div class="load">buscandoÔÇª</div>';
+  $('#res').innerHTML = '<div class="load">buscando…</div>';
   const { data, error } = await sb.rpc('buscar_produtos', { ...S.F, p_limite:100 });
   if (error){ if(!eQuota(error)) $('#res').innerHTML=`<div class="none"><b>Erro</b>${esc(error.message)}</div>`; return; }
   S.produtos = data ?? []; S.buscou = true; S.filtrosAbertos = false; S.selecao.clear();
   await quota(); render();
 }
 async function cats(){
-  $('#cres').innerHTML = '<div class="load">carregandoÔÇª</div>';
+  $('#cres').innerHTML = '<div class="load">carregando…</div>';
   const texto = $('#c_txt')?.value.trim()||null;
   const { data, error } = await sb.rpc('listar_categorias', { p_texto:texto, p_limite:100 });
   if (error){ if(!eQuota(error)) $('#cres').innerHTML=`<div class="none"><b>Erro</b>${esc(error.message)}</div>`; return; }
@@ -2599,7 +2599,7 @@ function fromFicha(fp, id){
     category_name: prod.categoria ?? null,
     brand: prod.marca ?? null,
     category_id: prod.categoria_id ?? null,
-    // produto_ranking_analise usa nomes em PT ÔÇö N├âO position_now
+    // produto_ranking_analise usa nomes em PT — NÃO position_now
     position_now: r.posicao_atual ?? r.position_now ?? null,
     best_position: r.melhor_posicao ?? r.best_position ?? null,
     days_in_top10: r.dias_top10 ?? r.days_in_top10 ?? 0,
@@ -2615,11 +2615,11 @@ function fromFicha(fp, id){
 async function abrir(id){
   S.detalheLocal = null;
   const daBusca = S.produtos.find(x=>x.product_id===id);
-  $('#sheet').innerHTML='<div class="load">carregando produtoÔÇª</div>';
-  // Sempre busca ficha: abrir pelo Monitor n├úo passa pela Busca, e a ficha
-  // ├® a fonte dos cards de posi├º├úo/pre├ºo. Antes o mapeamento lia
-  // position_now (nome da matview) em vez de posicao_atual (da ficha) ÔÇö
-  // por isso os cards ficavam "ÔÇö" mesmo com dado no banco.
+  $('#sheet').innerHTML='<div class="load">carregando produto…</div>';
+  // Sempre busca ficha: abrir pelo Monitor não passa pela Busca, e a ficha
+  // é a fonte dos cards de posição/preço. Antes o mapeamento lia
+  // position_now (nome da matview) em vez de posicao_atual (da ficha) —
+  // por isso os cards ficavam "—" mesmo com dado no banco.
   const [h, c, f] = await Promise.all([
     sb.rpc('historico_produto',{p_produto:id}),
     sb.rpc('concorrentes_produto',{p_produto:id}),
@@ -2646,14 +2646,14 @@ async function carregarSimilares(){
 
 function render(){
   if (S.view === 'alerta') { S.view = 'monitor'; S.aba = 'alertas'; }
-  // Shopee ainda n├úo tem as mesmas telas ÔÇö mant├®m o usu├írio na aba dedicada
+  // Shopee ainda não tem as mesmas telas — mantém o usuário na aba dedicada
   if (S.marketplace === 'shopee' && !['shopee','assinatura','extensao','calc','clipes'].includes(S.view)) {
     S.view = 'shopee';
   }
   pintaMarketplace();
-  // Posi├º├úo/pre├ºo s├│ mudam com a coleta di├íria, mas alertas e a├º├Áes em
-  // outra aba/aparelho n├úo. Reconsulta sozinho enquanto o Monitor estiver
-  // aberto, pra n├úo depender de F5 pra ver alerta novo chegar.
+  // Posição/preço só mudam com a coleta diária, mas alertas e ações em
+  // outra aba/aparelho não. Reconsulta sozinho enquanto o Monitor estiver
+  // aberto, pra não depender de F5 pra ver alerta novo chegar.
   if (S.view === 'monitor') {
     if (!monitorPollId) monitorPollId = setInterval(async () => {
       if (S.view !== 'monitor') { clearInterval(monitorPollId); monitorPollId = null; return; }
@@ -2713,7 +2713,7 @@ function render(){
       });
     });
 
-    // faixas r├ípidas de pre├ºo, posi├º├úo e concorrentes
+    // faixas rápidas de preço, posição e concorrentes
     const aplicarFaixa = (minKey, maxKey, raw) => {
       const [a,z] = raw.split('|');
       S.F = { ...S.F, ...lerFiltros() };
@@ -2754,7 +2754,7 @@ function render(){
       render(); contar();
     });
 
-    // seletores sem├ónticos da pesquisa simples
+    // seletores semânticos da pesquisa simples
     document.querySelectorAll('[data-sem]').forEach(b => b.onclick = (e) => {
       e.stopPropagation();
       S.sel = S.sel===b.dataset.sem ? null : b.dataset.sem; render(); });
@@ -2763,7 +2763,7 @@ function render(){
       S.F = { ...S.F, ...lerFiltros() };
       S.F[campo] = S.F[campo]===valor ? undefined : valor;
       if (S.F[campo]===undefined) delete S.F[campo];
-      // maturidade/n├¡vel sem├óntico limpa faixas num├®ricas que sobrescreveriam
+      // maturidade/nível semântico limpa faixas numéricas que sobrescreveriam
       if (campo === 'p_nivel_conc') { delete S.F.p_conc_min; delete S.F.p_conc_max; }
       S.sel = null; render(); contar(); });
     document.addEventListener('click', () => { if (S.sel){ S.sel=null; render(); } }, { once:true });
@@ -3054,7 +3054,7 @@ document.addEventListener('click', () => {
 $('#mkt_drop')?.addEventListener('click', (e) => e.stopPropagation());
 pintaMarketplace();
 
-// Cliques dos alertas: delega├º├úo no #sheet (n├úo depende de rebind a cada render)
+// Cliques dos alertas: delegação no #sheet (não depende de rebind a cada render)
 $('#sheet')?.addEventListener('click', (ev) => {
   const t = ev.target.closest('[data-aexp],[data-aficha]');
   if (!t || !$('#sheet').contains(t)) return;
