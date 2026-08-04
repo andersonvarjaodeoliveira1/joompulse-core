@@ -1,6 +1,6 @@
 # Extensão do Chrome — Gringa Radar
 
-## Instalar (recomendado)
+## Instalar
 
 [Gringa Radar na Chrome Web Store](https://chromewebstore.google.com/detail/gringa-radar/eilndeohnfhbfhbcikepjpbmgkdkjblp)
 
@@ -8,16 +8,7 @@
 2. Clique em **Usar no Chrome** / **Adicionar ao Chrome**
 3. Confirme
 
-No painel: **Extensão Chrome** → **Instalar na Chrome Web Store**.
-
-## Alternativa (desenvolvimento)
-
-ZIP `extensao-gringa-radar.zip` no painel / GitHub Pages:
-
-1. Extraia o ZIP
-2. Abra `chrome://extensions`
-3. Ligue o **Modo do desenvolvedor**
-4. **Carregar sem compactação** → pasta da extensão
+No painel: **Extensão Chrome** → **Instalar extensão no Chrome**.
 
 ## Login e assinatura
 

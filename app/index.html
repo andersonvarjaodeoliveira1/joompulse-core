@@ -2778,7 +2778,6 @@ async function carregarPlanos(){
 
 V.extensao = () => {
   const store = 'https://chromewebstore.google.com/detail/gringa-radar/eilndeohnfhbfhbcikepjpbmgkdkjblp';
-  const zip = 'extensao-gringa-radar.zip';
   return `
   <h1 class="pg">Extensão Chrome</h1>
   <p class="sub">Instale agora e passe a monitorar produtos do Mercado Livre direto na página do anúncio —
@@ -2815,8 +2814,7 @@ V.extensao = () => {
   </div>
   <div class="tip" style="margin-top:18px">O Monitor do painel atualiza ranking e preço todo dia pela coleta.
     Vendidos entram quando você abre o anúncio com a extensão instalada
-    (o Mercado Livre não publica esse número na API para anúncios de terceiros).
-    <span class="sb"> · </span><a href="${zip}" download>Baixar .zip (desenvolvimento)</a></div>`;
+    (o Mercado Livre não publica esse número na API para anúncios de terceiros).</div>`;
 };
 
 V.assinatura = () => {
