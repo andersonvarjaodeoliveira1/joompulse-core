@@ -14,15 +14,16 @@ No painel: **Extensão Chrome** → **Instalar extensão no Chrome**.
 
 Clique no ícone e entre com a **mesma conta do painel**.
 
-O login consulta `status_assinatura` no banco. Sem assinatura ativa
-(ou trial), a sessão não fica salva e os dados na página do ML não liberam.
+Sem assinatura ativa (ou trial), a sessão não fica salva e os dados na
+página do Mercado Livre não liberam.
 
 ## Usar
 
-Abra um produto no Mercado Livre. O card aparece na página.
-Vendidos no Monitor são atualizados quando você abre um produto monitorado
-(a API do ML não libera `sold_quantity` de terceiro).
+Abra um produto no Mercado Livre. O card aparece na página. Use
+**Monitorar** para acompanhar o produto no painel.
 
 ## Segurança
 
-O token fica no service worker da extensão, nunca na página do Mercado Livre.
+O token da conta fica no service worker da extensão, nunca na página do
+Mercado Livre. Detalhes do modelo de segurança do produto:
+[SECURITY.md](../SECURITY.md).

@@ -9,6 +9,13 @@
 .env.*
 !.env.example
 
+# Credenciais e dumps locais
+*.pem
+*.p12
+credentials.json
+service-account*.json
+supabase/.env
+
 # Estado local do Supabase CLI (guarda credencial do projeto vinculado)
 .branches
 .temp

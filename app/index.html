@@ -5,6 +5,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://*.supabase.co; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net; worker-src 'self' blob:;">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2811,10 +2813,7 @@ V.extensao = () => {
       <p class="hint" style="margin:14px 0 0">Assinatura ativa (ou trial) é necessária para liberar os dados na página.</p>
       <button class="btn" data-go="assinatura" style="margin-top:12px">Ver planos</button>
     </div>
-  </div>
-  <div class="tip" style="margin-top:18px">O Monitor do painel atualiza ranking e preço todo dia pela coleta.
-    Vendidos entram quando você abre o anúncio com a extensão instalada
-    (o Mercado Livre não publica esse número na API para anúncios de terceiros).</div>`;
+  </div>`;
 };
 
 V.assinatura = () => {
@@ -2858,13 +2857,11 @@ V.assinatura = () => {
       </div>`;
     }).join('')}
   </div>`}
-  <div class="tip" style="margin-top:20px"><b>Mercado Pago.</b> O botão Assinar cria uma preferência Checkout Pro.
-    Sem o secret <code>MP_ACCESS_TOKEN</code> no Supabase, o app avisa que o gateway ainda não está configurado
-    (nada é cobrado). Depois do pagamento aprovado, o webhook ativa <code>plan</code> e
-    <code>subscription_status</code> na sua conta.</div>
+  <div class="tip" style="margin-top:20px">Pagamento processado pelo Mercado Pago.
+    Depois da aprovação, o plano da sua conta é atualizado automaticamente.</div>
   <div class="cwarn" style="margin-top:12px">Preços são valor de referência até fechar a tabela comercial definitiva.
     A <button class="lnk" data-go="extensao" style="padding:0;font-size:inherit;color:inherit;text-decoration:underline">extensão Chrome</button>
-    exige assinatura ativa no banco.</div>`;
+    exige assinatura ativa.</div>`;
 };
 
 async function iniciarCheckout(plan){
@@ -2881,7 +2878,7 @@ async function iniciarCheckout(plan){
       return;
     }
     if (data?.erro === 'gateway_nao_configurado') {
-      S.pagoMsg = { ok:false, texto: data.detalhe || 'Gateway Mercado Pago ainda sem MP_ACCESS_TOKEN no Supabase.' };
+      S.pagoMsg = { ok:false, texto: 'Pagamento ainda em configuração. Tente de novo em breve ou fale com o suporte.' };
       return;
     }
     if (!data?.ok || !data?.init_point) {
