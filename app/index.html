@@ -2781,42 +2781,42 @@ V.extensao = () => {
   const zip = 'extensao-gringa-radar.zip';
   return `
   <h1 class="pg">Extensão Chrome</h1>
-  <p class="sub">Instale pela Chrome Web Store e entre com a mesma conta deste painel.
-    Só libera dados no Mercado Livre se a assinatura estiver ativa no banco.</p>
+  <p class="sub">Instale agora e passe a monitorar produtos do Mercado Livre direto na página do anúncio —
+    com a mesma conta deste painel.</p>
   <div class="hero" style="margin-bottom:22px">
-    <h3>Gringa Radar na página do produto</h3>
-    <p>Posição, concorrência, preços e vendidos (ao abrir o anúncio) sem sair do Mercado Livre.
-      Login na extensão verifica assinatura ativa ou trial.</p>
+    <h3>Monitore produtos no Mercado Livre</h3>
+    <p>Depois de colocar a extensão no Chrome, abra qualquer anúncio no Mercado Livre:
+      o Gringa Radar mostra posição no ranking, concorrência, preços e vendidos, e você
+      pode adicionar o produto ao <b>Monitor</b> sem sair da página.</p>
     <a class="b" href="${store}" target="_blank" rel="noopener"
-      style="display:inline-block;text-decoration:none;margin-right:10px">＋ Instalar na Chrome Web Store</a>
-    <a class="btn" href="${zip}" download style="display:inline-block;text-decoration:none">Baixar .zip (dev)</a>
+      style="display:inline-block;text-decoration:none">＋ Instalar extensão no Chrome</a>
   </div>
   <div class="g2">
     <div class="card cbox">
-      <div class="ct">1. Instalar</div>
+      <div class="ct">Como instalar</div>
       <ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.55">
-        <li>Abra a <a href="${store}" target="_blank" rel="noopener">página na Chrome Web Store</a></li>
-        <li>Clique em <b>Usar no Chrome</b> / <b>Adicionar ao Chrome</b></li>
-        <li>Confirme a instalação</li>
+        <li>Clique em <b>Instalar extensão no Chrome</b> acima</li>
+        <li>Na Chrome Web Store, escolha <b>Usar no Chrome</b></li>
+        <li>Confirme — a extensão aparece na barra do navegador</li>
       </ol>
-      <p class="hint" style="margin:12px 0 0">Alternativa para desenvolvimento: ZIP +
-        <code>chrome://extensions</code> → Modo do desenvolvedor → Carregar sem compactação.</p>
+      <p class="hint" style="margin:14px 0 0">Link direto:
+        <a href="${store}" target="_blank" rel="noopener">Chrome Web Store — Gringa Radar</a></p>
     </div>
     <div class="card cbox">
-      <div class="ct">2. Entrar</div>
-      <p style="margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.55">
-        Clique no ícone roxo na barra do Chrome. Use o <b>mesmo e-mail e senha</b>
-        desta conta. Se a assinatura estiver inativa, o login é recusado e o painel
-        pede para assinar aqui.
-      </p>
-      <button class="btn" data-go="assinatura" style="margin-top:14px">Ver planos</button>
+      <div class="ct">Como monitorar</div>
+      <ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.55">
+        <li>Entre na extensão com o <b>mesmo e-mail e senha</b> deste painel</li>
+        <li>Abra um produto no Mercado Livre</li>
+        <li>No card do Gringa Radar, use <b>Monitorar</b> para acompanhar posição, preço e vendidos</li>
+      </ol>
+      <p class="hint" style="margin:14px 0 0">Assinatura ativa (ou trial) é necessária para liberar os dados na página.</p>
+      <button class="btn" data-go="assinatura" style="margin-top:12px">Ver planos</button>
     </div>
   </div>
-  <div class="tip" style="margin-top:18px"><b>Gateway de pagamento.</b> Assinar no painel cria checkout
-    Mercado Pago (<code>criar-checkout</code>). Com <code>MP_ACCESS_TOKEN</code> configurado, o webhook
-    atualiza <code>profiles.subscription_status</code> e <code>plan</code>. Sem o token, o botão
-    explica que o gateway ainda não está ligado — assinatura ativa = status
-    <code>active</code>/<code>trialing</code>, trial válido, ou plano atribuído manualmente.</div>`;
+  <div class="tip" style="margin-top:18px">O Monitor do painel atualiza ranking e preço todo dia pela coleta.
+    Vendidos entram quando você abre o anúncio com a extensão instalada
+    (o Mercado Livre não publica esse número na API para anúncios de terceiros).
+    <span class="sb"> · </span><a href="${zip}" download>Baixar .zip (desenvolvimento)</a></div>`;
 };
 
 V.assinatura = () => {
