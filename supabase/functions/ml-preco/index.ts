@@ -33,6 +33,7 @@
  * da aplicação inteira. Qualquer mudança aqui tem que manter isso.
  */
 import postgres from 'https://esm.sh/postgres@3.4.4';
+import { requireUser, requireQuota, requireRateLimit } from '../_shared/auth.ts';
 
 const API = 'https://api.mercadolibre.com';
 const CORS = {
@@ -133,6 +134,13 @@ async function mlGet(path: string, token: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, erro: 'method_not_allowed' }, 405);
+
+  const gate = await requireUser(req);
+  if (!gate.ok) return json(gate.body, gate.status);
+  const rl = await requireRateLimit(gate.sb, 'ml-preco', 20, 60);
+  if (!rl.ok) return json(rl.body, rl.status);
+  const q = await requireQuota(gate.sb, 'calculator');
+  if (!q.ok) return json(q.body);
 
   let ref: string | undefined;
   try {

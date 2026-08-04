@@ -17,7 +17,8 @@
  *   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
  *   supabase secrets set ANTHROPIC_MODEL=claude-haiku-4-5-20251001   (opcional)
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { requireRateLimit } from '../_shared/auth.ts';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -74,6 +75,9 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_ANON_KEY')!,
     { global: { headers: { Authorization: authHeader } } },
   );
+
+  const rl = await requireRateLimit(sb, 'assistente', 10, 60);
+  if (!rl.ok) return json(rl.body, rl.status);
 
   const { data: quotaAntes, error: eQuota } = await sb.rpc('consume_quota', { p_feature: 'ai_content' });
   if (eQuota) return json({ ok: false, erro: 'falha_quota', detalhe: eQuota.message }, 200);

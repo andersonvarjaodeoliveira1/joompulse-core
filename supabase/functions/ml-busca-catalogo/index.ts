@@ -18,6 +18,7 @@
  * Deploy: supabase functions deploy ml-busca-catalogo
  */
 import postgres from 'https://esm.sh/postgres@3.4.4';
+import { requireUser, requireQuota, requireRateLimit } from '../_shared/auth.ts';
 
 const API = 'https://api.mercadolibre.com';
 const CORS = {
@@ -113,6 +114,13 @@ async function precoMediano(id: string, token: string): Promise<number | null> {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, erro: 'method_not_allowed' }, 405);
+
+  const gate = await requireUser(req);
+  if (!gate.ok) return json(gate.body, gate.status);
+  const rl = await requireRateLimit(gate.sb, 'ml-busca-catalogo', 20, 60);
+  if (!rl.ok) return json(rl.body, rl.status);
+  const q = await requireQuota(gate.sb, 'product_search');
+  if (!q.ok) return json(q.body);
 
   let texto: string | undefined;
   try { ({ texto } = await req.json()); } catch { return json({ ok: false, erro: 'corpo_invalido' }, 400); }

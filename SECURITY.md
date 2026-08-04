@@ -3,59 +3,65 @@
 Documento interno do modelo de segurança do produto (painel, extensão,
 Edge Functions, coleta e banco). **Segredos nunca entram neste arquivo.**
 
-## Princípios
+## A verdade (SaaS)
 
-1. O navegador só recebe a **chave publishable/anon** do Supabase.
-2. Senhas de banco, `service_role`, tokens Mercado Livre/Pago e Resend
-   ficam só em **Supabase Secrets** ou **GitHub Actions Secrets**.
-3. Toda ação de usuário autenticado passa por **RLS** ou RPC
-   `security definer` com checagem de `auth.uid()`.
+O frontend **nunca** fica realmente protegido — F12 lê o que o navegador
+executa. Ofuscação só atrapalha. O cofre é o **backend** (Supabase SQL,
+Edge Functions, collector). Diferencial competitivo (ranking, alertas,
+quotas, pagamentos) fica no servidor; o cliente só recebe o resultado.
+
+## Frente 1 — Backend
+
+1. O navegador só recebe a chave **publishable/anon** do Supabase.
+2. Senhas de banco, `service_role`, tokens ML/MP/Resend/Anthropic ficam
+   só em **Supabase Secrets** ou **GitHub Actions Secrets**.
+3. Ações autenticadas passam por **RLS** / RPC `security definer` com
+   `auth.uid()`.
 4. Funções perigosas (`gerar_alertas`, `refresh_rank_metrics`,
-   `ativar_assinatura_pagamento`, etc.) são **revogadas** de
-   `anon` / `authenticated` e só rodam com role de serviço/coleta.
+   `ativar_assinatura_pagamento`, …) são **revogadas** de
+   `anon`/`authenticated`.
+5. Edge Functions sensíveis exigem JWT + `consume_quota` +
+   `check_rate_limit` (`api_rate_buckets`).
+6. Webhook MP revalida o pagamento na API do MP; com
+   `MP_WEBHOOK_SECRET` também exige `x-signature`.
+
+## Frente 2 — Frontend
+
+1. Fonte editável: `frontend/` (Vite).
+2. Build de produção: **minify (terser)**, **sem source maps**,
+   **javascript-obfuscator** no bundle (`npm run build` em `frontend/`).
+3. Artefato servido no GitHub Pages: `app/` (HTML + `assets/*.js`).
+4. CSP + `referrer` restrito no HTML.
+5. LICENSE proprietário na raiz do repositório.
+
+```bash
+cd frontend && npm install && npm run build
+```
 
 ## Superfícies
 
 | Superfície | O que pode | O que não pode |
 |---|---|---|
-| `app/` (GitHub Pages) | Login, RPCs do plano, UI | Ler `service_role`, gravar métricas globais, ativar plano sem pagamento |
-| Extensão Chrome | Mesmas RPCs via token do usuário no **service worker** | Expor o token na página do Mercado Livre |
-| Edge Functions | Checkout, webhook MP, ML, assistente | Ser chamadas sem auth quando exigem JWT (exceto webhook/callback) |
-| Collector (Actions) | Coleta + `gerar_alertas` via `DATABASE_URL` | Expor connection string no front |
-
-## Extensão
-
-- Token e refresh ficam em `chrome.storage.local`, acessados só pelo
-  `background.js` (service worker).
-- O `content.js` pede dados por `chrome.runtime.sendMessage` — não fala
-  com o Supabase direto.
-- Assinatura: `status_assinatura` / gates no login; sem plano ativo os
-  dados na página do ML não liberam.
-
-## Pagamentos
-
-- Preferência criada em `criar-checkout` (usuário autenticado).
-- Plano só muda via `mp-webhook` → `ativar_assinatura_pagamento`
-  (service role). O cliente **não** pode auto-promover o plano.
+| `app/` (Pages) | Login, RPCs do plano, UI | `service_role`, ativar plano sozinho |
+| Extensão | RPCs via token no **service worker** | Token na página do ML |
+| Edge Functions | Checkout, webhook, ML, assistente | Uso anônimo nas rotas que exigem JWT |
+| Collector | Coleta + alertas via `DATABASE_URL` | Expor connection string no front |
 
 ## Segredos (onde configurar)
 
 | Segredo | Onde |
 |---|---|
 | `DATABASE_URL` | GitHub Actions |
-| `ML_CLIENT_*` / `ML_REDIRECT_URI` | Actions + Supabase Functions |
-| `MP_ACCESS_TOKEN` | Supabase Secrets |
+| `ML_CLIENT_*` | Actions + Supabase Functions |
+| `MP_ACCESS_TOKEN` / `MP_WEBHOOK_SECRET` | Supabase Secrets |
 | `RESEND_API_KEY` / `DIGEST_EMAIL_TO` | GitHub Actions |
-| `.env` local do collector | **nunca** commitado (ver `.gitignore`) |
-
-## Cabeçalhos no painel
-
-O `app/index.html` declara CSP (`frame-ancestors 'none'`, sem `object`,
-connect só Supabase/CDN) e `referrer` restrito.
+| `ANTHROPIC_API_KEY` | Supabase Secrets |
+| `.env` do collector / `frontend/.env.local` | **nunca** commitado |
 
 ## O que NÃO fazer
 
 - Commitar `.env`, connection string ou `service_role`.
+- Publicar source maps de produção.
 - Colocar token de usuário no content script da extensão.
-- Expor nomes de secrets ou detalhes de infra na UI pública.
+- Expor nomes de secrets na UI.
 - Liberar `gerar_alertas` / `ativar_assinatura_pagamento` para `authenticated`.

@@ -1,15 +1,15 @@
 /**
  * Webhook Mercado Pago — ativa plano quando o pagamento é aprovado.
  *
- * Configure no painel do MP (ou via notification_url da preference):
- *   https://<project>.supabase.co/functions/v1/mp-webhook
- *
  * Secrets:
- *   MP_ACCESS_TOKEN
- *   SUPABASE_DB_URL (injetado)
+ *   MP_ACCESS_TOKEN     — obrigatório
+ *   MP_WEBHOOK_SECRET   — secret da assinatura (painel MP); se definido,
+ *                         exige x-signature válida (manifesta)
  *
  * Deploy:
  *   supabase functions deploy mp-webhook --no-verify-jwt
+ *
+ * Copyright (c) 2026 Gringa Radar. Todos os direitos reservados.
  */
 import postgres from 'https://esm.sh/postgres@3.4.4';
 
@@ -28,10 +28,51 @@ function json(body: unknown, status = 200) {
   });
 }
 
+/** Valida x-signature do MP quando MP_WEBHOOK_SECRET está configurado. */
+async function assinaturaOk(req: Request, rawBody: string): Promise<boolean> {
+  const secret = Deno.env.get('MP_WEBHOOK_SECRET');
+  if (!secret) return true; // modo permissivo até o secret ser setado
+
+  const sigHeader = req.headers.get('x-signature') ?? '';
+  const requestId = req.headers.get('x-request-id') ?? '';
+  // Formato: ts=...,v1=...
+  const parts = Object.fromEntries(
+    sigHeader.split(',').map((p) => {
+      const [k, ...rest] = p.trim().split('=');
+      return [k, rest.join('=')];
+    }),
+  );
+  const ts = parts.ts;
+  const v1 = parts.v1;
+  if (!ts || !v1) return false;
+
+  const url = new URL(req.url);
+  const dataId = url.searchParams.get('data.id')
+    ?? (() => {
+      try {
+        const j = JSON.parse(rawBody);
+        return String((j?.data as { id?: string } | undefined)?.id ?? j?.id ?? '');
+      } catch { return ''; }
+    })();
+
+  const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(manifest));
+  const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hex === v1.toLowerCase();
+}
+
 async function processPayment(paymentId: string) {
   const token = Deno.env.get('MP_ACCESS_TOKEN');
   if (!token) return { ok: false, erro: 'sem_token' };
 
+  // Sempre revalida no MP — nunca confia só no payload do webhook.
   const r = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { authorization: `Bearer ${token}` },
   });
@@ -93,6 +134,11 @@ async function processPayment(paymentId: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
 
+  const rawBody = req.method === 'POST' ? await req.text() : '';
+  if (!(await assinaturaOk(req, rawBody))) {
+    return json({ ok: false, erro: 'assinatura_invalida' }, 401);
+  }
+
   // Health / challenge
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -108,7 +154,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, erro: 'method_not_allowed' }, 405);
 
   let body: Record<string, unknown> = {};
-  try { body = await req.json(); } catch { /* querystring fallback */ }
+  try { body = rawBody ? JSON.parse(rawBody) : {}; } catch { /* querystring fallback */ }
 
   const url = new URL(req.url);
   const paymentId = String(

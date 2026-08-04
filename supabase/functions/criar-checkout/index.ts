@@ -12,6 +12,7 @@
  */
 import postgres from 'https://esm.sh/postgres@3.4.4';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { requireRateLimit } from '../_shared/auth.ts';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -68,6 +69,9 @@ Deno.serve(async (req) => {
   if (userErr || !userData?.user) return json({ ok: false, erro: 'nao_autenticado' }, 401);
   const userId = userData.user.id;
   const email = userData.user.email ?? undefined;
+
+  const rl = await requireRateLimit(userClient, 'criar-checkout', 8, 60);
+  if (!rl.ok) return json(rl.body, rl.status);
 
   const [plano] = await sql<{
     code: string; name: string; price_monthly: number; price_annual_month: number;
