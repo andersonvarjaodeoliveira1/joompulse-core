@@ -13,6 +13,8 @@
  *   npm run collect itens       # nome/foto dos destaques tipo ITEM (não passam por produtos)
  *   npm run collect calibrar    # pares reais da própria conta
  *   npm run collect rodada      # tudo acima + métricas
+ *   npm run collect rank-metrics full  # refresh matviews + gerar_alertas
+ *   npm run collect alertas     # só gerar_alertas() (Monitor)
  *   npm run collect fornecedor <csv>  # importa catálogo de fornecedor
  *   npm run collect pedidos     # atende os pedidos vindos da extensão
  *   npm run collect pedidos-status    # resumo da fila
@@ -191,10 +193,26 @@ async function main() {
         await rodadaDiaria(client());
         break;
 
-      case 'rank-metrics':
-        await rank.refreshRankMetrics(process.argv[3] !== 'full');
-        log('métricas de ranking recalculadas');
+      case 'rank-metrics': {
+        try {
+          await rank.refreshRankMetrics(process.argv[3] !== 'full');
+          log('métricas de ranking recalculadas');
+        } catch (err) {
+          log('métricas falharam — seguindo para alertas:',
+            err instanceof Error ? err.message : err);
+        }
+        // gerar_alertas lê product_rank_daily (snapshots), não a matview.
+        // Pode (e deve) rodar mesmo se category_rank_metrics estourar.
+        const n = await rank.gerarAlertas();
+        log(`alertas gerados: ${n}`);
         break;
+      }
+
+      case 'alertas': {
+        const n = await rank.gerarAlertas();
+        log(`alertas gerados: ${n}`);
+        break;
+      }
 
       case 'pedidos':
         await atenderPedidos(client(), Number(process.argv[3] ?? 200));

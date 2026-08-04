@@ -70,11 +70,22 @@ jobs:
         run: npm run collect pedidos
         continue-on-error: true
 
+      # Métricas alimentam o Monitor; alertas comparam hoje vs ontem.
+      # Se o refresh estourar timeout, ainda tentamos gerar alertas
+      # (gerar_alertas lê product_rank_daily, não a matview).
       - name: Métricas e alertas
         working-directory: collector
         run: npm run collect rank-metrics full
+        continue-on-error: true
+
+      - name: Gerar alertas (fallback)
+        if: always()
+        working-directory: collector
+        run: npm run collect alertas
+        continue-on-error: true
 
       - name: Digest — produtos novos + e-mail + aviso no app
+        if: always()
         working-directory: collector
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -83,7 +94,7 @@ jobs:
         continue-on-error: true
 
       - name: Manutenção semanal
-        if: success()
+        if: always()
         working-directory: collector
         run: |
           if [ "$(date +%u)" = "1" ]; then
@@ -106,6 +117,7 @@ jobs:
       # se o volume de hoje for baixo demais ou cair mais de 50% em
       # relação a ontem, o job falha e o GitHub manda e-mail.
       - name: Verificar se coletou de verdade
+        if: always()
         working-directory: collector
         run: npm run collect verificar
 

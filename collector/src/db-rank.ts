@@ -437,7 +437,48 @@ export async function marcarCatalogProductsSincronizados(ids: string[]) {
 }
 
 export async function refreshRankMetrics(concurrent = true) {
-  await sql`select refresh_rank_metrics(${concurrent})`;
+  // Cada matview em chamada separada: se category estourar o teto do
+  // pooler (~120s), product_rank_metrics / product_competition já
+  // ficaram atualizados e o Monitor não fica com posição velha.
+  const bumpTimeout = () =>
+    sql`select set_config('statement_timeout', '600000', true)`;
+
+  await bumpTimeout();
+  try {
+    if (concurrent) {
+      await sql`refresh materialized view concurrently product_rank_metrics`;
+      await bumpTimeout();
+      await sql`refresh materialized view concurrently product_competition`;
+    } else {
+      await sql`refresh materialized view product_rank_metrics`;
+      await bumpTimeout();
+      await sql`refresh materialized view product_competition`;
+    }
+  } catch (err) {
+    if (concurrent) {
+      await bumpTimeout();
+      await sql`refresh materialized view product_rank_metrics`;
+      await bumpTimeout();
+      await sql`refresh materialized view product_competition`;
+    } else {
+      throw err;
+    }
+  }
+
+  await bumpTimeout();
+  try {
+    if (concurrent) {
+      await sql`refresh materialized view concurrently category_rank_metrics`;
+    } else {
+      await sql`refresh materialized view category_rank_metrics`;
+    }
+  } catch (err) {
+    console.warn(
+      new Date().toISOString(),
+      'category_rank_metrics falhou (Monitor de produto segue ok):',
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 /**

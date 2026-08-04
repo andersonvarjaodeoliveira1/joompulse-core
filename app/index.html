@@ -2777,26 +2777,30 @@ async function carregarPlanos(){
 }
 
 V.extensao = () => {
+  const store = 'https://chromewebstore.google.com/detail/gringa-radar/eilndeohnfhbfhbcikepjpbmgkdkjblp';
   const zip = 'extensao-gringa-radar.zip';
   return `
   <h1 class="pg">Extensão Chrome</h1>
-  <p class="sub">Baixe, instale no Chrome e entre com a mesma conta deste painel.
+  <p class="sub">Instale pela Chrome Web Store e entre com a mesma conta deste painel.
     Só libera dados no Mercado Livre se a assinatura estiver ativa no banco.</p>
   <div class="hero" style="margin-bottom:22px">
     <h3>Gringa Radar na página do produto</h3>
-    <p>Posição, concorrência e preços sem sair do anúncio. Login na extensão
-      verifica se você tem assinatura ativa (ou trial).</p>
-    <a class="b" href="${zip}" download style="display:inline-block;text-decoration:none">⬇ Baixar extensão (.zip)</a>
+    <p>Posição, concorrência, preços e vendidos (ao abrir o anúncio) sem sair do Mercado Livre.
+      Login na extensão verifica assinatura ativa ou trial.</p>
+    <a class="b" href="${store}" target="_blank" rel="noopener"
+      style="display:inline-block;text-decoration:none;margin-right:10px">＋ Instalar na Chrome Web Store</a>
+    <a class="btn" href="${zip}" download style="display:inline-block;text-decoration:none">Baixar .zip (dev)</a>
   </div>
   <div class="g2">
     <div class="card cbox">
       <div class="ct">1. Instalar</div>
       <ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.55">
-        <li>Baixe o ZIP e extraia a pasta</li>
-        <li>Abra <code>chrome://extensions</code></li>
-        <li>Ligue o <b>Modo do desenvolvedor</b></li>
-        <li>Clique em <b>Carregar sem compactação</b> e escolha a pasta extraída</li>
+        <li>Abra a <a href="${store}" target="_blank" rel="noopener">página na Chrome Web Store</a></li>
+        <li>Clique em <b>Usar no Chrome</b> / <b>Adicionar ao Chrome</b></li>
+        <li>Confirme a instalação</li>
       </ol>
+      <p class="hint" style="margin:12px 0 0">Alternativa para desenvolvimento: ZIP +
+        <code>chrome://extensions</code> → Modo do desenvolvedor → Carregar sem compactação.</p>
     </div>
     <div class="card cbox">
       <div class="ct">2. Entrar</div>
@@ -2812,9 +2816,7 @@ V.extensao = () => {
     Mercado Pago (<code>criar-checkout</code>). Com <code>MP_ACCESS_TOKEN</code> configurado, o webhook
     atualiza <code>profiles.subscription_status</code> e <code>plan</code>. Sem o token, o botão
     explica que o gateway ainda não está ligado — assinatura ativa = status
-    <code>active</code>/<code>trialing</code>, trial válido, ou plano atribuído manualmente.</div>
-  <div class="cwarn" style="margin-top:14px">Chrome Web Store (instalação em 1 clique) vem depois —
-    por enquanto o ZIP + “carregar sem compactação” é o caminho público.</div>`;
+    <code>active</code>/<code>trialing</code>, trial válido, ou plano atribuído manualmente.</div>`;
 };
 
 V.assinatura = () => {

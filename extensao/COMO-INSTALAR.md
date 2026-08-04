@@ -1,11 +1,18 @@
 # Extensão do Chrome — Gringa Radar
 
-## Baixar
+## Instalar (recomendado)
 
-No painel: **Extensão Chrome** → **Baixar extensão (.zip)**  
-Ou o arquivo `extensao-gringa-radar.zip` junto do app no GitHub Pages.
+[Gringa Radar na Chrome Web Store](https://chromewebstore.google.com/detail/gringa-radar/eilndeohnfhbfhbcikepjpbmgkdkjblp)
 
-## Instalar
+1. Abra o link
+2. Clique em **Usar no Chrome** / **Adicionar ao Chrome**
+3. Confirme
+
+No painel: **Extensão Chrome** → **Instalar na Chrome Web Store**.
+
+## Alternativa (desenvolvimento)
+
+ZIP `extensao-gringa-radar.zip` no painel / GitHub Pages:
 
 1. Extraia o ZIP
 2. Abra `chrome://extensions`
@@ -22,6 +29,8 @@ O login consulta `status_assinatura` no banco. Sem assinatura ativa
 ## Usar
 
 Abra um produto no Mercado Livre. O card aparece na página.
+Vendidos no Monitor são atualizados quando você abre um produto monitorado
+(a API do ML não libera `sold_quantity` de terceiro).
 
 ## Segurança
 
