@@ -124,7 +124,7 @@ const boot = async () => {
   return bootJob;
 };
 
-// A extensao abre o app apontando para uma tela: #view=monitor&aba=fila.
+// A extensao abre o app apontando para uma tela: #view=monitor&aba=lista.
 // Sem isso qualquer link cai na home e a pessoa procura sozinha.
 function lerUrl(){
   const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
@@ -2317,7 +2317,11 @@ async function seguir(id, snapshot){
     alert(`Seu plano permite acompanhar ${data.limite} produtos e você já tem ${data.usados}. Remova um ou faça upgrade.`);
     return;
   }
-  await carregarMonitor(); render();
+  await carregarMonitor();
+  S.view = 'monitor';
+  S.aba = 'lista';
+  location.hash = 'view=monitor&aba=lista';
+  render();
 }
 async function largar(id){
   await sb.rpc('desmonitorar_produto',{ p_produto:id });
@@ -2388,6 +2392,9 @@ async function monitorarLote(){
   if (error) return alert(error.message);
   S.selecao.clear();
   await carregarMonitor();
+  S.view = 'monitor';
+  S.aba = 'lista';
+  location.hash = 'view=monitor&aba=lista';
   alert(data.fora_do_limite > 0
     ? `${data.adicionados} adicionado(s). ${data.fora_do_limite} ficaram de fora: seu plano permite ${data.limite}.`
     : `${data.adicionados} produto(s) adicionados ao Monitor.`);

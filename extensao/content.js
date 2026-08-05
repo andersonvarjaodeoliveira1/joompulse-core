@@ -428,7 +428,7 @@ function html(d) {
   return topo + insight + `
     <button class="gr-c-btn ${d.monitorado ? 'gr-c-off' : ''}" id="gr-mon"
       ${conhecido ? '' : 'hidden'}>
-      ${d.monitorado ? '✓ No seu monitor' : 'Monitorar este produto'}</button>`;
+      ${d.monitorado ? '✓ No seu monitor — abrir' : 'Monitorar este produto'}</button>`;
 }
 
 /**
@@ -532,11 +532,22 @@ function ligarBotoes(d) {
   };
 
   const mon = caixa && caixa.querySelector('#gr-mon');
-  if (mon && !d.monitorado) mon.onclick = () => abrirPastas(d, mon);
+  if (!mon) return;
+  if (d.monitorado) {
+    mon.onclick = () => abrirAcompanhando();
+  } else {
+    mon.onclick = () => abrirPastas(d, mon);
+  }
 }
 
 // ===== seletor de pasta =====
 const PASTA_PADRAO = 'Meus melhores produtos';
+const PAINEL = 'https://gringaradar.vercel.app/';
+
+/** Abre o painel na aba Acompanhando (Monitor). */
+function abrirAcompanhando() {
+  window.open(PAINEL + '#view=monitor&aba=lista', '_blank', 'noopener');
+}
 
 async function listarPastas() {
   const r = await rest({ metodo: 'GET', tabela: 'tracked_folders',
@@ -649,8 +660,9 @@ function desenharPastas(painel, pastas, d, botao) {
     d.monitorado = true;
     painel.remove();
     botao.className = 'gr-c-btn gr-c-off';
-    botao.textContent = semPasta ? 'No seu monitor' : 'Salvo na pasta';
-    botao.onclick = null;
+    botao.textContent = semPasta ? 'No seu monitor — abrir' : 'Salvo — abrir Acompanhando';
+    botao.onclick = () => abrirAcompanhando();
+    abrirAcompanhando();
   };
 }
 
