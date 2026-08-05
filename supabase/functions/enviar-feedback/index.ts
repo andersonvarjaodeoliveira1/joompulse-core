@@ -74,12 +74,16 @@ Deno.serve(async (req) => {
   const { data: userData } = await conta.auth.getUser();
   const contaEmail = userData?.user?.email ?? '(desconhecido)';
 
+  const digits = whatsapp.replace(/\D/g, '');
+  const waLink = digits ? `https://wa.me/55${digits.replace(/^55/, '')}` : '';
+
   const html = `
     <div style="font-family:Segoe UI,Arial,sans-serif;font-size:15px;line-height:1.5;color:#1a1a1e">
       <h2 style="margin:0 0 12px;font-size:18px">Novo feedback — Gringa Radar</h2>
-      <p style="margin:0 0 8px"><b>E-mail informado:</b> ${escapeHtml(email)}</p>
-      <p style="margin:0 0 8px"><b>WhatsApp:</b> ${escapeHtml(whatsapp)}</p>
-      <p style="margin:0 0 8px"><b>Conta logada:</b> ${escapeHtml(contaEmail)} (${auth.userId})</p>
+      <p style="margin:0 0 8px"><b>E-mail para contato:</b> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>
+      <p style="margin:0 0 8px"><b>WhatsApp para contato:</b> ${escapeHtml(whatsapp)}
+        ${waLink ? ` — <a href="${waLink}">abrir no WhatsApp</a>` : ''}</p>
+      <p style="margin:0 0 8px"><b>Conta logada:</b> ${escapeHtml(contaEmail)}</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0"/>
       <p style="margin:0 0 6px"><b>Mensagem:</b></p>
       <pre style="white-space:pre-wrap;font-family:inherit;background:#f7f8fa;padding:12px;border-radius:8px;margin:0">${escapeHtml(mensagem)}</pre>
@@ -99,9 +103,9 @@ Deno.serve(async (req) => {
         ?? 'Gringa Radar <onboarding@resend.dev>',
       to: [EMAIL_TO],
       reply_to: email,
-      subject: `Feedback Gringa Radar — ${email}`,
+      subject: `Feedback Gringa Radar — ${email} — WhatsApp ${whatsapp}`,
       html,
-      text: `Feedback Gringa Radar\n\nE-mail: ${email}\nWhatsApp: ${whatsapp}\nConta: ${contaEmail}\n\n${mensagem}`,
+      text: `Feedback Gringa Radar\n\nE-mail para contato: ${email}\nWhatsApp para contato: ${whatsapp}${waLink ? `\nLink WhatsApp: ${waLink}` : ''}\nConta logada: ${contaEmail}\n\nMensagem:\n${mensagem}`,
     }),
   });
 

@@ -3223,7 +3223,7 @@ async function enviarFeedback(){
       fbStatus(mapa[motivo] || 'Não deu para enviar agora. Tente de novo.', false);
       return;
     }
-    fbStatus('Obrigado! Seu feedback foi enviado.', true);
+    fbStatus('Enviado! Recebemos seu e-mail e WhatsApp para contato.', true);
     if ($('#fbMsg')) $('#fbMsg').value = '';
     setTimeout(() => abrirFeedback(false), 1600);
   } catch {
