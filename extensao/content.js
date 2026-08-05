@@ -198,13 +198,34 @@ function lerPagina() {
     if (Number.isFinite(p)) o.preco = p;
   }
   if (o.preco == null) {
-    const bloco = document.querySelector('.ui-pdp-price, .ui-pdp-price__second-line, [class*="ui-pdp-price"]')
-      || document;
-    const frac = bloco.querySelector('.andes-money-amount__fraction');
-    const cent = bloco.querySelector('.andes-money-amount__cents');
-    if (frac) {
+    // Preço principal do anúncio (evita pegar parcela / frete)
+    const blocos = [
+      document.querySelector('.ui-pdp-price__second-line'),
+      document.querySelector('.ui-pdp-price'),
+      document.querySelector('[class*="ui-pdp-price"]'),
+      document.querySelector('.ui-pdp-container__col-right'),
+    ].filter(Boolean);
+    for (const bloco of (blocos.length ? blocos : [document])) {
+      const frac = bloco.querySelector(
+        '.andes-money-amount--cents-superscript .andes-money-amount__fraction, .andes-money-amount__fraction',
+      );
+      const cent = frac
+        ? (frac.parentElement?.querySelector('.andes-money-amount__cents')
+          || bloco.querySelector('.andes-money-amount__cents'))
+        : null;
+      if (!frac) continue;
       const p = parseFloat(frac.textContent.replace(/\./g, '') + '.' + (cent?.textContent || '0'));
-      if (Number.isFinite(p)) o.preco = p;
+      if (Number.isFinite(p) && p > 0) { o.preco = p; break; }
+    }
+  }
+
+  // Fallback: qualquer "R$ 1.234" / "R$ 1.234,56" no subtítulo/header
+  if (o.preco == null) {
+    const zona = document.querySelector('.ui-pdp-container__col-right, .ui-pdp-header, main') || document.body;
+    const m = (zona.innerText || '').match(/R\$\s*([\d.]+)(?:,(\d{2}))?/);
+    if (m) {
+      const p = parseFloat(m[1].replace(/\./g, '') + '.' + (m[2] || '0'));
+      if (Number.isFinite(p) && p > 0) o.preco = p;
     }
   }
 
@@ -383,13 +404,12 @@ async function carregarPrecos() {
 
 function html(d) {
   const pg = lerPagina();
-  // Insights vêm da própria página do ML — podem aparecer mesmo sem
-  // assinatura/ranking, porque o número já está na tela do usuário.
-  const temInsight = pg.vendidos != null || pg.preco != null || pg.criado || pg.nota != null;
-  const blocoInsight = temInsight ? `
+  // Sempre mostra "Ver insights" — a leitura da página pode chegar depois
+  // (React do ML). Se ainda não tiver número, o bloco diz isso com honestidade.
+  const blocoInsight = `
     <button class="gr-c-btn gr-c-sec" id="gr-ins">
       ${estadoInsight ? '▲ Ocultar insights' : '▼ Ver insights'}</button>
-    <div class="gr-c-ins" ${estadoInsight ? '' : 'hidden'}>${blocosInsight(pg, d)}</div>` : '';
+    <div class="gr-c-ins" ${estadoInsight ? '' : 'hidden'}>${blocosInsight(pg, d)}</div>`;
 
   if (d.status === 'sem_assinatura') {
     return `<div class="gr-c-vazio"><b>Assinatura necessária</b>
@@ -493,7 +513,10 @@ function blocosInsight(pg, d) {
     ${pg.preco != null ? `<div class="gr-c-ib">
       <div class="gr-c-it">Preço na página <i>lido agora</i></div>
       <div style="font-size:18px;font-weight:700">${brl(pg.preco)}</div>
-    </div>` : ''}
+    </div>` : `<div class="gr-c-ib">
+      <div class="gr-c-it">Preço na página</div>
+      <div class="gr-c-nota">Ainda não li o preço neste layout — role a página ou aguarde 1–2s.</div>
+    </div>`}
     ${pg.criado ? `<div class="gr-c-ib">
       <div class="gr-c-it">Anúncio criado em <i>lido da página</i></div>
       <div style="font-size:14px;font-weight:600">${esc(pg.criado)}${pg.diasNoAr ? ` <span style="font-weight:400;color:#8A93A0;font-size:12px">(${pg.diasNoAr.toLocaleString('pt-BR')} dias no ar)</span>` : ''}</div>
@@ -818,12 +841,26 @@ async function consultar() {
   corpo.innerHTML = html(dados);
   ligarBotoes(dados);
   if (estadoInsight) carregarPrecos();
+  agendarRefreshInsights();
 
   // Se já está no monitor, atualiza vendidos/preço toda vez que a página
   // abre — a API do ML não entrega isso; só a leitura da página atualiza.
   if (dados && dados.monitorado && dados.produto) {
     atualizarVendasMonitor(dados.produto).catch(() => {});
   }
+}
+
+/** O ML (React) desenha preço/vendidos depois do nosso card. Relê e atualiza. */
+function agendarRefreshInsights() {
+  [700, 1600, 3200, 5500].forEach((ms) => {
+    setTimeout(() => {
+      if (!caixa || !caixa.isConnected || !dados) return;
+      const wrap = caixa.querySelector('.gr-c-ins');
+      if (!wrap) return;
+      wrap.innerHTML = blocosInsight(lerPagina(), dados);
+      if (estadoInsight) carregarPrecos();
+    }, ms);
+  });
 }
 
 function limpar() {
