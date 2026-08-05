@@ -27,7 +27,7 @@ const S = { view:'home', marketplace: localStorage.getItem('gr_mkt') || 'meli', 
             catalogos:[], catalogosBusy:false, catalogosMsg:null, catalogosLoaded:false,
             detalheAba:'catalogo', similares:[], similaresCarregado:false, detalheLocal:null,
             locais:[], contatos:{}, LF:{}, ref:'', refAviso:null, refVivo:null, refBusy:false, refPedidoOk:null,
-            sel:null, selecao:new Set() };
+            sel:null, selecao:new Set(), monitorExtraOk:false };
 
 const brl = n => n==null?'—':'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num = n => n==null?'—':Number(n).toLocaleString('pt-BR');
@@ -86,21 +86,42 @@ $('#assistInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') en
 $('#irAssinatura').onclick = () => { S.view = 'assinatura'; render(); };
 $('#stripx').onclick = () => $('#strip').remove();
 
+let bootJob = null; // evita boot duplo (getSession + onAuthStateChange)
 sb.auth.onAuthStateChange((_e,s) => {
   if (s){ $('#gate').classList.add('hide'); $('#app').classList.remove('hide'); boot(); }
-  else { $('#app').classList.add('hide'); $('#gate').classList.remove('hide'); }
+  else {
+    bootJob = null;
+    S.monitorExtraOk = false;
+    $('#app').classList.add('hide');
+    $('#gate').classList.remove('hide');
+  }
 });
 const boot = async () => {
-  const [,,d, dig, av] = await Promise.all([
-    quota(), carregarMonitor(), sb.rpc('categoria_destaque'),
-    sb.rpc('digest_hoje'), sb.rpc('listar_avisos_sistema', { p_limite: 10 }),
-  ]);
-  S.categoriaDestaque = d.data?.[0] ?? d.data ?? null;
-  S.digest = dig?.data && typeof dig.data === 'object' && Object.keys(dig.data).length
-    ? dig.data : null;
-  S.avisos = av?.data ?? [];
-  lerUrl();
-  render();
+  if (bootJob) return bootJob;
+  bootJob = (async () => {
+    // 1) Pinta a Home na hora — não espera rede
+    lerUrl();
+    render();
+
+    // 2) Só o que a Home precisa (leve e em paralelo)
+    const [, d, dig, av] = await Promise.all([
+      Promise.all([quota(), carregarMonitorBasico()]),
+      sb.rpc('categoria_destaque'),
+      sb.rpc('digest_hoje'),
+      sb.rpc('listar_avisos_sistema', { p_limite: 10 }),
+    ]);
+    S.categoriaDestaque = d.data?.[0] ?? d.data ?? null;
+    S.digest = dig?.data && typeof dig.data === 'object' && Object.keys(dig.data).length
+      ? dig.data : null;
+    S.avisos = av?.data ?? [];
+    if (S.view === 'home' || !S.view) render();
+
+    // 3) Pedidos / vendedores / histórico do monitor — em fundo
+    carregarMonitorExtra().then(() => {
+      if (S.view === 'monitor') render();
+    }).catch(() => {});
+  })();
+  return bootJob;
 };
 
 // A extensao abre o app apontando para uma tela: #view=monitor&aba=fila.
@@ -361,7 +382,7 @@ function qcFaixa(attr, curMin, curMax, opcoes){
 }
 
 
-/** Árvore de categorias, no estilo do JoomPulse: raízes abertas de cara,
+/** Árvore de categorias do Gringa Radar: raízes abertas de cara,
  *  seta ▸ expande sem sair da posição. Folha não tem seta (nada abaixo). */
 function catArvoreHtml(parentId, depth){
   const chave = parentId ?? '_raiz';
@@ -2240,21 +2261,35 @@ async function enviarPerguntaAssistente(){
   }
 }
 
-async function carregarMonitor(){
-  const [m,a,f,v,hm] = await Promise.all([
+/** Contagens da Home: monitorados + alertas (rápido). */
+async function carregarMonitorBasico(){
+  const [m, a] = await Promise.all([
     sb.rpc('listar_monitorados'),
-    sb.rpc('listar_alertas',{p_limite:80}),
+    sb.rpc('listar_alertas', { p_limite: 80 }),
+  ]);
+  S.monitorados = m.data ?? [];
+  S.alertas = a.data ?? [];
+}
+
+/** Dados pesados do Monitor (histórico 21d, pedidos, vendedores). */
+async function carregarMonitorExtra(){
+  const [f, v, hm] = await Promise.all([
     sb.rpc('meus_pedidos'),
     sb.from('tracked_sellers').select('seller_id,created_at,sellers(nickname,city,state,permalink,is_official_store)').order('created_at',{ascending:false}),
-    sb.rpc('historico_monitorados',{p_dias:21}),
+    sb.rpc('historico_monitorados', { p_dias: 21 }),
   ]);
-  S.monitorados = m.data ?? []; S.alertas = a.data ?? []; S.pedidos = f.data ?? [];
+  S.pedidos = f.data ?? [];
   S.vendedores = v.data ?? [];
   S.histMon = {};
   if (hm.error) console.warn('historico_monitorados', hm.error.message);
   (hm.data ?? []).forEach(r => {
     (S.histMon[r.product_id] ??= []).push({ dia: r.dia, posicao: r.posicao, preco: r.preco });
   });
+  S.monitorExtraOk = true;
+}
+
+async function carregarMonitor(){
+  await Promise.all([carregarMonitorBasico(), carregarMonitorExtra()]);
 }
 async function buscarVendedores(){
   const t = S.vendBusca.trim();
@@ -3029,12 +3064,16 @@ function render(){
 
 document.querySelectorAll('.item,.solo').forEach(b =>
   b.onclick = () => { S.view = b.dataset.v; render();
-    if (b.dataset.v === 'categorias') carregarCategoriasRecentes().then(render); });
+    if (b.dataset.v === 'categorias') carregarCategoriasRecentes().then(render);
+    if (b.dataset.v === 'monitor' && !S.monitorExtraOk) {
+      carregarMonitorExtra().then(() => { if (S.view === 'monitor') render(); });
+    }
+  });
 document.querySelectorAll('.gh').forEach(h => h.onclick = () => {
   document.getElementById(h.dataset.g).classList.toggle('hide');
 });
 
-// Seletor Mercado Livre / Shopee (mesmo formato do JoomPulse, estilo Gringa Radar)
+// Seletor Mercado Livre / Shopee (estilo Gringa Radar)
 $('#mkt_btn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   S.mktAberto = !S.mktAberto;
@@ -3071,6 +3110,10 @@ $('#sheet')?.addEventListener('click', (ev) => {
   }
 });
 
-sb.auth.getSession().then(({data}) => {
-  if (data.session){ $('#gate').classList.add('hide'); $('#app').classList.remove('hide'); boot(); }
+// Mostra o shell na hora se já tem sessão; o boot() vem só do onAuthStateChange
+// (evita duplicar RPCs e atrasa menos a Home).
+sb.auth.getSession().then(({ data }) => {
+  if (!data.session) return;
+  $('#gate').classList.add('hide');
+  $('#app').classList.remove('hide');
 });
