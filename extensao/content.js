@@ -146,23 +146,62 @@ function lerPagina() {
   const o = { vendidos: null, aprox: false, preco: null, criado: null, titulo: null,
               nota: null, avaliacoes: null, vendedor: null, marca: null, imagem: null, diasNoAr: null };
 
-  // "+100 vendidos" | "100 vendidos" | "+1mil vendidos"
-  const mv = txt.match(/(\+)?\s*([\d.]+)\s*(mil)?\s*vendid/i);
-  if (mv) {
+  // JSON-LD (Product / Offer) — costuma sobreviver a mudanças de layout
+  try {
+    document.querySelectorAll('script[type="application/ld+json"]').forEach((el) => {
+      let j; try { j = JSON.parse(el.textContent); } catch { return; }
+      const list = Array.isArray(j) ? j : [j];
+      for (const node of list) {
+        const n = node?.['@graph'] ? node['@graph'] : [node];
+        for (const item of (Array.isArray(n) ? n : [n])) {
+          if (!item || typeof item !== 'object') continue;
+          if (o.preco == null) {
+            const offers = item.offers || item.aggregateOffer;
+            const offer = Array.isArray(offers) ? offers[0] : offers;
+            const p = parseFloat(offer?.price ?? offer?.lowPrice ?? item.price);
+            if (Number.isFinite(p)) o.preco = p;
+          }
+          if (o.nota == null && item.aggregateRating?.ratingValue != null) {
+            const n2 = parseFloat(String(item.aggregateRating.ratingValue).replace(',', '.'));
+            if (Number.isFinite(n2)) o.nota = n2;
+          }
+          if (o.avaliacoes == null && item.aggregateRating?.ratingCount != null) {
+            const n2 = parseInt(String(item.aggregateRating.ratingCount).replace(/\D/g, ''), 10);
+            if (Number.isFinite(n2)) o.avaliacoes = n2;
+          }
+          if (!o.titulo && item.name) o.titulo = String(item.name).trim().slice(0, 180);
+        }
+      }
+    });
+  } catch { /* layout novo / JSON inválido */ }
+
+  // "+100 vendidos" | "100 vendidos" | "+1 mil vendidos" | "+5mil vendas"
+  const candidatos = [];
+  const sub = document.querySelector('.ui-pdp-subtitle, .ui-pdp-header__subtitle, [class*="ui-pdp-subtitle"]');
+  if (sub?.textContent) candidatos.push(sub.textContent);
+  candidatos.push(txt);
+  const reVend = /(\+)?\s*([\d.]+)\s*(mil)?\s*vendid/i;
+  const reVend2 = /(\+)?\s*([\d.]+)\s*(mil)?\s*vendas?\b/i;
+  for (const trecho of candidatos) {
+    if (o.vendidos != null) break;
+    const mv = trecho.match(reVend) || trecho.match(reVend2);
+    if (!mv) continue;
     let n = parseFloat(mv[2].replace(/\./g, ''));
     if (mv[3]) n *= 1000;
     if (Number.isFinite(n)) { o.vendidos = n; o.aprox = !!mv[1] || !!mv[3]; }
   }
 
-  // preço: prioriza o meta, que vem sem formatação
+  // preço: meta → money-amount (primeiro do bloco de preço do anúncio)
   const meta = document.querySelector('meta[itemprop="price"], meta[property="product:price:amount"]');
   if (meta?.content) {
     const p = parseFloat(meta.content);
     if (Number.isFinite(p)) o.preco = p;
   }
   if (o.preco == null) {
-    const frac = document.querySelector('.andes-money-amount__fraction');
-    const cent = document.querySelector('.andes-money-amount__cents');
+    const bloco = document.querySelector('.ui-pdp-price, .ui-pdp-price__second-line, [class*="ui-pdp-price"]')
+      || document;
+    const frac = bloco.querySelector('.andes-money-amount__fraction');
+    const cent = bloco.querySelector('.andes-money-amount__cents');
     if (frac) {
       const p = parseFloat(frac.textContent.replace(/\./g, '') + '.' + (cent?.textContent || '0'));
       if (Number.isFinite(p)) o.preco = p;
@@ -186,7 +225,7 @@ function lerPagina() {
     if (Number.isFinite(n)) o.nota = n;
   }
   if (o.nota == null) {
-    const el = document.querySelector('.ui-pdp-review__rating');
+    const el = document.querySelector('.ui-pdp-review__rating, .ui-review-capability__rating');
     if (el) {
       const n = parseFloat(el.textContent.trim().replace(',', '.'));
       if (Number.isFinite(n)) o.nota = n;
@@ -206,7 +245,7 @@ function lerPagina() {
     }
   }
 
-  const vend = document.querySelector('.ui-pdp-seller__link-trigger, .ui-box-component__link');
+  const vend = document.querySelector('.ui-pdp-seller__link-trigger, .ui-box-component__link, a[href*="/perfil/"]');
   if (vend) o.vendedor = vend.textContent.trim().slice(0, 60);
 
   const mMarca = txt.match(/Marca\s*[:\n]\s*([^\n]{2,40})/i);
@@ -307,7 +346,7 @@ function ancora() {
 // 4. O CARD
 // =====================================================================
 let alvo = null, dados = null, caixa = null, aba = null;
-let estadoInsight = false;
+let estadoInsight = true;
 
 /** Desenha a série de preço que a nossa coleta gravou. */
 function grafico(serie) {
@@ -343,17 +382,25 @@ async function carregarPrecos() {
 }
 
 function html(d) {
+  const pg = lerPagina();
+  // Insights vêm da própria página do ML — podem aparecer mesmo sem
+  // assinatura/ranking, porque o número já está na tela do usuário.
+  const temInsight = pg.vendidos != null || pg.preco != null || pg.criado || pg.nota != null;
+  const blocoInsight = temInsight ? `
+    <button class="gr-c-btn gr-c-sec" id="gr-ins">
+      ${estadoInsight ? '▲ Ocultar insights' : '▼ Ver insights'}</button>
+    <div class="gr-c-ins" ${estadoInsight ? '' : 'hidden'}>${blocosInsight(pg, d)}</div>` : '';
+
   if (d.status === 'sem_assinatura') {
     return `<div class="gr-c-vazio"><b>Assinatura necessária</b>
       <p>Entre no ícone da extensão com uma conta que tenha assinatura ativa,
-        ou assine no painel do Gringa Radar.</p></div>`;
+        ou assine no painel do Gringa Radar.</p></div>${blocoInsight}`;
   }
   if (d.status === 'sem_quota') {
     return `<div class="gr-c-vazio"><b>Consultas do mês esgotadas</b>
-      <p>O contador zera no dia 1º.</p></div>`;
+      <p>O contador zera no dia 1º.</p></div>${blocoInsight}`;
   }
 
-  const pg = lerPagina();
   const conhecido = d.status === 'encontrado';
 
   // Bloco de ranking — só quando temos o produto na base.
@@ -417,15 +464,7 @@ function html(d) {
                  a coleta pode demorar mais</span>`}</div>`;
   }
 
-  // Insights vindos da própria página — funcionam mesmo sem o produto
-  // estar na nossa base, porque o número está na tela do usuário.
-  const temInsight = pg.vendidos != null && pg.preco != null;
-  const insight = temInsight ? `
-    <button class="gr-c-btn gr-c-sec" id="gr-ins">
-      ${estadoInsight ? '▲ Ocultar insights' : '▼ Ver insights'}</button>
-    <div class="gr-c-ins" ${estadoInsight ? '' : 'hidden'}>${blocosInsight(pg, d)}</div>` : '';
-
-  return topo + insight + `
+  return topo + blocoInsight + `
     <button class="gr-c-btn ${d.monitorado ? 'gr-c-off' : ''}" id="gr-mon"
       ${conhecido ? '' : 'hidden'}>
       ${d.monitorado ? '✓ No seu monitor — abrir' : 'Monitorar este produto'}</button>`;
@@ -440,20 +479,26 @@ function html(d) {
  * anúncio. Números redondos com cara de precisão seriam pior que nada.
  */
 function blocosInsight(pg, d) {
-  const dias = d.dias_observados && d.dias_observados > 1 ? d.dias_observados : null;
-  const m = dias ? medias(pg.vendidos, dias) : null;
-  const receita = pg.vendidos * pg.preco;
+  const diasPagina = pg.diasNoAr && pg.diasNoAr > 1 ? pg.diasNoAr : null;
+  const diasBase = diasPagina
+    || (d.dias_observados && d.dias_observados > 1 ? d.dias_observados : null);
+  const m = (pg.vendidos != null && diasBase) ? medias(pg.vendidos, diasBase) : null;
+  const receita = (pg.vendidos != null && pg.preco != null) ? pg.vendidos * pg.preco : null;
 
   // Alíquotas padrão do Mercado Livre. Variam por categoria e por plano
   // do vendedor — servem para ordem de grandeza, não para contabilidade.
   const COMISSAO = 0.12, IMPOSTO = 0.07;
 
   return `
+    ${pg.preco != null ? `<div class="gr-c-ib">
+      <div class="gr-c-it">Preço na página <i>lido agora</i></div>
+      <div style="font-size:18px;font-weight:700">${brl(pg.preco)}</div>
+    </div>` : ''}
     ${pg.criado ? `<div class="gr-c-ib">
       <div class="gr-c-it">Anúncio criado em <i>lido da página</i></div>
       <div style="font-size:14px;font-weight:600">${esc(pg.criado)}${pg.diasNoAr ? ` <span style="font-weight:400;color:#8A93A0;font-size:12px">(${pg.diasNoAr.toLocaleString('pt-BR')} dias no ar)</span>` : ''}</div>
     </div>` : ''}
-    <div class="gr-c-ib">
+    ${pg.vendidos != null ? `<div class="gr-c-ib">
       <div class="gr-c-it">Vendas <i>segundo a página</i></div>
       <div class="gr-c-igrade">
         <div><span>Total</span><b>${pg.aprox ? '~' : ''}${pg.vendidos.toLocaleString('pt-BR')}</b></div>
@@ -462,13 +507,16 @@ function blocosInsight(pg, d) {
                <div><span>Média diária</span><b>${m.dia}</b></div>`
             : `<div style="grid-column:span 3"><span>Médias</span>
                  <b style="font-size:12px;font-weight:500;color:#8A93A0">
-                   precisam de histórico nosso</b></div>`}
+                   precisam da data de criação ou do nosso histórico</b></div>`}
       </div>
-      ${m ? `<div class="gr-c-nota">base: ${m.dias} dia(s) de observação — no mínimo,
+      ${m ? `<div class="gr-c-nota">base: ${m.dias} dia(s)${diasPagina ? ' no ar (página)' : ' de observação nossa'} — no mínimo,
              o anúncio pode ser mais antigo</div>` : ''}
-    </div>
+    </div>` : `<div class="gr-c-ib">
+      <div class="gr-c-it">Vendas <i>segundo a página</i></div>
+      <div class="gr-c-nota">Não achamos o número de vendidos neste layout do ML.</div>
+    </div>`}
 
-    <div class="gr-c-ib">
+    ${receita != null ? `<div class="gr-c-ib">
       <div class="gr-c-it">Receita e custos <i>estimados</i></div>
       <div class="gr-c-igrade">
         <div><span>Receita total</span><b>${brl(receita)}</b></div>
@@ -478,7 +526,7 @@ function blocosInsight(pg, d) {
           <b style="color:#16A34A">${brl(receita * (1 - COMISSAO - IMPOSTO))}</b></div>
       </div>
       <div class="gr-c-nota">alíquotas padrão; variam por categoria e plano do vendedor</div>
-    </div>
+    </div>` : ''}
 
     <div class="gr-c-ib" id="gr-precos">
       <div class="gr-c-it">Variação de preço <i>coleta nossa</i></div>
@@ -754,6 +802,7 @@ async function consultar() {
   dados = r.dados;
   corpo.innerHTML = html(dados);
   ligarBotoes(dados);
+  if (estadoInsight) carregarPrecos();
 
   // Se já está no monitor, atualiza vendidos/preço toda vez que a página
   // abre — a API do ML não entrega isso; só a leitura da página atualiza.
