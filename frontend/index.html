@@ -131,6 +131,25 @@
       <button class="btn" id="assistSend">Enviar</button>
     </div>
   </div>
+
+  <button type="button" class="fb-fab hide" id="fbFab" aria-expanded="false">Feedback</button>
+  <div class="fb-box hide" id="fbBox" role="dialog" aria-label="Enviar feedback">
+    <div class="fb-head">
+      <b>Feedback</b>
+      <button type="button" id="fbClose" aria-label="Fechar">×</button>
+    </div>
+    <div class="fb-body">
+      <p>Conta o que melhorar, o que falta ou o que te atrapalhou. A mensagem chega direto no e-mail do time.</p>
+      <label for="fbEmail">E-mail</label>
+      <input id="fbEmail" type="email" autocomplete="email" placeholder="seu@email.com">
+      <label for="fbWhats">WhatsApp</label>
+      <input id="fbWhats" type="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+      <label for="fbMsg">Mensagem</label>
+      <textarea id="fbMsg" placeholder="O que melhorar, ideias, bugs…"></textarea>
+      <div class="fb-msg" id="fbStatus"></div>
+      <button type="button" class="btn" id="fbSend">Enviar feedback</button>
+    </div>
+  </div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

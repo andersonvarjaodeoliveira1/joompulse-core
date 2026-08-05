@@ -232,7 +232,7 @@
   .excap{font-size:12px;color:var(--ink-3);text-align:center;margin-bottom:14px}
 
   /* assistente */
-  .assist{position:fixed;right:20px;bottom:20px;width:380px;max-height:70vh;background:var(--card);
+  .assist{position:fixed;right:20px;bottom:78px;width:380px;max-height:70vh;background:var(--card);
     border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);
     display:flex;flex-direction:column;z-index:50}
   .assist.hide{display:none}
@@ -247,7 +247,35 @@
   .amsg.erro{align-self:flex-start;background:#FEF2F2;color:var(--dn)}
   .ainput{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
   .ainput input{flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px}
-  @media (max-width:640px){ .assist{right:10px;left:10px;width:auto;bottom:10px} }
+
+  /* feedback — canto inferior direito */
+  .fb-fab{position:fixed;right:20px;bottom:20px;z-index:45;border:0;border-radius:999px;
+    background:var(--brand);color:#fff;font:inherit;font-size:13.5px;font-weight:600;
+    padding:12px 18px;box-shadow:0 8px 24px rgba(124,58,237,.35);display:flex;align-items:center;gap:8px}
+  .fb-fab:hover{background:var(--brand-2)}
+  .fb-box{position:fixed;right:20px;bottom:78px;z-index:46;width:340px;max-width:calc(100vw - 24px);
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 12px 40px rgba(0,0,0,.18);padding:0;overflow:hidden}
+  .fb-box.hide{display:none}
+  .fb-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .fb-head b{font-size:14px}
+  .fb-head button{margin-left:auto;background:none;border:0;font-size:18px;color:var(--ink-3);line-height:1;padding:0}
+  .fb-body{padding:14px}
+  .fb-body p{margin:0 0 12px;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+  .fb-body label{display:block;font-size:12px;font-weight:500;color:var(--ink-2);margin:0 0 4px}
+  .fb-body input,.fb-body textarea{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line);
+    border-radius:8px;font:inherit;font-size:13.5px;background:var(--bg);color:var(--ink);margin-bottom:10px}
+  .fb-body textarea{min-height:96px;resize:vertical}
+  .fb-msg{font-size:12.5px;margin:0 0 10px;padding:8px 10px;border-radius:8px;display:none}
+  .fb-msg.on{display:block}
+  .fb-msg.ok{background:#F0FDF4;color:#16A34A}
+  .fb-msg.err{background:#FEF2F2;color:#DC2626}
+  .fb-body .btn{width:100%}
+  @media (max-width:640px){
+    .assist{right:10px;left:10px;width:auto;bottom:72px}
+    .fb-fab{right:10px;bottom:12px}
+    .fb-box{right:10px;left:10px;width:auto;bottom:72px}
+  }
   .neg{color:var(--dn)}
 
   .modo{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:18px}

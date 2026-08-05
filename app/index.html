@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/app.Ce-ScYgn.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index.CN49fCLb.css">
+  <script type="module" crossorigin src="./assets/app.CMaYrjNT.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index.Bfp_JiNR.css">
 </head>
 <body>
 <div id="gate" class="gate">
@@ -131,6 +131,25 @@
     <div class="ainput">
       <input id="assistInput" placeholder="ex: por que o produto X caiu de posição?">
       <button class="btn" id="assistSend">Enviar</button>
+    </div>
+  </div>
+
+  <button type="button" class="fb-fab hide" id="fbFab" aria-expanded="false">Feedback</button>
+  <div class="fb-box hide" id="fbBox" role="dialog" aria-label="Enviar feedback">
+    <div class="fb-head">
+      <b>Feedback</b>
+      <button type="button" id="fbClose" aria-label="Fechar">×</button>
+    </div>
+    <div class="fb-body">
+      <p>Conta o que melhorar, o que falta ou o que te atrapalhou. A mensagem chega direto no e-mail do time.</p>
+      <label for="fbEmail">E-mail</label>
+      <input id="fbEmail" type="email" autocomplete="email" placeholder="seu@email.com">
+      <label for="fbWhats">WhatsApp</label>
+      <input id="fbWhats" type="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+      <label for="fbMsg">Mensagem</label>
+      <textarea id="fbMsg" placeholder="O que melhorar, ideias, bugs…"></textarea>
+      <div class="fb-msg" id="fbStatus"></div>
+      <button type="button" class="btn" id="fbSend">Enviar feedback</button>
     </div>
   </div>
 </div>

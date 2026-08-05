@@ -79,7 +79,11 @@ $('#tema').onclick = () => {
   localStorage.setItem('gr_tema', atual);
   $('#tema').textContent = atual === 'escuro' ? '☀️' : '🌙';
 };
-$('#abrirAssist').onclick = () => { S.assistOpen = !S.assistOpen; renderAssist(); };
+$('#abrirAssist').onclick = () => {
+  S.assistOpen = !S.assistOpen;
+  if (S.assistOpen) abrirFeedback(false);
+  renderAssist();
+};
 $('#assistClose').onclick = () => { S.assistOpen = false; renderAssist(); };
 $('#assistSend').onclick = enviarPerguntaAssistente;
 $('#assistInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') enviarPerguntaAssistente(); });
@@ -88,12 +92,19 @@ $('#stripx').onclick = () => $('#strip').remove();
 
 let bootJob = null; // evita boot duplo (getSession + onAuthStateChange)
 sb.auth.onAuthStateChange((_e,s) => {
-  if (s){ $('#gate').classList.add('hide'); $('#app').classList.remove('hide'); boot(); }
-  else {
+  if (s){
+    $('#gate').classList.add('hide');
+    $('#app').classList.remove('hide');
+    $('#fbFab')?.classList.remove('hide');
+    preencherEmailFeedback(s.user?.email);
+    boot();
+  } else {
     bootJob = null;
     S.monitorExtraOk = false;
     $('#app').classList.add('hide');
     $('#gate').classList.remove('hide');
+    $('#fbFab')?.classList.add('hide');
+    $('#fbBox')?.classList.add('hide');
   }
 });
 const boot = async () => {
@@ -3123,4 +3134,76 @@ sb.auth.getSession().then(({ data }) => {
   if (!data.session) return;
   $('#gate').classList.add('hide');
   $('#app').classList.remove('hide');
+  $('#fbFab')?.classList.remove('hide');
+  preencherEmailFeedback(data.session.user?.email);
 });
+
+function preencherEmailFeedback(email){
+  const el = $('#fbEmail');
+  if (el && email && !el.value) el.value = email;
+}
+
+function fbStatus(texto, ok){
+  const el = $('#fbStatus');
+  if (!el) return;
+  el.textContent = texto || '';
+  el.className = 'fb-msg' + (texto ? ` on ${ok ? 'ok' : 'err'}` : '');
+}
+
+function abrirFeedback(force){
+  const box = $('#fbBox');
+  const fab = $('#fbFab');
+  if (!box || !fab) return;
+  const abrir = force ?? box.classList.contains('hide');
+  box.classList.toggle('hide', !abrir);
+  fab.setAttribute('aria-expanded', String(abrir));
+  if (abrir) {
+    S.assistOpen = false;
+    renderAssist();
+    preencherEmailFeedback();
+    sb.auth.getSession().then(({ data }) => preencherEmailFeedback(data.session?.user?.email));
+    $('#fbMsg')?.focus();
+  }
+}
+
+async function enviarFeedback(){
+  const email = ($('#fbEmail')?.value || '').trim();
+  const whatsapp = ($('#fbWhats')?.value || '').trim();
+  const mensagem = ($('#fbMsg')?.value || '').trim();
+  const btn = $('#fbSend');
+  if (btn?.disabled) return;
+  fbStatus('', true);
+  if (!email) { fbStatus('Informe seu e-mail.', false); return; }
+  if (!whatsapp) { fbStatus('Informe seu WhatsApp.', false); return; }
+  if (mensagem.length < 5) { fbStatus('Escreva uma mensagem um pouco maior.', false); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    const { data, error } = await sb.functions.invoke('enviar-feedback', {
+      body: { email, whatsapp, mensagem },
+    });
+    if (error || !data?.ok) {
+      const motivo = data?.erro || error?.message || 'falha';
+      const mapa = {
+        email_invalido: 'E-mail inválido.',
+        whatsapp_invalido: 'WhatsApp inválido — use DDD + número.',
+        mensagem_curta: 'Mensagem muito curta.',
+        rate_limit: 'Muitos envios. Tente de novo em alguns minutos.',
+        email_nao_configurado: 'Envio de e-mail ainda não configurado no servidor.',
+        nao_autenticado: 'Faça login de novo e tente outra vez.',
+      };
+      fbStatus(mapa[motivo] || 'Não deu para enviar agora. Tente de novo.', false);
+      return;
+    }
+    fbStatus('Obrigado! Seu feedback foi enviado.', true);
+    if ($('#fbMsg')) $('#fbMsg').value = '';
+    setTimeout(() => abrirFeedback(false), 1600);
+  } catch {
+    fbStatus('Não deu para enviar agora. Tente de novo.', false);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar feedback'; }
+  }
+}
+
+$('#fbFab')?.addEventListener('click', () => abrirFeedback());
+$('#fbClose')?.addEventListener('click', () => abrirFeedback(false));
+$('#fbSend')?.addEventListener('click', enviarFeedback);
