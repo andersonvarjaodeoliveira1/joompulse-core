@@ -564,6 +564,7 @@ function ligarBotoes(d) {
           ? `${n} pedidos deste produto — ele sobe na fila da proxima coleta.`
           : 'Entrou na fila. Volte amanha para ver se a categoria tem ranking publico.';
       }
+      abrirFilaColeta();
     } else {
       pedir.disabled = false;
       pedir.textContent = 'nao deu — tente de novo';
@@ -592,9 +593,23 @@ function ligarBotoes(d) {
 const PASTA_PADRAO = 'Meus melhores produtos';
 const PAINEL = 'https://gringaradar.vercel.app/';
 
-/** Abre o painel na aba Acompanhando (Monitor). */
+/** Abre (ou foca) o painel na aba pedida. `r=` força o app a recarregar a lista. */
+function abrirPainel(aba) {
+  const hash = `#view=monitor&aba=${encodeURIComponent(aba || 'lista')}&r=${Date.now()}`;
+  const url = PAINEL + hash;
+  try {
+    chrome.runtime.sendMessage({ tipo: 'abrir_url', url });
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 function abrirAcompanhando() {
-  window.open(PAINEL + '#view=monitor&aba=lista', '_blank', 'noopener');
+  abrirPainel('lista');
+}
+
+function abrirFilaColeta() {
+  abrirPainel('fila');
 }
 
 async function listarPastas() {

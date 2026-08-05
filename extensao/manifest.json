@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Gringa Radar",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Posição no ranking, concorrência e preços do produto direto na página do Mercado Livre. Requer assinatura ativa.",
   "permissions": [
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
-    "https://blnupzfgfhvykrgmvwhw.supabase.co/*"
+    "https://blnupzfgfhvykrgmvwhw.supabase.co/*",
+    "https://gringaradar.vercel.app/*",
+    "https://joompulse-core.vercel.app/*"
   ],
   "background": {
     "service_worker": "background.js",

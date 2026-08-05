@@ -125,7 +125,8 @@ const boot = async () => {
     S.digest = dig?.data && typeof dig.data === 'object' && Object.keys(dig.data).length
       ? dig.data : null;
     S.avisos = av?.data ?? [];
-    if (S.view === 'home' || !S.view) render();
+    // Re-pinta com dados reais (inclui deep-link #view=monitor)
+    render();
 
     // 3) Pedidos / vendedores / histórico do monitor — em fundo
     carregarMonitorExtra().then(() => {
@@ -158,8 +159,36 @@ function lerUrl(){
     }
     history.replaceState(null, '', location.pathname + (location.hash || ''));
   }
+  return { refresh: h.has('r') || v === 'monitor' };
 }
-window.addEventListener('hashchange', () => { lerUrl(); render(); });
+
+/** Recarrega monitorados/alertas/fila e redesenha se estiver no Monitor. */
+let syncMonAt = 0;
+async function sincronizarMonitor(forcar = false){
+  const agora = Date.now();
+  if (!forcar && agora - syncMonAt < 1500) return;
+  syncMonAt = agora;
+  await carregarMonitor();
+  if (S.view === 'monitor') render();
+}
+
+window.addEventListener('hashchange', async () => {
+  lerUrl();
+  render();
+  if (S.view === 'monitor') await sincronizarMonitor(true);
+});
+
+// Volta da extensão / outra aba: atualiza Acompanhando sem F5
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (S.view === 'monitor') sincronizarMonitor();
+});
+window.addEventListener('focus', () => {
+  if (S.view === 'monitor') sincronizarMonitor();
+});
+window.addEventListener('pageshow', (ev) => {
+  if (ev.persisted && S.view === 'monitor') sincronizarMonitor();
+});
 
 async function quota(){
   const { data, error } = await sb.rpc('quota_status');
@@ -2711,7 +2740,7 @@ function render(){
     if (!monitorPollId) monitorPollId = setInterval(async () => {
       if (S.view !== 'monitor') { clearInterval(monitorPollId); monitorPollId = null; return; }
       await carregarMonitor(); render();
-    }, 45000);
+    }, 12000);
   } else if (monitorPollId) {
     clearInterval(monitorPollId); monitorPollId = null;
   }

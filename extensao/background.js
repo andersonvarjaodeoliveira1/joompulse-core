@@ -86,4 +86,26 @@ chrome.runtime.onMessage.addListener((msg, _remetente, responder) => {
     sessao().then((s) => responder({ logado: !!s, email: s?.email ?? null }));
     return true;
   }
+  if (msg.tipo === 'abrir_url' && msg.url) {
+    // Reusa a aba do painel se já estiver aberta, pra o produto aparecer
+    // sem F5 (o hash com &r= dispara o sync no front).
+    chrome.tabs.query({}, (tabs) => {
+      const alvo = (tabs || []).find((t) => {
+        const u = t.url || '';
+        return u.includes('gringaradar.vercel.app')
+          || u.includes('joompulse-core.vercel.app')
+          || u.includes('github.io/joompulse-core')
+          || u.includes('github.io/gringaradar');
+      });
+      if (alvo?.id != null) {
+        chrome.tabs.update(alvo.id, { url: msg.url, active: true }, () => {
+          if (alvo.windowId != null) chrome.windows.update(alvo.windowId, { focused: true });
+          responder({ ok: true, reused: true });
+        });
+      } else {
+        chrome.tabs.create({ url: msg.url }, () => responder({ ok: true, reused: false }));
+      }
+    });
+    return true;
+  }
 });
